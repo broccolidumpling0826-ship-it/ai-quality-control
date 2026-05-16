@@ -36,7 +36,14 @@ export interface UserInfo {
 }
 
 export interface LoginForm {
+  /** 表单展示用工号；提交后端时映射为 userNo */
   username: string
+  password: string
+}
+
+/** 登录请求体（与后端 LoginCmd 一致） */
+export interface LoginCmd {
+  userNo: string
   password: string
 }
 

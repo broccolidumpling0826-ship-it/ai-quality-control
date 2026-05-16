@@ -42,4 +42,33 @@ public class QcConcessionVO {
 
     @ApiModelProperty(value = "剩余天数（到期日距今天数，已过期为负数）")
     private int remainingDays;
+
+    // ---------- 前端展示别名（与 effectiveDate/expiryDate 等同步填充） ----------
+
+    @ApiModelProperty(value = "生效日期（前端别名 validFrom）")
+    private LocalDate validFrom;
+
+    @ApiModelProperty(value = "到期日期（前端别名 validTo）")
+    private LocalDate validTo;
+
+    @ApiModelProperty(value = "客户确认附件（前端别名 confirmFileUrl）")
+    private String confirmFileUrl;
+
+    @ApiModelProperty(value = "卷号（关联检验记录）")
+    private String coilNo;
+
+    @ApiModelProperty(value = "批次号（关联检验记录）")
+    private String batchNo;
+
+    @ApiModelProperty(value = "申请人工号")
+    private String applyBy;
+
+    @ApiModelProperty(value = "申请人姓名")
+    private String applyByName;
+
+    @ApiModelProperty(value = "申请时间")
+    private String applyTime;
+
+    @ApiModelProperty(value = "让步原因（前端 detail.reason，映射 riskDescription）")
+    private String reason;
 }

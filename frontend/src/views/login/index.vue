@@ -307,12 +307,12 @@ onUnmounted(() => {
   caret-color: #00D4FF !important;
 }
 .login-page .el-input__inner::placeholder {
-  color: #3A5B7A !important;
+  color: var(--text-faint) !important;
   font-family: 'IBM Plex Sans', sans-serif !important;
 }
 .login-page .el-input__prefix-inner,
 .login-page .el-input__suffix-inner .el-icon {
-  color: #3A5B7A !important;
+  color: var(--text-faint) !important;
 }
 .login-page .el-input__suffix-inner .el-icon:hover {
   color: #00D4FF !important;
@@ -748,31 +748,31 @@ onUnmounted(() => {
 }
 
 .aqc-input :deep(.el-input__inner::placeholder) {
-  color: #3A5B7A !important;
+  color: var(--text-faint) !important;
   font-family: 'IBM Plex Sans', sans-serif !important;
   font-size: 12px !important;
 }
 
 .aqc-input :deep(.el-input__prefix-inner),
 .aqc-input :deep(.el-input__suffix-inner) {
-  color: #3A5B7A !important;
+  color: var(--text-faint) !important;
 }
 
 .aqc-input :deep(.el-input__suffix-inner .el-icon:hover) {
-  color: #7A9BBE !important;
+  color: var(--text-muted) !important;
 }
 
 /* 清空按钮深色 */
 .aqc-input :deep(.el-input__clear) {
-  color: #3A5B7A !important;
+  color: var(--text-faint) !important;
 }
 .aqc-input :deep(.el-input__clear:hover) {
-  color: #7A9BBE !important;
+  color: var(--text-muted) !important;
 }
 
 /* 密码显示切换按钮 */
 .aqc-input :deep(.el-input__password) {
-  color: #3A5B7A !important;
+  color: var(--text-faint) !important;
 }
 .aqc-input :deep(.el-input__password:hover) {
   color: #00D4FF !important;
@@ -841,7 +841,7 @@ onUnmounted(() => {
 .remember-text {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;
-  color: #7A9BBE;
+  color: var(--text-muted);
   letter-spacing: 0.05em;
   user-select: none;
 }

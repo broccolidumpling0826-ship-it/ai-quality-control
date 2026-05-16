@@ -33,8 +33,8 @@
               {{ dictStore.getLabel('JUDGMENT_TYPE', detail.targetJudgmentType) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="影响范围">{{ detail.impactScope || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="改判原因" :span="3">{{ detail.reason }}</el-descriptions-item>
+          <el-descriptions-item label="影响范围">{{ detail.affectScope ?? detail.impactScope ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item label="改判原因" :span="3">{{ detail.rejudgmentReason ?? detail.reason }}</el-descriptions-item>
           <el-descriptions-item v-if="detail.isReverse" label="新证据来源">
             {{ dictStore.getLabel('NEW_EVIDENCE_SOURCE', detail.evidenceSource) || detail.evidenceSource }}
           </el-descriptions-item>
@@ -49,25 +49,25 @@
       <!-- 审批历史时间线 -->
       <el-card shadow="never">
         <template #header><span style="font-weight:600">审批历史</span></template>
-        <el-timeline v-if="detail.approvalHistory && detail.approvalHistory.length > 0">
+        <el-timeline v-if="(detail.approvalRecords ?? detail.approvalHistory)?.length">
           <el-timeline-item
-            v-for="(item, index) in detail.approvalHistory"
+            v-for="(item, index) in (detail.approvalRecords ?? detail.approvalHistory)"
             :key="index"
-            :type="timelineItemType(item.decision)"
-            :timestamp="item.approveTime"
+            :type="timelineItemType(item.decision ?? item.approvalAction)"
+            :timestamp="item.approveTime ?? item.approvalTime"
             placement="top"
           >
             <el-card shadow="never" style="padding:0">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                <strong>{{ item.approverName }}</strong>
-                <el-tag :type="timelineItemType(item.decision)" size="small">
-                  {{ decisionLabel(item.decision) }}
+                <strong>{{ item.approverName ?? item.approverNo }}</strong>
+                <el-tag :type="timelineItemType(item.decision ?? item.approvalAction)" size="small">
+                  {{ decisionLabel(item.decision ?? item.approvalAction) }}
                 </el-tag>
-                <span v-if="item.approvalLevel" style="color:#999;font-size:12px">
+                <span v-if="item.approvalLevel" class="text-muted" style="font-size:12px">
                   [{{ item.approvalLevel }}]
                 </span>
               </div>
-              <p style="color:#606266;margin:0">{{ item.comment || '无审批意见' }}</p>
+              <p class="text-secondary" style="margin:0">{{ item.comment ?? item.approvalComment ?? '无审批意见' }}</p>
             </el-card>
           </el-timeline-item>
         </el-timeline>

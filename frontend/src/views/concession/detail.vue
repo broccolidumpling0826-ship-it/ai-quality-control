@@ -31,7 +31,7 @@
                 {{ dictStore.getLabel('CONCESSION_STATUS', detail.concessionStatus) }}
               </el-tag>
             </el-descriptions-item>
-            <el-descriptions-item label="让步原因" :span="2">{{ detail.reason }}</el-descriptions-item>
+            <el-descriptions-item label="风险描述" :span="2">{{ detail.riskDescription ?? detail.reason }}</el-descriptions-item>
           </el-descriptions>
         </el-card>
 
@@ -42,9 +42,9 @@
             <div :class="['countdown-days', remainingDays <= 7 ? 'days-warning' : 'days-normal']">
               {{ remainingDays }}
             </div>
-            <div style="font-size:14px;color:#909399">天</div>
+            <div class="text-muted" style="font-size:14px">天</div>
           </div>
-          <div style="font-size:12px;color:#c0c4cc;margin-top:8px">
+          <div class="text-muted text-meta-sm" style="margin-top:8px">
             到期日：{{ detail.validTo }}
           </div>
           <el-tag v-if="remainingDays <= 0" type="danger" style="margin-top:8px">已过期</el-tag>
@@ -57,13 +57,13 @@
         <template #header><span style="font-weight:600">客户确认附件</span></template>
 
         <!-- 已上传 -->
-        <template v-if="detail.confirmFileUrl">
+        <template v-if="detail.confirmFileUrl || detail.confirmAttachmentUrl">
           <el-alert type="success" :closable="false" show-icon style="margin-bottom:12px">
             附件已上传，不可替换
           </el-alert>
           <el-descriptions :column="3" border>
             <el-descriptions-item label="文件名">
-              <el-link :href="detail.confirmFileUrl" type="primary" target="_blank">
+              <el-link :href="detail.confirmFileUrl || detail.confirmAttachmentUrl" type="primary" target="_blank">
                 {{ detail.confirmFileName || '查看附件' }}
               </el-link>
             </el-descriptions-item>
@@ -127,7 +127,7 @@
           v-if="canConfirm"
           type="success"
           :loading="actionLoading"
-          :disabled="!detail.confirmFileUrl && !uploadFile"
+          :disabled="!(detail.confirmFileUrl || detail.confirmAttachmentUrl) && !uploadFile"
           @click="handleConfirm"
         >确认客户已确认</el-button>
       </div>
@@ -205,9 +205,11 @@ const remainingDays = computed(() => {
   return Math.max(0, Math.ceil(diff / (24 * 3600 * 1000)))
 })
 
-const canConfirm = computed(() => detail.value?.concessionStatus === 'PENDING_CONFIRM')
-const canReject = computed(() => detail.value?.concessionStatus === 'PENDING_CONFIRM')
-const canInternalApprove = computed(() => detail.value?.concessionStatus === 'CONFIRMED')
+const canConfirm = computed(
+  () => detail.value?.confirmStatus === 'PENDING' && detail.value?.approvalStatus === 'PENDING'
+)
+const canReject = computed(() => detail.value?.confirmStatus === 'PENDING')
+const canInternalApprove = computed(() => detail.value?.confirmStatus === 'CONFIRMED')
 
 async function loadDetail() {
   const id = route.query.id as string
@@ -229,7 +231,7 @@ function handleFileRemove() {
 }
 
 async function handleConfirm() {
-  if (!detail.value.confirmFileUrl && !uploadFile.value) {
+  if (!(detail.value.confirmFileUrl || detail.value.confirmAttachmentUrl) && !uploadFile.value) {
     ElMessage.error('请先上传客户确认附件')
     return
   }

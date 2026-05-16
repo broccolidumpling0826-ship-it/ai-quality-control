@@ -48,22 +48,22 @@
                 {{ dictStore.getLabel('JUDGMENT_TYPE', row.targetJudgmentType) }}
               </el-tag>
             </div>
-            <div style="font-size:12px;color:#666;margin-top:4px">卷号：{{ row.coilNo }}</div>
+            <div class="text-meta-sm" style="margin-top:4px">卷号：{{ row.coilNo }}</div>
           </template>
         </el-table-column>
         <el-table-column
-          prop="reason"
+          prop="rejudgmentReason"
           label="改判原因"
           min-width="180"
           show-overflow-tooltip
-          :filters="getFilters('reason')"
+          :filters="getFilters('rejudgmentReason')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
         <el-table-column label="逆向改判" width="100" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.isReverse" type="danger" size="small" style="font-weight:600">逆向改判</el-tag>
-            <span v-else style="color:#c0c4cc">-</span>
+            <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
         <el-table-column label="审批级别" width="110">
@@ -79,18 +79,18 @@
           </template>
         </el-table-column>
         <el-table-column
-          prop="applyTime"
+          prop="createDateTime"
           label="申请时间"
           width="160"
-          :filters="getFilters('applyTime')"
+          :filters="getFilters('createDateTime')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
         <el-table-column
-          prop="applyByName"
-          label="申请人"
-          width="90"
-          :filters="getFilters('applyByName')"
+          prop="createUserNo"
+          label="申请人工号"
+          width="110"
+          :filters="getFilters('createUserNo')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
@@ -129,7 +129,7 @@
             →
             {{ dictStore.getLabel('JUDGMENT_TYPE', approveTarget.targetJudgmentType) }}
           </el-descriptions-item>
-          <el-descriptions-item label="改判原因" :span="2">{{ approveTarget.reason }}</el-descriptions-item>
+          <el-descriptions-item label="改判原因" :span="2">{{ approveTarget.rejudgmentReason }}</el-descriptions-item>
         </el-descriptions>
       </div>
       <el-form ref="approveFormRef" :model="approveForm" :rules="approveRules" label-width="80px">
@@ -227,7 +227,7 @@ async function submitApprove(decision: string) {
   approveLoading.value = true
   try {
     await approveRejudgment(approveTarget.value.id, {
-      decision,
+      action: decision as 'APPROVED' | 'REJECTED',
       comment: approveForm.comment
     })
     ElMessage.success(decision === 'APPROVED' ? '审批通过' : '已驳回')

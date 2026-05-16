@@ -4,9 +4,10 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.QcReinspectionAddCmd;
+import com.jhict.quality.dto.QcReinspectionPageQuery;
 import com.jhict.quality.dto.ReinspectionCompleteCmd;
-import com.jhict.quality.entity.QcReinspectionRecord;
 import com.jhict.quality.service.api.ReinspectionService;
+import com.jhict.quality.vo.QcReinspectionListVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -41,11 +42,7 @@ public class ReinspectionController {
 
     @PostMapping("/page")
     @ApiOperation(value = "分页查询复检记录")
-    public ApiResult<IPage<QcReinspectionRecord>> page(
-            @ApiParam(value = "页码") @RequestParam(defaultValue = "1") int pageNum,
-            @ApiParam(value = "每页大小") @RequestParam(defaultValue = "10") int pageSize,
-            @ApiParam(value = "状态（PENDING/COMPLETED）") @RequestParam(required = false) String status,
-            @ApiParam(value = "责任人工号") @RequestParam(required = false) String responsibleNo) {
-        return ApiResult.success(reinspectionService.page(pageNum, pageSize, status));
+    public ApiResult<IPage<QcReinspectionListVO>> page(@ModelAttribute QcReinspectionPageQuery query) {
+        return ApiResult.success(reinspectionService.page(query));
     }
 }

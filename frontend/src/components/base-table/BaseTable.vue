@@ -399,7 +399,7 @@ function handleHeaderFilter() {
 }
 
 .cell-empty {
-  color: #c0c4cc;
+  color: var(--text-muted);
 }
 
 .pagination-wrapper {
@@ -410,7 +410,7 @@ function handleHeaderFilter() {
 
 :deep(.el-table th.el-table__cell) {
   background-color: #fafafa;
-  color: #303133;
+  color: var(--text-primary);
   font-weight: 600;
 }
 

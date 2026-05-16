@@ -56,7 +56,7 @@
               @click="loadMore"
               :loading="loadingMore"
             >加载更多</el-button>
-            <span v-else style="color:#c0c4cc;font-size:12px">已加载全部</span>
+            <span v-else class="text-muted" style="font-size:12px">已加载全部</span>
           </div>
         </template>
         <el-empty v-else description="暂无通知消息" />
@@ -202,7 +202,7 @@ onUnmounted(stopPolling)
 }
 .notification-content {
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary);
   margin: 0 0 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -211,6 +211,6 @@ onUnmounted(stopPolling)
 }
 .notification-time {
   font-size: 11px;
-  color: #c0c4cc;
+  color: var(--text-muted);
 }
 </style>

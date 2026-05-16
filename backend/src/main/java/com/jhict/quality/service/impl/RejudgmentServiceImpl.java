@@ -237,7 +237,11 @@ public class RejudgmentServiceImpl implements RejudgmentService {
         vo.setOriginalJudgmentType(request.getOriginalJudgmentType());
         vo.setTargetJudgmentType(request.getTargetJudgmentType());
         vo.setRejudgmentReason(request.getRejudgmentReason());
+        vo.setReason(request.getRejudgmentReason());
         vo.setAffectScope(request.getAffectScope());
+        vo.setImpactScope(request.getAffectScope());
+        vo.setEvidenceSource(request.getNewEvidenceSource());
+        vo.setEvidenceFileUrl(request.getEvidenceAttachmentUrl());
         vo.setIsReverse(request.getIsReverse());
         vo.setApprovalLevel(request.getApprovalLevel());
         vo.setApprovalStatus(request.getApprovalStatus());
@@ -247,11 +251,15 @@ public class RejudgmentServiceImpl implements RejudgmentService {
             QcRejudgmentRequestVO.ApprovalRecordVO r = new QcRejudgmentRequestVO.ApprovalRecordVO();
             r.setApproverNo(a.getApproverNo());
             r.setApprovalAction(a.getApprovalAction());
+            r.setDecision(a.getApprovalAction());
             r.setApprovalComment(a.getApprovalComment());
+            r.setComment(a.getApprovalComment());
             r.setApprovalTime(a.getApprovalTime());
+            r.setApproveTime(a.getApprovalTime());
             return r;
         }).collect(Collectors.toList());
         vo.setApprovalRecords(approvalVOs);
+        vo.setApprovalHistory(approvalVOs);
 
         return vo;
     }

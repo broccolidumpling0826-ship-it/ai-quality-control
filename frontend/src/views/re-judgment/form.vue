@@ -131,6 +131,7 @@ import { WarningFilled, UploadFilled } from '@element-plus/icons-vue'
 import { useDictStore } from '@/store/dict'
 import { applyRejudgment } from '@/api/rejudgment'
 import { getJudgmentExplanation } from '@/api/judgment'
+import { uploadFile } from '@/api/file'
 
 const route = useRoute()
 const router = useRouter()
@@ -143,7 +144,7 @@ const originalJudgment = ref<any>(null)
 const fileList = ref<UploadFile[]>([])
 
 const formData = reactive({
-  judgmentId: (route.query.judgmentId as string) || '',
+  judgmentId: (route.query.judgmentId as string) || (route.query.id as string) || '',
   targetJudgmentType: '',
   reason: '',
   impactScope: '',
@@ -205,19 +206,22 @@ async function handleSubmit() {
   }
   submitLoading.value = true
   try {
-    const fd = new FormData()
-    fd.append('judgmentId', formData.judgmentId)
-    fd.append('targetJudgmentType', formData.targetJudgmentType)
-    fd.append('reason', formData.reason)
-    fd.append('impactScope', formData.impactScope || '')
-    fd.append('isReverse', String(isReverse.value))
-    if (isReverse.value) {
-      fd.append('evidenceSource', formData.evidenceSource)
-      if (formData.evidenceFile) {
-        fd.append('evidenceFile', formData.evidenceFile)
-      }
+    let evidenceAttachmentUrl: string | undefined
+    if (isReverse.value && formData.evidenceFile) {
+      evidenceAttachmentUrl = await uploadFile(formData.evidenceFile, 'rejudgment-evidence')
     }
-    await applyRejudgment(Object.fromEntries(fd.entries()))
+    await applyRejudgment({
+      originalJudgmentId: formData.judgmentId,
+      targetJudgmentType: formData.targetJudgmentType,
+      rejudgmentReason: formData.reason,
+      affectScope: formData.impactScope || '-',
+      ...(isReverse.value
+        ? {
+            newEvidenceSource: formData.evidenceSource,
+            evidenceAttachmentUrl
+          }
+        : {})
+    })
     ElMessage.success('改判申请已提交')
     router.push('/re-judgment')
   } finally {

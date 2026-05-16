@@ -19,8 +19,20 @@ public class QcQualityStandardVO {
     @ApiModelProperty(value = "品种")
     private String variety;
 
+    @ApiModelProperty(value = "品种（前端别名 productVariety）")
+    private String productVariety;
+
     @ApiModelProperty(value = "牌号")
     private String grade;
+
+    @ApiModelProperty(value = "牌号（前端别名 productGrade）")
+    private String productGrade;
+
+    @ApiModelProperty(value = "规格范围")
+    private String specRange;
+
+    @ApiModelProperty(value = "版本号（前端别名 version）")
+    private String version;
 
     @ApiModelProperty(value = "版本号")
     private String versionNo;
@@ -39,4 +51,10 @@ public class QcQualityStandardVO {
 
     @ApiModelProperty(value = "关联指标数量")
     private Integer indicatorCount;
+
+    @ApiModelProperty(value = "备注")
+    private String remark;
+
+    @ApiModelProperty(value = "描述（前端别名 description）")
+    private String description;
 }

@@ -13,8 +13,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="责任人">
-          <el-input v-model="searchForm.responsiblePerson" placeholder="输入责任人" clearable style="width:150px" />
+        <el-form-item label="责任人工号">
+          <el-input v-model="searchForm.responsibleNo" placeholder="输入工号" clearable style="width:150px" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
@@ -35,7 +35,7 @@
         <el-table-column label="原判定记录" min-width="200">
           <template #default="{ row }">
             <div>卷号：{{ row.coilNo }}</div>
-            <div style="color:#666;font-size:12px">
+            <div class="text-meta-sm">
               判定：
               <el-tag :type="dictStore.getColorTag('JUDGMENT_TYPE', row.originalJudgmentType) as any" size="small">
                 {{ dictStore.getLabel('JUDGMENT_TYPE', row.originalJudgmentType) }}
@@ -44,27 +44,27 @@
           </template>
         </el-table-column>
         <el-table-column
-          prop="reason"
+          prop="reinspectionReason"
           label="复检原因"
           min-width="180"
           show-overflow-tooltip
-          :filters="getFilters('reason')"
+          :filters="getFilters('reinspectionReason')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
         <el-table-column
-          prop="responsiblePerson"
-          label="责任人"
+          prop="responsibleNo"
+          label="责任人工号"
           width="110"
-          :filters="getFilters('responsiblePerson')"
+          :filters="getFilters('responsibleNo')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
         <el-table-column
-          prop="createTime"
+          prop="createDateTime"
           label="发起时间"
           width="160"
-          :filters="getFilters('createTime')"
+          :filters="getFilters('createDateTime')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
@@ -87,7 +87,7 @@
             <span v-if="row.newRecordId">
               <el-button link type="primary" @click="viewNewRecord(row)">{{ row.newRecordId }}</el-button>
             </span>
-            <span v-else style="color:#c0c4cc">未关联</span>
+            <span v-else class="text-muted">未关联</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="130" fixed="right">
@@ -121,7 +121,7 @@
         <el-form-item label="新检验记录ID" prop="newRecordId">
           <el-input v-model="completeForm.newRecordId" placeholder="输入新检验记录ID" />
         </el-form-item>
-        <p style="color:#999;font-size:12px;margin-left:120px">填入完成复检后生成的检验记录ID</p>
+        <p class="text-hint" style="margin-left:120px">填入完成复检后生成的检验记录ID</p>
       </el-form>
       <template #footer>
         <el-button @click="completeDialogVisible = false">取消</el-button>
@@ -144,7 +144,7 @@ import type { PageResult } from '@/types'
 const router = useRouter()
 const dictStore = useDictStore()
 
-const searchForm = reactive({ status: '', responsiblePerson: '' })
+const searchForm = reactive({ status: '', responsibleNo: '' })
 const pageNum = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
@@ -168,7 +168,7 @@ async function loadData() {
       pageNum: pageNum.value,
       pageSize: pageSize.value,
       status: searchForm.status || undefined,
-      responsiblePerson: searchForm.responsiblePerson || undefined
+      responsibleNo: searchForm.responsibleNo || undefined
     }) as PageResult<any>
     tableData.value = res.records || []
     total.value = res.total || 0
@@ -183,7 +183,7 @@ function handleSearch() {
 }
 
 function handleReset() {
-  Object.assign(searchForm, { status: '', responsiblePerson: '' })
+  Object.assign(searchForm, { status: '', responsibleNo: '' })
   pageNum.value = 1
   loadData()
 }

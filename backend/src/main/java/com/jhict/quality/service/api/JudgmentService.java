@@ -5,6 +5,7 @@ import com.jhict.quality.dto.QcJudgmentPageQuery;
 import com.jhict.quality.engine.model.JudgmentOutput;
 import com.jhict.quality.entity.QcJudgmentResult;
 import com.jhict.quality.vo.DashboardSummaryVO;
+import com.jhict.quality.vo.QcJudgmentListVO;
 import com.jhict.quality.vo.QcJudgmentResultVO;
 
 /**
@@ -43,7 +44,7 @@ public interface JudgmentService {
      * @param query 查询条件
      * @return 分页结果
      */
-    IPage<QcJudgmentResult> page(QcJudgmentPageQuery query);
+    IPage<QcJudgmentListVO> page(QcJudgmentPageQuery query);
 
     /**
      * 获取看板汇总数据（带Redis缓存，TTL=60s）

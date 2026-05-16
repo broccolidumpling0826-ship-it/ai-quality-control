@@ -8,6 +8,12 @@ import lombok.Data;
 @ApiModel(value = "QcJudgmentPageQuery", description = "判定结论分页查询条件")
 public class QcJudgmentPageQuery {
 
+    @ApiModelProperty(value = "卷号（模糊，关联检验记录）")
+    private String coilNo;
+
+    @ApiModelProperty(value = "批次号（模糊，关联检验记录）")
+    private String batchNo;
+
     @ApiModelProperty(value = "判定结论类型（QUALIFIED/UNQUALIFIED/NEED_REINSPECTION/CAN_CONCESSION）")
     private String judgmentType;
 
@@ -25,4 +31,17 @@ public class QcJudgmentPageQuery {
 
     @ApiModelProperty(value = "每页条数，默认20")
     private Integer pageSize = 20;
+
+    /** 兼容前端 startTime/endTime（仅日期） */
+    public void setStartTime(String startTime) {
+        if (startTime != null && !startTime.isEmpty()) {
+            this.timeStart = startTime.length() <= 10 ? startTime + " 00:00:00" : startTime;
+        }
+    }
+
+    public void setEndTime(String endTime) {
+        if (endTime != null && !endTime.isEmpty()) {
+            this.timeEnd = endTime.length() <= 10 ? endTime + " 23:59:59" : endTime;
+        }
+    }
 }

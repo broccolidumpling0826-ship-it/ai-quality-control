@@ -13,8 +13,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="总状态">
-          <el-select v-model="searchForm.concessionStatus" placeholder="请选择" clearable style="width:140px">
+        <el-form-item label="审批状态">
+          <el-select v-model="searchForm.approvalStatus" placeholder="请选择" clearable style="width:140px">
             <el-option
               v-for="item in dictStore.getItems('CONCESSION_STATUS')"
               :key="item.value"
@@ -46,7 +46,7 @@
         <el-table-column label="关联卷号/批次" min-width="180">
           <template #default="{ row }">
             <div>卷号：{{ row.coilNo }}</div>
-            <div style="font-size:12px;color:#666">批次：{{ row.batchNo }}</div>
+            <div class="text-meta-sm">批次：{{ row.batchNo }}</div>
           </template>
         </el-table-column>
         <el-table-column
@@ -60,9 +60,9 @@
         />
         <el-table-column label="有效期" width="180">
           <template #default="{ row }">
-            <div>{{ row.validFrom }} ~ {{ row.validTo }}</div>
+            <div>{{ row.validFrom ?? row.effectiveDate }} ~ {{ row.validTo ?? row.expiryDate }}</div>
             <div :class="['remaining-days', remainingDaysClass(row.validTo)]">
-              剩余 {{ remainingDays(row.validTo) }} 天
+              剩余 {{ remainingDays(row.validTo ?? row.expiryDate) }} 天
             </div>
           </template>
         </el-table-column>
@@ -73,10 +73,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="总状态" width="110">
+        <el-table-column label="审批状态" width="110">
           <template #default="{ row }">
-            <el-tag :type="dictStore.getColorTag('CONCESSION_STATUS', row.concessionStatus) as any">
-              {{ dictStore.getLabel('CONCESSION_STATUS', row.concessionStatus) }}
+            <el-tag :type="dictStore.getColorTag('CONCESSION_STATUS', row.approvalStatus) as any">
+              {{ dictStore.getLabel('CONCESSION_STATUS', row.approvalStatus) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -128,7 +128,7 @@ import type { PageResult } from '@/types'
 const router = useRouter()
 const dictStore = useDictStore()
 
-const searchForm = reactive({ confirmStatus: '', concessionStatus: '', coilNo: '' })
+const searchForm = reactive({ confirmStatus: '', approvalStatus: '', coilNo: '' })
 const pageNum = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
@@ -142,14 +142,14 @@ function remainingDays(validTo: string): number {
   return Math.max(0, Math.ceil(diff / (24 * 3600 * 1000)))
 }
 
-function remainingDaysClass(validTo: string): string {
-  const days = remainingDays(validTo)
+function remainingDaysClass(validTo: string | undefined): string {
+  const days = remainingDays(validTo ?? '')
   if (days <= 7) return 'days-warning'
   return 'days-normal'
 }
 
 function rowClassName({ row }: { row: any }): string {
-  if (remainingDays(row.validTo) <= 3) return 'expiring-row'
+  if (remainingDays(row.validTo ?? row.expiryDate) <= 3) return 'expiring-row'
   return ''
 }
 
@@ -160,7 +160,7 @@ async function loadData() {
       pageNum: pageNum.value,
       pageSize: pageSize.value,
       confirmStatus: searchForm.confirmStatus || undefined,
-      concessionStatus: searchForm.concessionStatus || undefined,
+      approvalStatus: searchForm.approvalStatus || undefined,
       coilNo: searchForm.coilNo || undefined
     }) as PageResult<any>
     tableData.value = res.records || []
@@ -176,7 +176,7 @@ function handleSearch() {
 }
 
 function handleReset() {
-  Object.assign(searchForm, { confirmStatus: '', concessionStatus: '', coilNo: '' })
+  Object.assign(searchForm, { confirmStatus: '', approvalStatus: '', coilNo: '' })
   pageNum.value = 1
   loadData()
 }
@@ -204,7 +204,7 @@ onMounted(loadData)
   font-weight: 600;
 }
 .days-normal {
-  color: #909399;
+  color: var(--text-muted);
 }
 :deep(.expiring-row) {
   background-color: #fdf6ec !important;

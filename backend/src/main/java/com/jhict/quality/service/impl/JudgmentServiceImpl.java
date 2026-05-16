@@ -5,15 +5,20 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jhict.quality.common.constant.JudgmentExplainConstants;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.common.exception.ServiceException;
+import com.jhict.quality.enums.StandardType;
 import com.jhict.quality.dto.QcJudgmentPageQuery;
 import com.jhict.quality.engine.model.JudgmentOutput;
 import com.jhict.quality.entity.*;
 import com.jhict.quality.mapper.*;
 import com.jhict.quality.service.api.JudgmentService;
 import com.jhict.quality.service.api.NotificationService;
+import com.jhict.quality.entity.SysUser;
+import com.jhict.quality.mapper.SysUserMapper;
 import com.jhict.quality.vo.DashboardSummaryVO;
+import com.jhict.quality.vo.QcJudgmentListVO;
 import com.jhict.quality.vo.QcJudgmentResultVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +63,9 @@ public class JudgmentServiceImpl implements JudgmentService {
 
     @Resource
     private QcInspectionRecordMapper inspectionRecordMapper;
+
+    @Resource
+    private SysUserMapper sysUserMapper;
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
@@ -157,11 +165,8 @@ public class JudgmentServiceImpl implements JudgmentService {
             throw new ServiceException(ApiResult.CODE_NOT_FOUND, "未找到该检验记录的最终判定结论");
         }
 
-        // 查询检验记录获取卷号
         QcInspectionRecord record = inspectionRecordMapper.selectById(recordId);
-        String coilNo = record != null ? record.getCoilNo() : null;
-
-        return buildJudgmentResultVO(result, coilNo, true);
+        return buildJudgmentResultVO(result, record, true);
     }
 
     @Override
@@ -171,32 +176,23 @@ public class JudgmentServiceImpl implements JudgmentService {
             throw new ServiceException(ApiResult.CODE_NOT_FOUND, "判定结论不存在");
         }
 
-        // 查询检验记录获取卷号
         QcInspectionRecord record = inspectionRecordMapper.selectById(result.getRecordId());
-        String coilNo = record != null ? record.getCoilNo() : null;
-
-        return buildJudgmentResultVO(result, coilNo, true);
+        return buildJudgmentResultVO(result, record, true);
     }
 
     @Override
-    public IPage<QcJudgmentResult> page(QcJudgmentPageQuery query) {
-        Page<QcJudgmentResult> pageParam = new Page<>(query.getPageNum(), query.getPageSize());
+    public IPage<QcJudgmentListVO> page(QcJudgmentPageQuery query) {
+        int pageNum = resolvePageNum(query.getPageNum());
+        int pageSize = resolvePageSize(query.getPageSize());
 
-        LambdaQueryWrapper<QcJudgmentResult> wrapper = new LambdaQueryWrapper<QcJudgmentResult>()
-                .eq(StringUtils.hasText(query.getJudgmentType()),
-                        QcJudgmentResult::getJudgmentType, query.getJudgmentType())
-                .eq(query.getIsFinal() != null, QcJudgmentResult::getIsFinal, query.getIsFinal())
-                .ge(StringUtils.hasText(query.getTimeStart()),
-                        QcJudgmentResult::getJudgmentTime,
-                        StringUtils.hasText(query.getTimeStart())
-                                ? LocalDateTime.parse(query.getTimeStart(), FORMATTER) : null)
-                .le(StringUtils.hasText(query.getTimeEnd()),
-                        QcJudgmentResult::getJudgmentTime,
-                        StringUtils.hasText(query.getTimeEnd())
-                                ? LocalDateTime.parse(query.getTimeEnd(), FORMATTER) : null)
-                .orderByDesc(QcJudgmentResult::getJudgmentTime);
+        Set<String> recordIdFilter = resolveRecordIdsByCoilOrBatch(query.getCoilNo(), query.getBatchNo());
+        if (recordIdFilter != null && recordIdFilter.isEmpty()) {
+            return emptyJudgmentListPage(pageNum, pageSize);
+        }
 
-        return judgmentResultMapper.selectPage(pageParam, wrapper);
+        IPage<QcJudgmentResult> entityPage = judgmentResultMapper.selectPage(
+                new Page<>(pageNum, pageSize), buildJudgmentPageWrapper(query, recordIdFilter));
+        return convertToJudgmentListPage(entityPage);
     }
 
     @Override
@@ -239,71 +235,266 @@ public class JudgmentServiceImpl implements JudgmentService {
     }
 
     /**
-     * 构建JudgmentResultVO（含evidences和matchedStandards）
+     * 构建判定解释 VO（检验信息、标准匹配、指标明细分步填充）
      */
-    private QcJudgmentResultVO buildJudgmentResultVO(QcJudgmentResult result, String coilNo, boolean loadEvidences) {
+    private QcJudgmentResultVO buildJudgmentResultVO(QcJudgmentResult result, QcInspectionRecord record, boolean loadEvidences) {
         QcJudgmentResultVO vo = new QcJudgmentResultVO();
         vo.setJudgmentId(result.getId());
         vo.setRecordId(result.getRecordId());
-        vo.setCoilNo(coilNo);
-        vo.setJudgmentType(result.getJudgmentType());
-        vo.setJudgmentTime(result.getJudgmentTime() != null
-                ? result.getJudgmentTime().format(FORMATTER) : null);
-        vo.setIsFinal(result.getIsFinal());
-
-        // 解析matchedStandardIds
-        List<String> standardIds = parseMatchedStandardIds(result.getMatchedStandardIds());
-        List<QcJudgmentResultVO.MatchedStandardVO> matchedStandards = new ArrayList<>();
-        if (!standardIds.isEmpty()) {
-            List<QcQualityStandard> standards = qualityStandardMapper.selectBatchIds(standardIds);
-            matchedStandards = standards.stream().map(s -> {
-                QcJudgmentResultVO.MatchedStandardVO msVO = new QcJudgmentResultVO.MatchedStandardVO();
-                msVO.setStandardId(s.getId());
-                msVO.setStandardType(s.getStandardType());
-                msVO.setVersionNo(s.getVersionNo());
-                return msVO;
-            }).collect(Collectors.toList());
-        }
-        vo.setMatchedStandards(matchedStandards);
-
-        // 加载evidences
-        if (loadEvidences) {
-            List<QcJudgmentEvidence> evidenceList = judgmentEvidenceMapper.findByJudgmentId(result.getId());
-
-            // 批量查询指标元信息
-            List<String> indicatorIds = evidenceList.stream()
-                    .map(QcJudgmentEvidence::getIndicatorId)
-                    .filter(Objects::nonNull)
-                    .distinct()
-                    .collect(Collectors.toList());
-            Map<String, QcIndicatorItem> indicatorMap = new HashMap<>();
-            if (!indicatorIds.isEmpty()) {
-                indicatorItemMapper.selectBatchIds(indicatorIds)
-                        .forEach(item -> indicatorMap.put(item.getId(), item));
-            }
-
-            List<QcJudgmentResultVO.EvidenceVO> evidenceVOList = evidenceList.stream().map(e -> {
-                QcJudgmentResultVO.EvidenceVO evidenceVO = new QcJudgmentResultVO.EvidenceVO();
-                evidenceVO.setTestValue(e.getTestValue());
-                evidenceVO.setUpperLimit(e.getUpperLimit());
-                evidenceVO.setLowerLimit(e.getLowerLimit());
-                evidenceVO.setDeviation(e.getDeviation());
-                evidenceVO.setTriggerRule(e.getTriggerRule());
-                evidenceVO.setIsPassed(e.getIsPassed());
-                QcIndicatorItem indicator = indicatorMap.get(e.getIndicatorId());
-                if (indicator != null) {
-                    evidenceVO.setIndicatorName(indicator.getIndicatorName());
-                    evidenceVO.setIndicatorCode(indicator.getIndicatorCode());
-                    evidenceVO.setUnit(indicator.getUnit());
-                }
-                return evidenceVO;
-            }).collect(Collectors.toList());
-            vo.setEvidences(evidenceVOList);
-        } else {
-            vo.setEvidences(Collections.emptyList());
-        }
-
+        fillInspectionFieldsOnVo(vo, result, record);
+        fillStandardFieldsOnVo(vo, result);
+        fillEvidenceFieldsOnVo(vo, result, loadEvidences);
         return vo;
+    }
+
+    private void fillInspectionFieldsOnVo(QcJudgmentResultVO vo, QcJudgmentResult result, QcInspectionRecord record) {
+        if (record == null) {
+            return;
+        }
+        vo.setCoilNo(record.getCoilNo());
+        vo.setBatchNo(record.getBatchNo());
+        vo.setHeatNo(record.getHeatNo());
+        vo.setProductVariety(record.getProductVariety());
+        vo.setProductGrade(record.getProductGrade());
+        vo.setProductSpec(record.getProductSpec());
+        vo.setSpecification(record.getProductSpec());
+        vo.setTesterNo(record.getTesterNo());
+        if (StringUtils.hasText(record.getTesterNo())) {
+            Map<String, String> nameMap = loadUserNameMap(Collections.singleton(record.getTesterNo()));
+            vo.setInspector(nameMap.getOrDefault(record.getTesterNo(), record.getTesterNo()));
+        }
+        String judgmentTimeStr = result.getJudgmentTime() != null
+                ? result.getJudgmentTime().format(FORMATTER) : null;
+        vo.setJudgmentType(result.getJudgmentType());
+        vo.setJudgmentTime(judgmentTimeStr);
+        vo.setJudgeTime(judgmentTimeStr);
+        vo.setIsFinal(result.getIsFinal());
+    }
+
+    private void fillStandardFieldsOnVo(QcJudgmentResultVO vo, QcJudgmentResult result) {
+        List<String> standardIds = parseMatchedStandardIds(result.getMatchedStandardIds());
+        List<QcQualityStandard> matchedEntityList = standardIds.isEmpty()
+                ? Collections.emptyList()
+                : qualityStandardMapper.selectBatchIds(standardIds);
+        vo.setMatchedStandards(convertToMatchedStandardVoList(matchedEntityList));
+        vo.setStandardMatches(buildStandardMatches(matchedEntityList));
+    }
+
+    private void fillEvidenceFieldsOnVo(QcJudgmentResultVO vo, QcJudgmentResult result, boolean loadEvidences) {
+        if (!loadEvidences) {
+            vo.setEvidences(Collections.emptyList());
+            vo.setIndicatorDetails(Collections.emptyList());
+            return;
+        }
+        List<QcJudgmentEvidence> evidenceList = judgmentEvidenceMapper.findByJudgmentId(result.getId());
+        Map<String, QcIndicatorItem> indicatorMap = loadIndicatorMap(evidenceList);
+        vo.setEvidences(convertToEvidenceVoList(evidenceList, indicatorMap));
+        vo.setIndicatorDetails(buildIndicatorDetails(evidenceList, indicatorMap));
+    }
+
+    private List<QcJudgmentResultVO.MatchedStandardVO> convertToMatchedStandardVoList(List<QcQualityStandard> matchedList) {
+        return matchedList.stream().map(s -> {
+            QcJudgmentResultVO.MatchedStandardVO msVO = new QcJudgmentResultVO.MatchedStandardVO();
+            msVO.setStandardId(s.getId());
+            msVO.setStandardType(s.getStandardType());
+            msVO.setVersionNo(s.getVersionNo());
+            msVO.setSpecRange(s.getSpecRange());
+            return msVO;
+        }).collect(Collectors.toList());
+    }
+
+    private List<QcJudgmentResultVO.StandardMatchVO> buildStandardMatches(List<QcQualityStandard> matchedList) {
+        Map<String, QcQualityStandard> byType = matchedList.stream()
+                .filter(s -> StringUtils.hasText(s.getStandardType()))
+                .collect(Collectors.toMap(QcQualityStandard::getStandardType, s -> s, (a, b) -> a));
+
+        List<QcJudgmentResultVO.StandardMatchVO> matches = new ArrayList<>();
+        for (StandardType type : JudgmentExplainConstants.STANDARD_MATCH_PRIORITY) {
+            QcJudgmentResultVO.StandardMatchVO match = new QcJudgmentResultVO.StandardMatchVO();
+            match.setStandardType(type.getCode());
+            QcQualityStandard hit = byType.get(type.getCode());
+            if (hit != null) {
+                match.setHit(Boolean.TRUE);
+                match.setStandardName(hit.getSpecRange() + " (" + hit.getVersionNo() + ")");
+            } else {
+                match.setHit(Boolean.FALSE);
+                match.setSkipReason(JudgmentExplainConstants.SKIP_REASON_NOT_MATCHED);
+            }
+            matches.add(match);
+        }
+        return matches;
+    }
+
+    private Map<String, QcIndicatorItem> loadIndicatorMap(List<QcJudgmentEvidence> evidenceList) {
+        List<String> indicatorIds = evidenceList.stream()
+                .map(QcJudgmentEvidence::getIndicatorId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (indicatorIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, QcIndicatorItem> indicatorMap = new HashMap<>();
+        indicatorItemMapper.selectBatchIds(indicatorIds)
+                .forEach(item -> indicatorMap.put(item.getId(), item));
+        return indicatorMap;
+    }
+
+    private List<QcJudgmentResultVO.EvidenceVO> convertToEvidenceVoList(
+            List<QcJudgmentEvidence> evidenceList, Map<String, QcIndicatorItem> indicatorMap) {
+        return evidenceList.stream().map(e -> {
+            QcJudgmentResultVO.EvidenceVO evidenceVO = new QcJudgmentResultVO.EvidenceVO();
+            evidenceVO.setTestValue(e.getTestValue());
+            evidenceVO.setUpperLimit(e.getUpperLimit());
+            evidenceVO.setLowerLimit(e.getLowerLimit());
+            evidenceVO.setDeviation(e.getDeviation());
+            evidenceVO.setTriggerRule(e.getTriggerRule());
+            evidenceVO.setIsPassed(e.getIsPassed());
+            QcIndicatorItem indicator = indicatorMap.get(e.getIndicatorId());
+            if (indicator != null) {
+                evidenceVO.setIndicatorName(indicator.getIndicatorName());
+                evidenceVO.setIndicatorCode(indicator.getIndicatorCode());
+                evidenceVO.setUnit(indicator.getUnit());
+            }
+            return evidenceVO;
+        }).collect(Collectors.toList());
+    }
+
+    private List<QcJudgmentResultVO.IndicatorDetailVO> buildIndicatorDetails(
+            List<QcJudgmentEvidence> evidenceList, Map<String, QcIndicatorItem> indicatorMap) {
+        return evidenceList.stream().map(e -> toIndicatorDetailVo(e, indicatorMap)).collect(Collectors.toList());
+    }
+
+    private QcJudgmentResultVO.IndicatorDetailVO toIndicatorDetailVo(
+            QcJudgmentEvidence e, Map<String, QcIndicatorItem> indicatorMap) {
+        QcJudgmentResultVO.IndicatorDetailVO detail = new QcJudgmentResultVO.IndicatorDetailVO();
+        boolean uncoveredByStandard = !StringUtils.hasText(e.getStandardId());
+        detail.setNoStandard(uncoveredByStandard);
+        detail.setMeasuredValue(e.getTestValue());
+        detail.setLowerLimit(e.getLowerLimit());
+        detail.setUpperLimit(e.getUpperLimit());
+        detail.setDeviation(e.getDeviation());
+        detail.setTriggeredRule(e.getTriggerRule());
+        QcIndicatorItem indicator = indicatorMap.get(e.getIndicatorId());
+        if (indicator != null) {
+            detail.setIndicatorName(indicator.getIndicatorName());
+        }
+        detail.setIndicatorResult(resolveIndicatorResultCode(uncoveredByStandard, e.getIsPassed()));
+        return detail;
+    }
+
+    private String resolveIndicatorResultCode(boolean uncoveredByStandard, Integer passedFlag) {
+        if (uncoveredByStandard) {
+            return JudgmentExplainConstants.INDICATOR_RESULT_WARNING;
+        }
+        if (Integer.valueOf(JudgmentExplainConstants.PASSED_FLAG).equals(passedFlag)) {
+            return JudgmentExplainConstants.INDICATOR_RESULT_PASS;
+        }
+        return JudgmentExplainConstants.INDICATOR_RESULT_FAIL;
+    }
+
+    private int resolvePageNum(Integer pageNum) {
+        return pageNum != null && pageNum > 0 ? pageNum : 1;
+    }
+
+    private int resolvePageSize(Integer pageSize) {
+        return pageSize != null && pageSize > 0 ? pageSize : 20;
+    }
+
+    private Page<QcJudgmentListVO> emptyJudgmentListPage(int pageNum, int pageSize) {
+        Page<QcJudgmentListVO> empty = new Page<>(pageNum, pageSize, 0);
+        empty.setRecords(Collections.emptyList());
+        return empty;
+    }
+
+    private LambdaQueryWrapper<QcJudgmentResult> buildJudgmentPageWrapper(
+            QcJudgmentPageQuery query, Set<String> recordIdFilter) {
+        LambdaQueryWrapper<QcJudgmentResult> wrapper = new LambdaQueryWrapper<QcJudgmentResult>()
+                .in(recordIdFilter != null, QcJudgmentResult::getRecordId, recordIdFilter)
+                .eq(StringUtils.hasText(query.getJudgmentType()),
+                        QcJudgmentResult::getJudgmentType, query.getJudgmentType())
+                .eq(query.getIsFinal() != null, QcJudgmentResult::getIsFinal, query.getIsFinal())
+                .orderByDesc(QcJudgmentResult::getJudgmentTime);
+        if (StringUtils.hasText(query.getTimeStart())) {
+            wrapper.ge(QcJudgmentResult::getJudgmentTime,
+                    LocalDateTime.parse(query.getTimeStart(), FORMATTER));
+        }
+        if (StringUtils.hasText(query.getTimeEnd())) {
+            wrapper.le(QcJudgmentResult::getJudgmentTime,
+                    LocalDateTime.parse(query.getTimeEnd(), FORMATTER));
+        }
+        return wrapper;
+    }
+
+    private IPage<QcJudgmentListVO> convertToJudgmentListPage(IPage<QcJudgmentResult> entityPage) {
+        Map<String, QcInspectionRecord> recordMap = loadInspectionRecordMap(
+                entityPage.getRecords().stream()
+                        .map(QcJudgmentResult::getRecordId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet()));
+        Map<String, String> userNameMap = loadUserNameMap(
+                recordMap.values().stream()
+                        .map(QcInspectionRecord::getTesterNo)
+                        .filter(StringUtils::hasText)
+                        .collect(Collectors.toSet()));
+        List<QcJudgmentListVO> voList = entityPage.getRecords().stream()
+                .map(j -> toJudgmentListVO(j, recordMap.get(j.getRecordId()), userNameMap))
+                .collect(Collectors.toList());
+        Page<QcJudgmentListVO> voPage = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
+        voPage.setRecords(voList);
+        return voPage;
+    }
+
+    private QcJudgmentListVO toJudgmentListVO(QcJudgmentResult j, QcInspectionRecord record, Map<String, String> userNameMap) {
+        QcJudgmentListVO vo = new QcJudgmentListVO();
+        vo.setId(j.getId());
+        vo.setRecordId(j.getRecordId());
+        vo.setJudgmentType(j.getJudgmentType());
+        vo.setJudgmentTime(j.getJudgmentTime() != null ? j.getJudgmentTime().format(FORMATTER) : null);
+        vo.setIsFinal(j.getIsFinal());
+        if (record != null) {
+            vo.setCoilNo(record.getCoilNo());
+            vo.setBatchNo(record.getBatchNo());
+            vo.setHeatNo(record.getHeatNo());
+            vo.setProductVariety(record.getProductVariety());
+            vo.setProductGrade(record.getProductGrade());
+            vo.setTesterNo(record.getTesterNo());
+            vo.setInspector(userNameMap.getOrDefault(record.getTesterNo(), record.getTesterNo()));
+        }
+        return vo;
+    }
+
+    private Set<String> resolveRecordIdsByCoilOrBatch(String coilNo, String batchNo) {
+        if (!StringUtils.hasText(coilNo) && !StringUtils.hasText(batchNo)) {
+            return null;
+        }
+        LambdaQueryWrapper<QcInspectionRecord> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(coilNo)) {
+            wrapper.like(QcInspectionRecord::getCoilNo, coilNo);
+        }
+        if (StringUtils.hasText(batchNo)) {
+            wrapper.like(QcInspectionRecord::getBatchNo, batchNo);
+        }
+        return inspectionRecordMapper.selectList(wrapper).stream()
+                .map(QcInspectionRecord::getId)
+                .collect(Collectors.toSet());
+    }
+
+    private Map<String, QcInspectionRecord> loadInspectionRecordMap(Set<String> recordIds) {
+        if (recordIds == null || recordIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return inspectionRecordMapper.selectBatchIds(recordIds).stream()
+                .collect(Collectors.toMap(QcInspectionRecord::getId, r -> r, (a, b) -> a));
+    }
+
+    private Map<String, String> loadUserNameMap(Set<String> userNos) {
+        if (userNos == null || userNos.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return sysUserMapper.selectList(new LambdaQueryWrapper<SysUser>().in(SysUser::getUserNo, userNos))
+                .stream()
+                .collect(Collectors.toMap(SysUser::getUserNo, SysUser::getUsername, (a, b) -> a));
     }
 
     /**

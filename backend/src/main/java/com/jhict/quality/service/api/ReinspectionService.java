@@ -2,8 +2,9 @@ package com.jhict.quality.service.api;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.dto.QcReinspectionAddCmd;
+import com.jhict.quality.dto.QcReinspectionPageQuery;
 import com.jhict.quality.dto.ReinspectionCompleteCmd;
-import com.jhict.quality.entity.QcReinspectionRecord;
+import com.jhict.quality.vo.QcReinspectionListVO;
 
 public interface ReinspectionService {
 
@@ -31,5 +32,5 @@ public interface ReinspectionService {
      * @param status    状态过滤
      * @return 分页结果
      */
-    IPage<QcReinspectionRecord> page(int pageNum, int pageSize, String status);
+    IPage<QcReinspectionListVO> page(QcReinspectionPageQuery query);
 }

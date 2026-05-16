@@ -94,18 +94,18 @@
           </template>
         </el-table-column>
         <el-table-column
-          prop="inspectionTime"
+          prop="testTime"
           label="检验时间"
           width="160"
-          :filters="getFilters('inspectionTime')"
+          :filters="getFilters('testTime')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
         <el-table-column
-          prop="inspector"
+          prop="testerNo"
           label="检验人"
           width="100"
-          :filters="getFilters('inspector')"
+          :filters="getFilters('testerNo')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
@@ -127,7 +127,7 @@
           <template #default="{ row }">
             <el-button link type="primary" @click="handleViewDetail(row)">查看详情</el-button>
             <el-button
-              v-if="row.status !== 'VOIDED'"
+              v-if="row.status !== 'VOID'"
               link
               type="danger"
               @click="handleVoid(row)"
@@ -224,7 +224,11 @@ async function loadData() {
       params.endTime = searchForm.timeRange[1]
     }
     const res = await pageInspections(params) as PageResult<any>
-    tableData.value = res.records || []
+    tableData.value = (res.records || []).map((row) => ({
+      ...row,
+      testTime: row.testTime ?? row.inspectionTime,
+      testerNo: row.testerNo ?? row.inspector
+    }))
     total.value = res.total || 0
   } finally {
     loading.value = false

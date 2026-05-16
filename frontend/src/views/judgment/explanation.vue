@@ -4,7 +4,7 @@
     <el-card shadow="never" class="hero-card" v-if="detail">
       <div class="hero-content">
         <div class="hero-left">
-          <div style="margin-bottom:8px;color:#666;font-size:14px">
+          <div class="hero-coil-meta">
             卷号：<strong>{{ detail.coilNo }}</strong>
             &nbsp;&nbsp;批次号：<strong>{{ detail.batchNo }}</strong>
           </div>
@@ -40,7 +40,7 @@
         </div>
         <div class="match-status">
           <el-icon v-if="match.hit" color="#409eff" :size="24"><CircleCheckFilled /></el-icon>
-          <el-icon v-else color="#c0c4cc" :size="24"><CircleCloseFilled /></el-icon>
+          <el-icon v-else color="var(--text-muted)" :size="24"><CircleCloseFilled /></el-icon>
           <span :class="match.hit ? 'status-hit' : 'status-skip'">
             {{ match.hit ? '命中' : '跳过' }}
           </span>
@@ -59,7 +59,7 @@
         >
           <div class="match-type">{{ stdTypeLabel(type) }}</div>
           <div class="match-status">
-            <el-icon color="#c0c4cc" :size="24"><CircleCloseFilled /></el-icon>
+            <el-icon color="var(--text-muted)" :size="24"><CircleCloseFilled /></el-icon>
             <span class="status-skip">-</span>
           </div>
         </el-card>
@@ -121,7 +121,7 @@
           filter-placement="bottom-start"
         >
           <template #default="{ row }">
-            <span style="font-size:12px;color:#666">{{ row.triggeredRule || '-' }}</span>
+            <span class="rule-cell">{{ row.triggeredRule || '-' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="判断结论" width="120" align="center">
@@ -158,11 +158,11 @@
     <!-- 发起复检弹窗 -->
     <el-dialog v-model="reinspectionDialogVisible" title="发起复检" width="440px">
       <el-form ref="reinspectionFormRef" :model="reinspectionForm" :rules="reinspectionRules" label-width="80px">
-        <el-form-item label="复检原因" prop="reason">
-          <el-input v-model="reinspectionForm.reason" type="textarea" :rows="3" placeholder="请输入复检原因" />
+        <el-form-item label="复检原因" prop="reinspectionReason">
+          <el-input v-model="reinspectionForm.reinspectionReason" type="textarea" :rows="3" placeholder="请输入复检原因" />
         </el-form-item>
-        <el-form-item label="责任人" prop="responsiblePerson">
-          <el-input v-model="reinspectionForm.responsiblePerson" placeholder="责任人工号或姓名" />
+        <el-form-item label="责任人工号" prop="responsibleNo">
+          <el-input v-model="reinspectionForm.responsibleNo" placeholder="责任人工号" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -196,9 +196,9 @@ const { getFilters: getIndicatorFilters, filterMethod: indicatorFilterMethod } =
 
 const reinspectionDialogVisible = ref(false)
 const reinspectionFormRef = ref<FormInstance>()
-const reinspectionForm = ref({ reason: '', responsiblePerson: '' })
+const reinspectionForm = ref({ reinspectionReason: '', responsibleNo: '' })
 const reinspectionRules = {
-  reason: [{ required: true, message: '请输入复检原因', trigger: 'blur' }]
+  reinspectionReason: [{ required: true, message: '请输入复检原因', trigger: 'blur' }]
 }
 
 const canInitiateReinspection = computed(() =>
@@ -258,7 +258,7 @@ async function loadDetail() {
 }
 
 function handleReinspection() {
-  reinspectionForm.value = { reason: '', responsiblePerson: '' }
+  reinspectionForm.value = { reinspectionReason: '', responsibleNo: '' }
   reinspectionDialogVisible.value = true
 }
 
@@ -267,8 +267,9 @@ async function confirmReinspection() {
   actionLoading.value = true
   try {
     await initiateReinspection({
-      judgmentId: detail.value?.id,
-      ...reinspectionForm.value
+      originalJudgmentId: detail.value?.judgmentId ?? detail.value?.id,
+      reinspectionReason: reinspectionForm.value.reinspectionReason,
+      responsibleNo: reinspectionForm.value.responsibleNo
     })
     ElMessage.success('复检任务已发起')
     reinspectionDialogVisible.value = false
@@ -278,11 +279,13 @@ async function confirmReinspection() {
 }
 
 function handleRejudgment() {
-  router.push(`/re-judgment/form?judgmentId=${detail.value?.id}`)
+  const jid = detail.value?.judgmentId ?? detail.value?.id
+  router.push(`/re-judgment/form?judgmentId=${jid}`)
 }
 
 function handleConcession() {
-  router.push(`/concession/apply?judgmentId=${detail.value?.id}`)
+  const jid = detail.value?.judgmentId ?? detail.value?.id
+  router.push(`/concession/apply?judgmentId=${jid}`)
 }
 
 onMounted(loadDetail)
@@ -322,13 +325,6 @@ onMounted(loadDetail)
   flex: 1;
   text-align: center;
 }
-.match-hit {
-  border-color: #409eff !important;
-  background: #ecf5ff !important;
-}
-.match-skip {
-  opacity: 0.6;
-}
 .match-type {
   font-weight: 600;
   font-size: 14px;
@@ -342,20 +338,14 @@ onMounted(loadDetail)
   font-size: 14px;
 }
 .status-hit {
-  color: #409eff;
   font-weight: 600;
-}
-.status-skip {
-  color: #c0c4cc;
 }
 .match-name {
   font-size: 12px;
-  color: #606266;
   margin-top: 6px;
 }
 .match-reason {
   font-size: 12px;
-  color: #909399;
   margin-top: 4px;
 }
 .bottom-bar {

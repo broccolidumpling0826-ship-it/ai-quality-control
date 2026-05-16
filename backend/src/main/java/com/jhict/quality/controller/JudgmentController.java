@@ -3,9 +3,9 @@ package com.jhict.quality.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.QcJudgmentPageQuery;
-import com.jhict.quality.entity.QcJudgmentResult;
 import com.jhict.quality.service.api.JudgmentService;
 import com.jhict.quality.vo.DashboardSummaryVO;
+import com.jhict.quality.vo.QcJudgmentListVO;
 import com.jhict.quality.vo.QcJudgmentResultVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -38,7 +38,7 @@ public class JudgmentController {
 
     @PostMapping("/page")
     @ApiOperation(value = "分页查询判定结论")
-    public ApiResult<IPage<QcJudgmentResult>> page(@RequestBody QcJudgmentPageQuery query) {
+    public ApiResult<IPage<QcJudgmentListVO>> page(@RequestBody QcJudgmentPageQuery query) {
         return ApiResult.success(judgmentService.page(query));
     }
 

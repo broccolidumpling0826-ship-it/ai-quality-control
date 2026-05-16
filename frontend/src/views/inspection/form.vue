@@ -71,7 +71,7 @@
                   :value="opt.value"
                 />
                 <template v-if="specRangeOptions.length === 0 && !specRangeLoading" #empty>
-                  <div style="padding:8px 16px;color:#7A9BBE;font-size:12px;">
+                  <div class="text-muted" style="padding:8px 16px;font-size:12px;">
                     暂无有效规格，请先在标准库维护对应标准
                   </div>
                 </template>
@@ -196,7 +196,7 @@
           <el-descriptions-item label="判定时间">{{ judgmentResult?.judgeTime }}</el-descriptions-item>
           <el-descriptions-item label="检验人">{{ judgmentResult?.inspector }}</el-descriptions-item>
         </el-descriptions>
-        <p v-if="judgmentResult?.remark" style="margin-top:12px;color:#666">
+        <p v-if="judgmentResult?.remark" class="text-secondary" style="margin-top:12px">
           {{ judgmentResult?.remark }}
         </p>
       </div>
@@ -215,7 +215,7 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { useDictStore } from '@/store/dict'
 import { useAuthStore } from '@/store/auth'
-import { addInspection } from '@/api/inspection'
+import { addInspection, mapInspectionAddPayload } from '@/api/inspection'
 import { listIndicators, getSpecRanges, type SpecRangeOption } from '@/api/standard'
 
 const router = useRouter()
@@ -375,26 +375,20 @@ async function handleSubmit() {
   }
   submitLoading.value = true
   try {
-    const payload = {
+    const payload = mapInspectionAddPayload({
       ...baseForm,
-      inspector: authStore.userInfo?.userNo,
-      inspectorName: authStore.userInfo?.username,
-      indicators: indicatorRows.value.map(r => ({
-        indicatorId: r.indicatorId,
-        indicatorName: r.indicatorName,
-        indicatorCode: r.indicatorCode,
-        measuredValue: r.measuredValue,
-        noStandard: r.noStandard
-      }))
-    }
+      productSpec: baseForm.specification,
+      testTime: baseForm.inspectionTime,
+      testerNo: authStore.userInfo?.userNo,
+      indicators: indicatorRows.value
+    })
     const res = await addInspection(payload) as any
-    createdRecordId.value = res?.id || res?.recordId || ''
-    judgmentResult.value = res?.judgment || {
+    createdRecordId.value = res?.recordId || res?.id || ''
+    judgmentResult.value = {
       judgmentType: res?.judgmentType,
       heatNo: baseForm.heatNo,
       coilNo: baseForm.coilNo,
-      judgeTime: new Date().toLocaleString(),
-      inspector: authStore.userInfo?.username,
+      judgeTime: res?.judgmentTime,
       judgmentId: res?.judgmentId
     }
     resultDialogVisible.value = true

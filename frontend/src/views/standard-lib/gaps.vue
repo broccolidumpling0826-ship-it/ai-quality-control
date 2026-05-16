@@ -262,7 +262,7 @@ onMounted(loadData)
 
 .page-desc {
   font-size: 12px;
-  color: var(--text-secondary, #7a9bbe);
+  color: var(--text-secondary);
   padding-left: 28px;
 }
 
@@ -293,7 +293,7 @@ onMounted(loadData)
 .reset-btn {
   background: transparent;
   border-color: var(--border, #1e3a5f);
-  color: var(--text-secondary, #7a9bbe);
+  color: var(--text-secondary);
 }
 
 /* ── 表格 ─────────────────────────────────────────── */
@@ -318,7 +318,7 @@ onMounted(loadData)
 .mono-text {
   font-family: var(--font-data, monospace);
   font-size: 11px;
-  color: var(--text-secondary, #7a9bbe);
+  color: var(--text-secondary);
 }
 
 .record-id {
@@ -339,7 +339,7 @@ onMounted(loadData)
 }
 
 .resolved-label {
-  color: var(--text-muted, #4a6a8a);
+  color: var(--text-muted);
   font-size: 12px;
 }
 

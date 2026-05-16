@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.ConcessionConfirmCmd;
 import com.jhict.quality.dto.QcConcessionAddCmd;
+import com.jhict.quality.dto.QcConcessionPageQuery;
 import com.jhict.quality.service.api.ConcessionService;
 import com.jhict.quality.vo.QcConcessionVO;
 import io.swagger.annotations.Api;
@@ -64,12 +65,8 @@ public class ConcessionController {
 
     @PostMapping("/page")
     @ApiOperation(value = "分页查询让步接收申请")
-    public ApiResult<IPage<QcConcessionVO>> page(
-            @ApiParam(value = "页码") @RequestParam(defaultValue = "1") int pageNum,
-            @ApiParam(value = "每页大小") @RequestParam(defaultValue = "10") int pageSize,
-            @ApiParam(value = "确认状态") @RequestParam(required = false) String confirmStatus,
-            @ApiParam(value = "审批状态") @RequestParam(required = false) String approvalStatus) {
-        return ApiResult.success(concessionService.page(pageNum, pageSize, confirmStatus, approvalStatus));
+    public ApiResult<IPage<QcConcessionVO>> page(@ModelAttribute QcConcessionPageQuery query) {
+        return ApiResult.success(concessionService.page(query));
     }
 
     @GetMapping("/{id}")

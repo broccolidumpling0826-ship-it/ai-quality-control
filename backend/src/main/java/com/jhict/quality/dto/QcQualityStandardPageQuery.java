@@ -25,4 +25,14 @@ public class QcQualityStandardPageQuery {
 
     @ApiModelProperty(value = "每页条数，默认20")
     private Integer pageSize = 20;
+
+    /** 兼容前端 productVariety → variety */
+    public void setProductVariety(String productVariety) {
+        this.variety = productVariety;
+    }
+
+    /** 兼容前端 productGrade → grade */
+    public void setProductGrade(String productGrade) {
+        this.grade = productGrade;
+    }
 }

@@ -3,6 +3,7 @@ package com.jhict.quality.service.api;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.dto.ConcessionConfirmCmd;
 import com.jhict.quality.dto.QcConcessionAddCmd;
+import com.jhict.quality.dto.QcConcessionPageQuery;
 import com.jhict.quality.vo.QcConcessionVO;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -52,7 +53,7 @@ public interface ConcessionService {
      * @param approvalStatus 审批状态过滤
      * @return 分页结果
      */
-    IPage<QcConcessionVO> page(int pageNum, int pageSize, String confirmStatus, String approvalStatus);
+    IPage<QcConcessionVO> page(QcConcessionPageQuery query);
 
     /**
      * 查询让步申请详情

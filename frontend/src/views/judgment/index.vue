@@ -106,10 +106,10 @@
           </template>
         </el-table-column>
         <el-table-column
-          prop="judgeTime"
+          prop="judgmentTime"
           label="判定时间"
           width="160"
-          :filters="getFilters('judgeTime')"
+          :filters="getFilters('judgmentTime')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
@@ -178,8 +178,8 @@ async function loadData() {
       judgmentType: searchForm.judgmentType || undefined
     }
     if (searchForm.timeRange) {
-      params.startTime = searchForm.timeRange[0]
-      params.endTime = searchForm.timeRange[1]
+      params.timeStart = `${searchForm.timeRange[0]} 00:00:00`
+      params.timeEnd = `${searchForm.timeRange[1]} 23:59:59`
     }
     const res = await pageJudgments(params) as PageResult<any>
     tableData.value = res.records || []
@@ -205,7 +205,7 @@ function handleRowClick(row: any) {
 }
 
 function viewExplanation(row: any) {
-  router.push(`/judgment/explanation?id=${row.id}`)
+  router.push(`/judgment/explanation?id=${row.id ?? row.judgmentId}`)
 }
 
 onMounted(loadData)

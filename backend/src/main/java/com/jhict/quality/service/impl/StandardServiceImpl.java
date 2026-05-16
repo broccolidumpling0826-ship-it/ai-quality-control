@@ -203,8 +203,12 @@ public class StandardServiceImpl implements StandardService {
             vo.setId(s.getId());
             vo.setStandardType(s.getStandardType());
             vo.setVariety(s.getVariety());
+            vo.setProductVariety(s.getVariety());
             vo.setGrade(s.getGrade());
+            vo.setProductGrade(s.getGrade());
+            vo.setSpecRange(s.getSpecRange());
             vo.setVersionNo(s.getVersionNo());
+            vo.setVersion(s.getVersionNo());
             vo.setEffectiveDate(s.getEffectiveDate());
             vo.setExpiryDate(s.getExpiryDate());
             vo.setStatus(s.getStatus());
@@ -215,6 +219,8 @@ public class StandardServiceImpl implements StandardService {
                             .eq(QcStandardIndicator::getStandardId, s.getId())
             );
             vo.setIndicatorCount(Math.toIntExact(count));
+            vo.setRemark(s.getRemark());
+            vo.setDescription(s.getRemark());
             return vo;
         }).collect(Collectors.toList());
 
@@ -247,8 +253,14 @@ public class StandardServiceImpl implements StandardService {
         detailVO.setId(standard.getId());
         detailVO.setStandardType(standard.getStandardType());
         detailVO.setVariety(standard.getVariety());
+        detailVO.setProductVariety(standard.getVariety());
         detailVO.setGrade(standard.getGrade());
+        detailVO.setProductGrade(standard.getGrade());
+        detailVO.setSpecRange(standard.getSpecRange());
         detailVO.setVersionNo(standard.getVersionNo());
+        detailVO.setVersion(standard.getVersionNo());
+        detailVO.setRemark(standard.getRemark());
+        detailVO.setDescription(standard.getRemark());
         detailVO.setEffectiveDate(standard.getEffectiveDate());
         detailVO.setExpiryDate(standard.getExpiryDate());
         detailVO.setStatus(standard.getStatus());

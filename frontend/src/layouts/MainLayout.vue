@@ -372,12 +372,12 @@ const unreadCount = computed(() => notifications.value.filter((n) => !n.isRead).
 
 function getLevelColor(level: string): string {
   const map: Record<string, string> = {
-    info:    '#7A9BBE',
+    info:    'var(--text-muted)',
     success: '#16C974',
     warning: '#FF8C00',
     error:   '#FF3B5C'
   }
-  return map[level] ?? '#7A9BBE'
+  return map[level] ?? 'var(--text-muted)'
 }
 
 function markRead(item: SystemMessage) {

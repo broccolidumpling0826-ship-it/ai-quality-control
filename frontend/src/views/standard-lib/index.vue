@@ -228,6 +228,11 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="规格范围" prop="specRange">
+              <el-input v-model="formData.specRange" placeholder="如：Φ10~Φ20mm（必填，用于检验规格下拉）" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
             <el-form-item label="版本号" prop="version">
               <el-input v-model="formData.version" placeholder="如：V1.0" />
             </el-form-item>
@@ -400,6 +405,7 @@ const defaultForm = () => ({
   standardType: '',
   productVariety: '',
   productGrade: '',
+  specRange: '',
   version: '',
   effectiveDate: '',
   expiryDate: '',
@@ -413,7 +419,12 @@ const formRules = {
   standardCode: [{ required: true, message: '请输入标准编号', trigger: 'blur' }],
   standardName: [{ required: true, message: '请输入标准名称', trigger: 'blur' }],
   standardType: [{ required: true, message: '请选择标准类型', trigger: 'change' }],
-  effectiveDate: [{ required: true, message: '请选择生效日期', trigger: 'change' }]
+  specRange: [{ required: true, message: '请输入规格范围', trigger: 'blur' }],
+  productVariety: [{ required: true, message: '请选择品种', trigger: 'change' }],
+  productGrade: [{ required: true, message: '请输入牌号', trigger: 'blur' }],
+  version: [{ required: true, message: '请输入版本号', trigger: 'blur' }],
+  effectiveDate: [{ required: true, message: '请选择生效日期', trigger: 'change' }],
+  expiryDate: [{ required: true, message: '请选择失效日期', trigger: 'change' }]
 }
 
 // 发布
@@ -436,7 +447,15 @@ async function loadData() {
       pageSize: pageSize.value,
       ...searchForm
     }) as PageResult<any>
-    tableData.value = res.records || []
+    tableData.value = (res.records || []).map((row) => ({
+      ...row,
+      productVariety: row.productVariety ?? row.variety,
+      productGrade: row.productGrade ?? row.grade,
+      version: row.version ?? row.versionNo,
+      specRange: row.specRange,
+      standardName: row.standardName ?? row.specRange,
+      standardCode: row.standardCode ?? row.id
+    }))
     total.value = res.total || 0
   } catch {
     // handled by request interceptor

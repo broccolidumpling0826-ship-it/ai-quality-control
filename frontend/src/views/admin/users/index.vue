@@ -279,7 +279,7 @@ const { getFilters, filterMethod } = useTableFilter(tableData)
 // ─── 表格样式 ───────────────────────────────────────────────
 const headerCellStyle = {
   background: '#0B1929',
-  color: '#7A9BBE',
+  color: 'var(--text-muted)',
   borderBottom: '1px solid #1A3A5C',
   fontFamily: 'var(--font-data, monospace)',
   fontSize: '11px',
@@ -467,7 +467,7 @@ onMounted(() => {
   font-family: monospace;
   font-size: 9px;
   letter-spacing: 0.15em;
-  color: #4A6A8A;
+  color: var(--text-faint);
   margin-top: 2px;
 }
 
@@ -501,7 +501,7 @@ onMounted(() => {
   font-family: monospace;
   font-size: 10px;
   letter-spacing: 0.08em;
-  color: #4A6A8A;
+  color: var(--text-faint);
   text-transform: uppercase;
 }
 
@@ -532,7 +532,7 @@ onMounted(() => {
 .table-count {
   font-family: monospace;
   font-size: 11px;
-  color: #4A6A8A;
+  color: var(--text-faint);
 }
 
 .table-count em {
@@ -650,7 +650,7 @@ onMounted(() => {
 .btn-ghost {
   background: transparent;
   border: 1px solid #1A3A5C;
-  color: #7A9BBE;
+  color: var(--text-muted);
   font-size: 13px;
   height: 34px;
   padding: 0 16px;
@@ -691,7 +691,7 @@ onMounted(() => {
 }
 
 :deep(.aqc-dialog .el-dialog__headerbtn .el-icon) {
-  color: #4A6A8A;
+  color: var(--text-faint);
 }
 
 :deep(.aqc-dialog .el-dialog__headerbtn:hover .el-icon) {
@@ -709,7 +709,7 @@ onMounted(() => {
 
 /* ── 表单 ─────────────────────────────────────────────────── */
 :deep(.aqc-form .el-form-item__label) {
-  color: #7A9BBE;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -732,7 +732,7 @@ onMounted(() => {
 }
 
 :deep(.aqc-input .el-input__inner::placeholder) {
-  color: #2A4A6C;
+  color: var(--text-faint);
 }
 
 :deep(.aqc-select .el-select__wrapper) {
@@ -749,7 +749,7 @@ onMounted(() => {
 }
 
 :deep(.aqc-select .el-select__placeholder) {
-  color: #2A4A6C;
+  color: var(--text-faint);
 }
 
 /* ── 表格覆盖 ─────────────────────────────────────────────── */

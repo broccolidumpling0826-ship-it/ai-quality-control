@@ -31,4 +31,17 @@ public class QcInspectionRecordPageQuery {
 
     @ApiModelProperty(value = "每页条数，默认20")
     private Integer pageSize = 20;
+
+    /** 兼容前端 startTime/endTime（仅日期）→ testTimeStart/testTimeEnd */
+    public void setStartTime(String startTime) {
+        if (startTime != null && !startTime.isEmpty()) {
+            this.testTimeStart = startTime.length() <= 10 ? startTime + " 00:00:00" : startTime;
+        }
+    }
+
+    public void setEndTime(String endTime) {
+        if (endTime != null && !endTime.isEmpty()) {
+            this.testTimeEnd = endTime.length() <= 10 ? endTime + " 23:59:59" : endTime;
+        }
+    }
 }

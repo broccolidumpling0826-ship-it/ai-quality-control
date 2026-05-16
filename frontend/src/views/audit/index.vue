@@ -59,35 +59,19 @@
           </template>
         </el-table-column>
         <el-table-column
-          prop="operationModule"
-          label="操作模块"
-          width="120"
-          :filters="getFilters('operationModule')"
+          prop="targetEntity"
+          label="目标实体"
+          width="140"
+          :filters="getFilters('targetEntity')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
         <el-table-column
-          prop="operationObject"
-          label="操作对象"
-          width="130"
-          :filters="getFilters('operationObject')"
-          :filter-method="filterMethod"
-          filter-placement="bottom-start"
-        />
-        <el-table-column
-          prop="operationObjectId"
+          prop="targetId"
           label="对象ID"
           width="140"
           show-overflow-tooltip
-          :filters="getFilters('operationObjectId')"
-          :filter-method="filterMethod"
-          filter-placement="bottom-start"
-        />
-        <el-table-column
-          prop="operatorName"
-          label="操作人"
-          width="90"
-          :filters="getFilters('operatorName')"
+          :filters="getFilters('targetId')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
@@ -108,10 +92,10 @@
           filter-placement="bottom-start"
         />
         <el-table-column
-          prop="ip"
+          prop="ipAddress"
           label="IP地址"
           width="140"
-          :filters="getFilters('ip')"
+          :filters="getFilters('ipAddress')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
@@ -124,7 +108,7 @@
               size="small"
               @click.stop="viewDiff(row)"
             >查看</el-button>
-            <span v-else style="color:#c0c4cc">-</span>
+            <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
       </el-table>
@@ -262,7 +246,7 @@ onMounted(loadData)
 .diff-panel-title {
   font-weight: 600;
   font-size: 13px;
-  color: #606266;
+  color: var(--text-secondary);
   margin-bottom: 8px;
   padding: 4px 8px;
   background: #f5f7fa;
@@ -280,7 +264,7 @@ onMounted(loadData)
   margin: 0;
   white-space: pre-wrap;
   word-break: break-all;
-  color: #333;
+  color: var(--text-primary);
 }
 .json-block.after {
   background: #f0f9eb;

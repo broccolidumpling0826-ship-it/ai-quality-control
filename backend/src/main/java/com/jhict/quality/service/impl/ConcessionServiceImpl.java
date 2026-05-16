@@ -8,10 +8,16 @@ import com.jhict.quality.common.annotation.AuditLog;
 import com.jhict.quality.common.exception.ServiceException;
 import com.jhict.quality.dto.ConcessionConfirmCmd;
 import com.jhict.quality.dto.QcConcessionAddCmd;
+import com.jhict.quality.dto.QcConcessionPageQuery;
+import com.jhict.quality.enums.JudgmentType;
 import com.jhict.quality.entity.QcConcessionAcceptance;
+import com.jhict.quality.entity.QcInspectionRecord;
 import com.jhict.quality.entity.QcJudgmentResult;
+import com.jhict.quality.entity.SysUser;
 import com.jhict.quality.mapper.QcConcessionAcceptanceMapper;
+import com.jhict.quality.mapper.QcInspectionRecordMapper;
 import com.jhict.quality.mapper.QcJudgmentResultMapper;
+import com.jhict.quality.mapper.SysUserMapper;
 import com.jhict.quality.service.api.ConcessionService;
 import com.jhict.quality.service.api.FileStorageService;
 import com.jhict.quality.service.api.NotificationService;
@@ -26,7 +32,7 @@ import javax.annotation.Resource;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -38,6 +44,12 @@ public class ConcessionServiceImpl implements ConcessionService {
 
     @Resource
     private QcJudgmentResultMapper judgmentResultMapper;
+
+    @Resource
+    private QcInspectionRecordMapper inspectionRecordMapper;
+
+    @Resource
+    private SysUserMapper sysUserMapper;
 
     @Resource
     private NotificationService notificationService;
@@ -53,7 +65,7 @@ public class ConcessionServiceImpl implements ConcessionService {
         if (judgment == null) {
             throw new ServiceException("判定结论不存在，id=" + cmd.getJudgmentId());
         }
-        if (!"CAN_CONCESSION".equals(judgment.getJudgmentType())) {
+        if (!JudgmentType.CAN_CONCESSION.getCode().equals(judgment.getJudgmentType())) {
             throw new ServiceException("只有判定结论为【可让步】的记录才能发起让步接收申请，当前判定：" + judgment.getJudgmentType());
         }
 
@@ -156,19 +168,30 @@ public class ConcessionServiceImpl implements ConcessionService {
     }
 
     @Override
-    public IPage<QcConcessionVO> page(int pageNum, int pageSize, String confirmStatus, String approvalStatus) {
+    public IPage<QcConcessionVO> page(QcConcessionPageQuery query) {
+        int pageNum = query.getPageNum() != null && query.getPageNum() > 0 ? query.getPageNum() : 1;
+        int pageSize = query.getPageSize() != null && query.getPageSize() > 0 ? query.getPageSize() : 10;
+
         LambdaQueryWrapper<QcConcessionAcceptance> wrapper = new LambdaQueryWrapper<QcConcessionAcceptance>()
                 .orderByDesc(QcConcessionAcceptance::getCreateDateTime);
-        if (StringUtils.hasText(confirmStatus)) {
-            wrapper.eq(QcConcessionAcceptance::getConfirmStatus, confirmStatus);
+        if (StringUtils.hasText(query.getConfirmStatus())) {
+            wrapper.eq(QcConcessionAcceptance::getConfirmStatus, query.getConfirmStatus());
         }
-        if (StringUtils.hasText(approvalStatus)) {
-            wrapper.eq(QcConcessionAcceptance::getApprovalStatus, approvalStatus);
+        if (StringUtils.hasText(query.getApprovalStatus())) {
+            wrapper.eq(QcConcessionAcceptance::getApprovalStatus, query.getApprovalStatus());
+        }
+        if (StringUtils.hasText(query.getCoilNo())) {
+            Set<String> judgmentIds = resolveJudgmentIdsByCoilNo(query.getCoilNo());
+            if (judgmentIds.isEmpty()) {
+                Page<QcConcessionVO> empty = new Page<>(pageNum, pageSize, 0);
+                empty.setRecords(Collections.emptyList());
+                return empty;
+            }
+            wrapper.in(QcConcessionAcceptance::getJudgmentId, judgmentIds);
         }
 
         IPage<QcConcessionAcceptance> pageResult = concessionMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
 
-        // 转 VO
         List<QcConcessionVO> voList = pageResult.getRecords().stream()
                 .map(this::toVO)
                 .collect(Collectors.toList());
@@ -201,8 +224,11 @@ public class ConcessionServiceImpl implements ConcessionService {
         vo.setRiskDescription(acceptance.getRiskDescription());
         vo.setEffectiveDate(acceptance.getEffectiveDate());
         vo.setExpiryDate(acceptance.getExpiryDate());
+        vo.setValidFrom(acceptance.getEffectiveDate());
+        vo.setValidTo(acceptance.getExpiryDate());
         vo.setConfirmStatus(acceptance.getConfirmStatus());
         vo.setConfirmAttachmentUrl(acceptance.getConfirmAttachmentUrl());
+        vo.setConfirmFileUrl(acceptance.getConfirmAttachmentUrl());
         vo.setConfirmNote(acceptance.getConfirmNote());
         vo.setApprovalStatus(acceptance.getApprovalStatus());
 
@@ -211,7 +237,46 @@ public class ConcessionServiceImpl implements ConcessionService {
             remaining = (int) ChronoUnit.DAYS.between(LocalDate.now(), acceptance.getExpiryDate());
         }
         vo.setRemainingDays(remaining);
+        vo.setReason(acceptance.getRiskDescription());
+        vo.setApplyTime(acceptance.getCreateDateTime());
+        vo.setApplyBy(acceptance.getCreateUserNo());
+        if (StringUtils.hasText(acceptance.getCreateUserNo())) {
+            SysUser applicant = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
+                    .eq(SysUser::getUserNo, acceptance.getCreateUserNo())
+                    .last("LIMIT 1"));
+            vo.setApplyByName(applicant != null ? applicant.getUsername() : acceptance.getCreateUserNo());
+        }
+        enrichInspectionFields(vo, acceptance.getJudgmentId());
         return vo;
+    }
+
+    private void enrichInspectionFields(QcConcessionVO vo, String judgmentId) {
+        if (!StringUtils.hasText(judgmentId)) {
+            return;
+        }
+        QcJudgmentResult judgment = judgmentResultMapper.selectById(judgmentId);
+        if (judgment == null || !StringUtils.hasText(judgment.getRecordId())) {
+            return;
+        }
+        QcInspectionRecord record = inspectionRecordMapper.selectById(judgment.getRecordId());
+        if (record != null) {
+            vo.setCoilNo(record.getCoilNo());
+            vo.setBatchNo(record.getBatchNo());
+        }
+    }
+
+    private Set<String> resolveJudgmentIdsByCoilNo(String coilNo) {
+        List<QcInspectionRecord> records = inspectionRecordMapper.selectList(
+                new LambdaQueryWrapper<QcInspectionRecord>().like(QcInspectionRecord::getCoilNo, coilNo));
+        if (records.isEmpty()) {
+            return Collections.emptySet();
+        }
+        Set<String> recordIds = records.stream().map(QcInspectionRecord::getId).collect(Collectors.toSet());
+        return judgmentResultMapper.selectList(
+                        new LambdaQueryWrapper<QcJudgmentResult>().in(QcJudgmentResult::getRecordId, recordIds))
+                .stream()
+                .map(QcJudgmentResult::getId)
+                .collect(Collectors.toSet());
     }
 
     private String getLoginUserNo() {

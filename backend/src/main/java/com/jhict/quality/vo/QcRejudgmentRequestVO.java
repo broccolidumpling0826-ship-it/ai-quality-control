@@ -26,8 +26,23 @@ public class QcRejudgmentRequestVO {
     @ApiModelProperty(value = "改判原因")
     private String rejudgmentReason;
 
+    @ApiModelProperty(value = "改判原因（前端别名 reason）")
+    private String reason;
+
     @ApiModelProperty(value = "影响范围")
     private String affectScope;
+
+    @ApiModelProperty(value = "影响范围（前端别名 impactScope）")
+    private String impactScope;
+
+    @ApiModelProperty(value = "新证据来源（前端别名 evidenceSource）")
+    private String evidenceSource;
+
+    @ApiModelProperty(value = "证据附件（前端别名 evidenceFileUrl）")
+    private String evidenceFileUrl;
+
+    @ApiModelProperty(value = "审批记录（前端别名 approvalHistory）")
+    private List<ApprovalRecordVO> approvalHistory;
 
     @ApiModelProperty(value = "是否逆向改判：1是 0否")
     private Integer isReverse;
@@ -54,10 +69,19 @@ public class QcRejudgmentRequestVO {
         @ApiModelProperty(value = "审批动作")
         private String approvalAction;
 
+        @ApiModelProperty(value = "审批动作（前端别名 decision）")
+        private String decision;
+
         @ApiModelProperty(value = "审批意见")
         private String approvalComment;
 
+        @ApiModelProperty(value = "审批意见（前端别名 comment）")
+        private String comment;
+
         @ApiModelProperty(value = "审批时间")
         private LocalDateTime approvalTime;
+
+        @ApiModelProperty(value = "审批时间（前端别名 approveTime）")
+        private LocalDateTime approveTime;
     }
 }
