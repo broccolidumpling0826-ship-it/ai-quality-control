@@ -1,0 +1,17 @@
+{
+  "skill_name": "db-code-gen",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "根据以下表结构帮我生成后端业务代码：\n\n| 字段英文名 | 字段中文名 | 类型 | 长度 | 是否主键 | 是否为空 | 默认值 |\n|---|---|---|---|---|---|---|\n| ID | 主键 | VARCHAR2 | 32 | 是 | 否 | |\n| EMPLOYEE_NO | 员工工号 | VARCHAR2 | 32 | 否 | 否 | |\n| DEPT_CODE | 部门编码 | VARCHAR2 | 32 | 否 | 是 | |\n| LEAVE_TYPE | 假期类型（1请假2调休3年假） | VARCHAR2 | 10 | 否 | 否 | |\n| LEAVE_DAYS | 请假天数 | NUMBER | 10,2 | 否 | 否 | |\n| IS_VALID | 是否有效 | NUMBER | 1 | 否 | 否 | 1 |\n| REMARK | 备注 | VARCHAR2 | 500 | 否 | 是 | |\n| CREATE_USER_NO | 创建人工号 | VARCHAR2 | 32 | 否 | 是 | |\n| CREATE_DATE_TIME | 创建日期 | VARCHAR2 | 20 | 否 | 是 | |\n| UPDATE_USER_NO | 修改人工号 | VARCHAR2 | 32 | 否 | 是 | |\n| UPDATE_DATE_TIME | 修改日期 | VARCHAR2 | 20 | 否 | 是 | |\n| COMPANY_ID | 公司ID | VARCHAR2 | 32 | 否 | 是 | |\n\n表名：OA_LEAVE_RECORD，中文名：请假记录",
+      "expected_output": "生成 Entity（继承CoreEntity，不含基础字段，IS_VALID 用 Boolean，LEAVE_TYPE 因有3种状态应建议用枚举）、Mapper、Service（含批量操作模板，NOT_BLANK_FIELDS/UNIQUE_FIELDS 留空）、Controller（返回 ApiResult，接口路径符合规范）、Query 对象，共5个文件",
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "prompt": "帮我根据这个建表语句生成 Entity、Mapper、Service、Controller 代码：\n\nCREATE TABLE PRF_KPI_TARGET (\n  ID VARCHAR2(32) NOT NULL,\n  KPI_CODE VARCHAR2(50) NOT NULL,\n  KPI_NAME VARCHAR2(100) NOT NULL,\n  TARGET_VALUE NUMBER(18,4),\n  UNIT VARCHAR2(20),\n  YEAR_NO VARCHAR2(4) NOT NULL,\n  MONTH_NO VARCHAR2(2),\n  IS_ENABLE NUMBER(1) DEFAULT 1,\n  COMPANY_ID VARCHAR2(32),\n  CREATE_USER_NO VARCHAR2(32),\n  CREATE_DATE_TIME VARCHAR2(20),\n  UPDATE_USER_NO VARCHAR2(32),\n  UPDATE_DATE_TIME VARCHAR2(20),\n  CONSTRAINT PK_PRF_KPI_TARGET PRIMARY KEY (ID)\n);\nCOMMENT ON TABLE PRF_KPI_TARGET IS 'KPI目标设置';\nCOMMENT ON COLUMN PRF_KPI_TARGET.KPI_CODE IS 'KPI编码';\nCOMMENT ON COLUMN PRF_KPI_TARGET.KPI_NAME IS 'KPI名称';\nCOMMENT ON COLUMN PRF_KPI_TARGET.TARGET_VALUE IS '目标值';\nCOMMENT ON COLUMN PRF_KPI_TARGET.UNIT IS '单位';\nCOMMENT ON COLUMN PRF_KPI_TARGET.YEAR_NO IS '年份';\nCOMMENT ON COLUMN PRF_KPI_TARGET.MONTH_NO IS '月份';\nCOMMENT ON COLUMN PRF_KPI_TARGET.IS_ENABLE IS '是否启用';",
+      "expected_output": "生成 Entity（IS_ENABLE 用 Boolean，基础字段不重复声明）、Mapper、Service（prf 模块，含批量操作模板）、Controller（路径前缀 prf/kpi-target）、Query 对象，共5个文件",
+      "assertions": []
+    }
+  ]
+}

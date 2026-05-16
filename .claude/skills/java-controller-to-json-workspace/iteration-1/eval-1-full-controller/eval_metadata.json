@@ -1,0 +1,31 @@
+{
+  "eval_id": 1,
+  "eval_name": "full-controller-parse",
+  "prompt": "我需要解析这个 Controller 文件，提取所有接口信息生成 JSON 文件。\n\nController 文件路径：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/src/main/java/com/example/controller/MeterAcctActivityController.java\n\n输出目录：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/output",
+  "assertions": [
+    {
+      "id": "json-file-created",
+      "description": "生成了 MeterAcctActivityIStruct.json 文件"
+    },
+    {
+      "id": "has-five-interfaces",
+      "description": "interfaces 数组包含 5 个接口（save/update/delete/list/detail）"
+    },
+    {
+      "id": "save-interface-correct",
+      "description": "save 接口：method=POST，path=/meterAcctActivity/save，inputParam.paramStyle=body，inputParam 包含 DTO 字段"
+    },
+    {
+      "id": "list-interface-ipage",
+      "description": "list 接口出参 data 展开了分页结构（records/total/size/current/pages）"
+    },
+    {
+      "id": "delete-path-variable",
+      "description": "delete 接口：method=DELETE，path=/meterAcctActivity/delete/{id}，inputParam.paramStyle=path"
+    },
+    {
+      "id": "entity-fields-expanded",
+      "description": "实体类字段（如 activityName、status）已从 DTO/Entity 类中读取并展开，包含 description"
+    }
+  ]
+}

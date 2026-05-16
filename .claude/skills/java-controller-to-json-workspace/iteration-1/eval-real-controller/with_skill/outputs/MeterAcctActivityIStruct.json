@@ -1,0 +1,380 @@
+{
+  "controllerName": "MeterAcctActivityController",
+  "controllerDescription": "计量核算活动",
+  "baseUrl": "/meterAcctActivity",
+  "interfaces": [
+    {
+      "purpose": "获取列表",
+      "method": "GET",
+      "path": "/meterAcctActivity/list",
+      "inputParam": {
+        "paramStyle": "query",
+        "type": "object",
+        "fields": {
+          "activityName": { "type": "String", "description": "活动名称" },
+          "activityStatus": { "type": "String (enum)", "description": "活动状态，枚举值: 0-新建, 1-核算中, 2-审批中, 3-审批撤回, 4-审批驳回, 5-已完成, 6-终止, 7-待审批, 8-审批发起失败" },
+          "year": { "type": "String", "description": "年度" },
+          "month": { "type": "String (enum)", "description": "月份，枚举值: 1-1月, 2-2月, 3-3月, 4-4月, 5-5月, 6-6月, 7-7月, 8-8月, 9-9月, 10-10月, 11-11月, 12-12月" },
+          "acctOrgId": { "type": "String", "description": "核算组织id" },
+          "manageOrgId": { "type": "String", "description": "管理组织id" },
+          "copyFromId": { "type": "String", "description": "复制源id" },
+          "flowInstId": { "type": "String", "description": "流程实例id" },
+          "formInstId": { "type": "String", "description": "表单实例id" },
+          "id": { "type": "String", "description": "主键ID (来自CoreEntity)" },
+          "createTime": { "type": "Date", "description": "创建时间 (来自CoreEntity)" },
+          "updateTime": { "type": "Date", "description": "更新时间 (来自CoreEntity)" },
+          "createBy": { "type": "String", "description": "创建人 (来自CoreEntity)" },
+          "updateBy": { "type": "String", "description": "更新人 (来自CoreEntity)" },
+          "curUserParentOrgIdPrefix": { "type": "String", "description": "当前登录用户所属组织的上一级组织的id前缀（用于数据权限）" },
+          "ids": { "type": "List<String>", "description": "id集合" },
+          "yearMonth": { "type": "String", "description": "年月" },
+          "current": { "type": "long", "description": "当前页码 (JhPage分页参数)" },
+          "size": { "type": "long", "description": "每页大小 (JhPage分页参数)" }
+        }
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": {
+            "type": "object",
+            "description": "JhPage<List<MeterAcctActivityVO>>",
+            "fields": {
+              "records": {
+                "type": "array",
+                "itemType": "object",
+                "description": "MeterAcctActivityVO列表",
+                "fields": {
+                  "activityName": { "type": "String", "description": "活动名称" },
+                  "activityStatus": { "type": "String (enum)", "description": "活动状态，枚举值: 0-新建, 1-核算中, 2-审批中, 3-审批撤回, 4-审批驳回, 5-已完成, 6-终止, 7-待审批, 8-审批发起失败" },
+                  "year": { "type": "String", "description": "年度" },
+                  "month": { "type": "String (enum)", "description": "月份，枚举值: 1-1月, 2-2月, ..., 12-12月" },
+                  "acctOrgId": { "type": "String", "description": "核算组织id" },
+                  "manageOrgId": { "type": "String", "description": "管理组织id" },
+                  "copyFromId": { "type": "String", "description": "复制源id" },
+                  "flowInstId": { "type": "String", "description": "流程实例id" },
+                  "formInstId": { "type": "String", "description": "表单实例id" },
+                  "id": { "type": "String", "description": "主键ID (来自CoreEntity)" },
+                  "createTime": { "type": "Date", "description": "创建时间 (来自CoreEntity)" },
+                  "updateTime": { "type": "Date", "description": "更新时间 (来自CoreEntity)" },
+                  "createBy": { "type": "String", "description": "创建人 (来自CoreEntity)" },
+                  "updateBy": { "type": "String", "description": "更新人 (来自CoreEntity)" },
+                  "acctOrgName": { "type": "String", "description": "核算组织名" },
+                  "manageOrgName": { "type": "String", "description": "管理组织名" },
+                  "meterStds": {
+                    "type": "array",
+                    "itemType": "object",
+                    "description": "关联的计量标准集合",
+                    "fields": {
+                      "indCode": { "type": "String", "description": "指标编码" },
+                      "meterIndName": { "type": "String", "description": "计量指标名" },
+                      "meterUnit": { "type": "String", "description": "计量单位" },
+                      "useOrgId": { "type": "String", "description": "使用组织id" },
+                      "manageOrgId": { "type": "String", "description": "管理组织id" },
+                      "fixedUnitPriceFlag": { "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+                      "status": { "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+                      "citedFlag": { "type": "String", "description": "是否被引用标识（0-否，1-是）" },
+                      "id": { "type": "String", "description": "主键ID (来自CoreEntity)" },
+                      "createTime": { "type": "Date", "description": "创建时间 (来自CoreEntity)" },
+                      "updateTime": { "type": "Date", "description": "更新时间 (来自CoreEntity)" },
+                      "createBy": { "type": "String", "description": "创建人 (来自CoreEntity)" },
+                      "updateBy": { "type": "String", "description": "更新人 (来自CoreEntity)" }
+                    }
+                  }
+                }
+              },
+              "total": { "type": "long", "description": "总记录数" },
+              "size": { "type": "long", "description": "每页大小" },
+              "current": { "type": "long", "description": "当前页码" },
+              "pages": { "type": "long", "description": "总页数" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "purpose": "通过id获取详情",
+      "method": "GET",
+      "path": "/meterAcctActivity/getById",
+      "inputParam": {
+        "paramStyle": "query",
+        "type": "object",
+        "fields": {
+          "id": { "type": "String", "description": "记录id" }
+        }
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": {
+            "type": "object",
+            "description": "MeterAcctActivityVO",
+            "fields": {
+              "activityName": { "type": "String", "description": "活动名称" },
+              "activityStatus": { "type": "String (enum)", "description": "活动状态，枚举值: 0-新建, 1-核算中, 2-审批中, 3-审批撤回, 4-审批驳回, 5-已完成, 6-终止, 7-待审批, 8-审批发起失败" },
+              "year": { "type": "String", "description": "年度" },
+              "month": { "type": "String (enum)", "description": "月份，枚举值: 1-1月, 2-2月, ..., 12-12月" },
+              "acctOrgId": { "type": "String", "description": "核算组织id" },
+              "manageOrgId": { "type": "String", "description": "管理组织id" },
+              "copyFromId": { "type": "String", "description": "复制源id" },
+              "flowInstId": { "type": "String", "description": "流程实例id" },
+              "formInstId": { "type": "String", "description": "表单实例id" },
+              "id": { "type": "String", "description": "主键ID (来自CoreEntity)" },
+              "createTime": { "type": "Date", "description": "创建时间 (来自CoreEntity)" },
+              "updateTime": { "type": "Date", "description": "更新时间 (来自CoreEntity)" },
+              "createBy": { "type": "String", "description": "创建人 (来自CoreEntity)" },
+              "updateBy": { "type": "String", "description": "更新人 (来自CoreEntity)" },
+              "acctOrgName": { "type": "String", "description": "核算组织名" },
+              "manageOrgName": { "type": "String", "description": "管理组织名" },
+              "meterStds": {
+                "type": "array",
+                "itemType": "object",
+                "description": "关联的计量标准集合",
+                "fields": {
+                  "indCode": { "type": "String", "description": "指标编码" },
+                  "meterIndName": { "type": "String", "description": "计量指标名" },
+                  "meterUnit": { "type": "String", "description": "计量单位" },
+                  "useOrgId": { "type": "String", "description": "使用组织id" },
+                  "manageOrgId": { "type": "String", "description": "管理组织id" },
+                  "fixedUnitPriceFlag": { "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+                  "status": { "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+                  "citedFlag": { "type": "String", "description": "是否被引用标识（0-否，1-是）" },
+                  "id": { "type": "String", "description": "主键ID (来自CoreEntity)" },
+                  "createTime": { "type": "Date", "description": "创建时间 (来自CoreEntity)" },
+                  "updateTime": { "type": "Date", "description": "更新时间 (来自CoreEntity)" },
+                  "createBy": { "type": "String", "description": "创建人 (来自CoreEntity)" },
+                  "updateBy": { "type": "String", "description": "更新人 (来自CoreEntity)" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "purpose": "新增",
+      "method": "POST",
+      "path": "/meterAcctActivity/save",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "object",
+        "fields": {
+          "activityName": { "type": "String", "description": "活动名称" },
+          "activityStatus": { "type": "String (enum)", "description": "活动状态，枚举值: 0-新建, 1-核算中, 2-审批中, 3-审批撤回, 4-审批驳回, 5-已完成, 6-终止, 7-待审批, 8-审批发起失败" },
+          "year": { "type": "String", "description": "年度" },
+          "month": { "type": "String (enum)", "description": "月份，枚举值: 1-1月, 2-2月, ..., 12-12月" },
+          "acctOrgId": { "type": "String", "description": "核算组织id" },
+          "manageOrgId": { "type": "String", "description": "管理组织id" },
+          "copyFromId": { "type": "String", "description": "复制源id" },
+          "flowInstId": { "type": "String", "description": "流程实例id" },
+          "formInstId": { "type": "String", "description": "表单实例id" },
+          "id": { "type": "String", "description": "主键ID (来自CoreEntity)" },
+          "createTime": { "type": "Date", "description": "创建时间 (来自CoreEntity)" },
+          "updateTime": { "type": "Date", "description": "更新时间 (来自CoreEntity)" },
+          "createBy": { "type": "String", "description": "创建人 (来自CoreEntity)" },
+          "updateBy": { "type": "String", "description": "更新人 (来自CoreEntity)" },
+          "meterStdIds": { "type": "List<String>", "description": "关联的计量标准id集合" },
+          "meterStds": {
+            "type": "array",
+            "itemType": "object",
+            "description": "关联的计量标准集合",
+            "fields": {
+              "indCode": { "type": "String", "description": "指标编码" },
+              "meterIndName": { "type": "String", "description": "计量指标名" },
+              "meterUnit": { "type": "String", "description": "计量单位" },
+              "useOrgId": { "type": "String", "description": "使用组织id" },
+              "manageOrgId": { "type": "String", "description": "管理组织id" },
+              "fixedUnitPriceFlag": { "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+              "status": { "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+              "citedFlag": { "type": "String", "description": "是否被引用标识（0-否，1-是）" },
+              "id": { "type": "String", "description": "主键ID (来自CoreEntity)" },
+              "createTime": { "type": "Date", "description": "创建时间 (来自CoreEntity)" },
+              "updateTime": { "type": "Date", "description": "更新时间 (来自CoreEntity)" },
+              "createBy": { "type": "String", "description": "创建人 (来自CoreEntity)" },
+              "updateBy": { "type": "String", "description": "更新人 (来自CoreEntity)" }
+            }
+          }
+        }
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": {
+            "type": "object",
+            "description": "MeterAcctActivity（返回保存后的实体）",
+            "fields": {
+              "activityName": { "type": "String", "description": "活动名称" },
+              "activityStatus": { "type": "String (enum)", "description": "活动状态，枚举值: 0-新建, 1-核算中, 2-审批中, 3-审批撤回, 4-审批驳回, 5-已完成, 6-终止, 7-待审批, 8-审批发起失败" },
+              "year": { "type": "String", "description": "年度" },
+              "month": { "type": "String (enum)", "description": "月份，枚举值: 1-1月, 2-2月, ..., 12-12月" },
+              "acctOrgId": { "type": "String", "description": "核算组织id" },
+              "manageOrgId": { "type": "String", "description": "管理组织id" },
+              "copyFromId": { "type": "String", "description": "复制源id" },
+              "flowInstId": { "type": "String", "description": "流程实例id" },
+              "formInstId": { "type": "String", "description": "表单实例id" },
+              "id": { "type": "String", "description": "主键ID (来自CoreEntity)" },
+              "createTime": { "type": "Date", "description": "创建时间 (来自CoreEntity)" },
+              "updateTime": { "type": "Date", "description": "更新时间 (来自CoreEntity)" },
+              "createBy": { "type": "String", "description": "创建人 (来自CoreEntity)" },
+              "updateBy": { "type": "String", "description": "更新人 (来自CoreEntity)" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "purpose": "编辑",
+      "method": "PUT",
+      "path": "/meterAcctActivity/update",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "object",
+        "fields": {
+          "activityName": { "type": "String", "description": "活动名称" },
+          "activityStatus": { "type": "String (enum)", "description": "活动状态，枚举值: 0-新建, 1-核算中, 2-审批中, 3-审批撤回, 4-审批驳回, 5-已完成, 6-终止, 7-待审批, 8-审批发起失败" },
+          "year": { "type": "String", "description": "年度" },
+          "month": { "type": "String (enum)", "description": "月份，枚举值: 1-1月, 2-2月, ..., 12-12月" },
+          "acctOrgId": { "type": "String", "description": "核算组织id" },
+          "manageOrgId": { "type": "String", "description": "管理组织id" },
+          "copyFromId": { "type": "String", "description": "复制源id" },
+          "flowInstId": { "type": "String", "description": "流程实例id" },
+          "formInstId": { "type": "String", "description": "表单实例id" },
+          "id": { "type": "String", "description": "主键ID (来自CoreEntity)" },
+          "createTime": { "type": "Date", "description": "创建时间 (来自CoreEntity)" },
+          "updateTime": { "type": "Date", "description": "更新时间 (来自CoreEntity)" },
+          "createBy": { "type": "String", "description": "创建人 (来自CoreEntity)" },
+          "updateBy": { "type": "String", "description": "更新人 (来自CoreEntity)" },
+          "meterStdIds": { "type": "List<String>", "description": "关联的计量标准id集合" },
+          "meterStds": {
+            "type": "array",
+            "itemType": "object",
+            "description": "关联的计量标准集合",
+            "fields": {
+              "indCode": { "type": "String", "description": "指标编码" },
+              "meterIndName": { "type": "String", "description": "计量指标名" },
+              "meterUnit": { "type": "String", "description": "计量单位" },
+              "useOrgId": { "type": "String", "description": "使用组织id" },
+              "manageOrgId": { "type": "String", "description": "管理组织id" },
+              "fixedUnitPriceFlag": { "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+              "status": { "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+              "citedFlag": { "type": "String", "description": "是否被引用标识（0-否，1-是）" },
+              "id": { "type": "String", "description": "主键ID (来自CoreEntity)" },
+              "createTime": { "type": "Date", "description": "创建时间 (来自CoreEntity)" },
+              "updateTime": { "type": "Date", "description": "更新时间 (来自CoreEntity)" },
+              "createBy": { "type": "String", "description": "创建人 (来自CoreEntity)" },
+              "updateBy": { "type": "String", "description": "更新人 (来自CoreEntity)" }
+            }
+          }
+        }
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null", "description": "无返回数据" }
+        }
+      }
+    },
+    {
+      "purpose": "复制",
+      "method": "POST",
+      "path": "/meterAcctActivity/copy",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "array",
+        "itemType": "String",
+        "description": "要复制的记录id集合"
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null", "description": "无返回数据" }
+        }
+      }
+    },
+    {
+      "purpose": "删除",
+      "method": "DELETE",
+      "path": "/meterAcctActivity/remove",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "array",
+        "itemType": "String",
+        "description": "要删除的记录id集合"
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null", "description": "无返回数据" }
+        }
+      }
+    },
+    {
+      "purpose": "开启计量核算活动",
+      "method": "POST",
+      "path": "/meterAcctActivity/startActivity",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "array",
+        "itemType": "String",
+        "description": "要开启的活动id集合"
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null", "description": "无返回数据" }
+        }
+      }
+    },
+    {
+      "purpose": "终止计量核算活动",
+      "method": "POST",
+      "path": "/meterAcctActivity/terminateActivity",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "array",
+        "itemType": "String",
+        "description": "要终止的活动id集合"
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null", "description": "无返回数据" }
+        }
+      }
+    },
+    {
+      "purpose": "重启计量核算活动",
+      "method": "POST",
+      "path": "/meterAcctActivity/restartActivity",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "array",
+        "itemType": "String",
+        "description": "要重启的活动id集合"
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null", "description": "无返回数据" }
+        }
+      }
+    }
+  ]
+}

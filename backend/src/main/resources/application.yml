@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: quality-control
+  profiles:
+    active: dev
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+
+sa-token:
+  token-name: Authorization
+  # 前端请求头为 Authorization: Bearer {token}，须配置前缀否则整段被当作 token 导致 401
+  token-prefix: Bearer
+  timeout: 86400
+  active-timeout: -1
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: false
+  is-read-header: true
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+  packages-to-scan: com.jhict.quality.controller
+
+app:
+  upload:
+    base-path: /opt/quality-control/uploads
+    url-prefix: /api/v1/files
+    max-size: 20971520
+
+logging:
+  level:
+    com.jhict.quality: DEBUG
+    com.baomidou.mybatisplus: WARN

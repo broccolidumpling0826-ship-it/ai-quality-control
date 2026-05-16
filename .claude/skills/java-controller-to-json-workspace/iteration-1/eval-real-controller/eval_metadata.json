@@ -1,0 +1,31 @@
+{
+  "eval_id": 4,
+  "eval_name": "real-controller-full-parse",
+  "prompt": "请解析这个 Controller 文件，提取所有接口信息生成 JSON 文件。\n\nController 文件路径：/Users/weixuelei/workspace/idea/jinGang260129/jh4j-product-performance/jh4j-product-performance-service/src/main/java/com/jhict/product/performance/controller/MeterAcctActivityController.java\n\n输出目录：/tmp/real-controller-output",
+  "assertions": [
+    {
+      "id": "json-file-created",
+      "description": "生成了 MeterAcctActivityIStruct.json 文件"
+    },
+    {
+      "id": "has-nine-interfaces",
+      "description": "interfaces 数组包含 9 个接口（list/getById/save/update/copy/remove/startActivity/terminateActivity/restartActivity）"
+    },
+    {
+      "id": "list-interface-jhpage",
+      "description": "list 接口出参 data 展开了 JhPage 分页结构（或等价的分页字段），method=GET，入参含 query 字段"
+    },
+    {
+      "id": "save-dto-inherits-entity",
+      "description": "save 接口入参展开了 MeterAcctActivityDTO 字段，包含从父类 MeterAcctActivity 继承的字段（如 activityName/activityStatus/year 等）及自身字段（meterStdIds/meterStds）"
+    },
+    {
+      "id": "copy-remove-list-string",
+      "description": "copy/remove/startActivity/terminateActivity/restartActivity 接口入参为 List<String> ids，paramStyle=body"
+    },
+    {
+      "id": "getById-vo-output",
+      "description": "getById 接口出参 data 展开了 MeterAcctActivityVO 字段"
+    }
+  ]
+}

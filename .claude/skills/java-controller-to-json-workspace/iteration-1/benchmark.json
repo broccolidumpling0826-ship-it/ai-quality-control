@@ -1,0 +1,92 @@
+{
+  "skill_name": "java-controller-to-json",
+  "iteration": 1,
+  "configurations": [
+    {
+      "name": "with_skill",
+      "evals": [
+        {
+          "eval_id": 1,
+          "eval_name": "full-controller-parse",
+          "pass_rate": 1.0,
+          "assertions_passed": 6,
+          "assertions_total": 6,
+          "duration_seconds": 83.5,
+          "total_tokens": 24759
+        },
+        {
+          "eval_id": 2,
+          "eval_name": "partial-interfaces",
+          "pass_rate": 1.0,
+          "assertions_passed": 3,
+          "assertions_total": 3,
+          "duration_seconds": 82.9,
+          "total_tokens": 23446
+        },
+        {
+          "eval_id": 3,
+          "eval_name": "missing-output-dir-validation",
+          "pass_rate": 1.0,
+          "assertions_passed": 3,
+          "assertions_total": 3,
+          "duration_seconds": 29.9,
+          "total_tokens": 17313
+        }
+      ],
+      "summary": {
+        "pass_rate_mean": 1.0,
+        "pass_rate_stddev": 0.0,
+        "duration_mean": 65.4,
+        "duration_stddev": 25.5,
+        "tokens_mean": 21839,
+        "tokens_stddev": 3127
+      }
+    },
+    {
+      "name": "without_skill",
+      "evals": [
+        {
+          "eval_id": 1,
+          "eval_name": "full-controller-parse",
+          "pass_rate": 1.0,
+          "assertions_passed": 6,
+          "assertions_total": 6,
+          "duration_seconds": 155.7,
+          "total_tokens": 30376
+        },
+        {
+          "eval_id": 2,
+          "eval_name": "partial-interfaces",
+          "pass_rate": 1.0,
+          "assertions_passed": 3,
+          "assertions_total": 3,
+          "duration_seconds": 114.7,
+          "total_tokens": 25358
+        },
+        {
+          "eval_id": 3,
+          "eval_name": "missing-output-dir-validation",
+          "pass_rate": 1.0,
+          "assertions_passed": 3,
+          "assertions_total": 3,
+          "duration_seconds": 22.2,
+          "total_tokens": 13891
+        }
+      ],
+      "summary": {
+        "pass_rate_mean": 1.0,
+        "pass_rate_stddev": 0.0,
+        "duration_mean": 97.5,
+        "duration_stddev": 55.5,
+        "tokens_mean": 23208,
+        "tokens_stddev": 7076
+      }
+    }
+  ],
+  "analyst_observations": [
+    "所有断言在 with_skill 和 without_skill 配置下均通过（pass_rate=1.0），说明断言项可能判别力不强，or 两个配置输出质量相当。",
+    "with_skill 在速度上明显更快：平均耗时 65.4s vs baseline 97.5s（快约 33%），token 消耗更少（21839 vs 23208）。说明 skill 提供的结构化指引减少了模型的探索成本。",
+    "eval-3（缺少输出目录校验）是最快最简单的用例，两个配置都能正确处理，与 skill 关系不大——此断言是非判别性的，未来可以移除或升级为更有挑战性的场景。",
+    "eval-1（完整 Controller 解析）是最有价值的测试，with_skill 用了 8 次工具调用完成，baseline 用了 16 次，说明 skill 的步骤指引确实提升了执行效率。"
+  ]
+}

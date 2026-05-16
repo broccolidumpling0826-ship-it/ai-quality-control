@@ -1,0 +1,19 @@
+{
+  "eval_id": 2,
+  "eval_name": "partial-interfaces",
+  "prompt": "帮我把这个 Controller 接口的信息提取出来，我要用来生成前端代码。\n\n只需要解析 save 和 list 这两个接口。\n\nController 路径：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/src/main/java/com/example/controller/MeterAcctActivityController.java\n输出目录：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/output",
+  "assertions": [
+    {
+      "id": "json-file-created",
+      "description": "生成了 MeterAcctActivityIStruct.json 文件"
+    },
+    {
+      "id": "save-interface-present",
+      "description": "包含 save 接口，method=POST，inputParam 展开了 MeterAcctActivityDTO 字段"
+    },
+    {
+      "id": "list-interface-page-expanded",
+      "description": "list 接口出参 data 中包含 records 数组和 total 等分页字段"
+    }
+  ]
+}

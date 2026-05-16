@@ -1,0 +1,28 @@
+package com.jhict.quality.dto;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+
+@Data
+@ApiModel(value = "QcJudgmentPageQuery", description = "判定结论分页查询条件")
+public class QcJudgmentPageQuery {
+
+    @ApiModelProperty(value = "判定结论类型（QUALIFIED/UNQUALIFIED/NEED_REINSPECTION/CAN_CONCESSION）")
+    private String judgmentType;
+
+    @ApiModelProperty(value = "是否最终结论：1是 0否")
+    private Integer isFinal;
+
+    @ApiModelProperty(value = "判定时间起始（yyyy-MM-dd HH:mm:ss）")
+    private String timeStart;
+
+    @ApiModelProperty(value = "判定时间结束（yyyy-MM-dd HH:mm:ss）")
+    private String timeEnd;
+
+    @ApiModelProperty(value = "页码，默认1")
+    private Integer pageNum = 1;
+
+    @ApiModelProperty(value = "每页条数，默认20")
+    private Integer pageSize = 20;
+}

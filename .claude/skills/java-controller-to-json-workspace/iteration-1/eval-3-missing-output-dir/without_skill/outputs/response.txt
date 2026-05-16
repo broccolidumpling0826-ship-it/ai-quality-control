@@ -1,0 +1,10 @@
+您好！您提供了 Controller 文件路径，但缺少必要的输出目录参数，无法完成 JSON 结构文件的生成。
+
+请补充以下信息：
+
+- 输出目录路径：请提供生成的 JSON 文件需要保存到哪个目录（例如：/Users/yourname/output/）
+
+您已提供的信息：
+- Controller 路径：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/src/main/java/com/example/controller/MeterAcctActivityController.java
+
+请提供输出目录后，我将为您生成对应的接口 JSON 结构文件。

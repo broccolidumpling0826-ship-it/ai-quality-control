@@ -1,0 +1,187 @@
+{
+  "controllerName": "MeterAcctActivityController",
+  "controllerDescription": "计量核算活动",
+  "baseUrl": "/meterAcctActivity",
+  "interfaces": [
+    {
+      "purpose": "新增计量核算活动",
+      "method": "POST",
+      "path": "/meterAcctActivity/save",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "object",
+        "fields": {
+          "id": {
+            "type": "Long",
+            "description": "主键ID（更新时必填）"
+          },
+          "activityName": {
+            "type": "String",
+            "description": "活动名称"
+          },
+          "activityCode": {
+            "type": "String",
+            "description": "活动编码"
+          },
+          "startDate": {
+            "type": "Date",
+            "description": "开始日期"
+          },
+          "endDate": {
+            "type": "Date",
+            "description": "结束日期"
+          },
+          "status": {
+            "type": "Integer",
+            "description": "活动状态 0-禁用 1-启用"
+          },
+          "remark": {
+            "type": "String",
+            "description": "备注"
+          }
+        }
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": {
+            "type": "int",
+            "description": "状态码，200为成功"
+          },
+          "message": {
+            "type": "String",
+            "description": "提示信息"
+          },
+          "data": {
+            "type": "object",
+            "fields": {
+              "id": {
+                "type": "Long",
+                "description": "主键ID"
+              },
+              "activityName": {
+                "type": "String",
+                "description": "活动名称"
+              },
+              "activityCode": {
+                "type": "String",
+                "description": "活动编码"
+              },
+              "startDate": {
+                "type": "Date",
+                "description": "开始日期"
+              },
+              "endDate": {
+                "type": "Date",
+                "description": "结束日期"
+              },
+              "status": {
+                "type": "Integer",
+                "description": "活动状态 0-禁用 1-启用"
+              },
+              "remark": {
+                "type": "String",
+                "description": "备注"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "purpose": "查询计量核算活动列表（分页）",
+      "method": "POST",
+      "path": "/meterAcctActivity/list",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "object",
+        "fields": {
+          "activityName": {
+            "type": "String",
+            "description": "活动名称（模糊查询）"
+          },
+          "status": {
+            "type": "Integer",
+            "description": "活动状态 0-禁用 1-启用"
+          },
+          "pageNum": {
+            "type": "Integer",
+            "description": "当前页码"
+          },
+          "pageSize": {
+            "type": "Integer",
+            "description": "每页大小"
+          }
+        }
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": {
+            "type": "int",
+            "description": "状态码，200为成功"
+          },
+          "message": {
+            "type": "String",
+            "description": "提示信息"
+          },
+          "data": {
+            "type": "object",
+            "fields": {
+              "records": {
+                "type": "array",
+                "itemType": "object",
+                "fields": {
+                  "id": {
+                    "type": "Long",
+                    "description": "主键ID"
+                  },
+                  "activityName": {
+                    "type": "String",
+                    "description": "活动名称"
+                  },
+                  "activityCode": {
+                    "type": "String",
+                    "description": "活动编码"
+                  },
+                  "startDate": {
+                    "type": "Date",
+                    "description": "开始日期"
+                  },
+                  "endDate": {
+                    "type": "Date",
+                    "description": "结束日期"
+                  },
+                  "status": {
+                    "type": "Integer",
+                    "description": "活动状态 0-禁用 1-启用"
+                  },
+                  "remark": {
+                    "type": "String",
+                    "description": "备注"
+                  }
+                }
+              },
+              "total": {
+                "type": "long",
+                "description": "总记录数"
+              },
+              "size": {
+                "type": "long",
+                "description": "每页大小"
+              },
+              "current": {
+                "type": "long",
+                "description": "当前页码"
+              },
+              "pages": {
+                "type": "long",
+                "description": "总页数"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

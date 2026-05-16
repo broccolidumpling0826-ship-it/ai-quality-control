@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.PrfKpiTargetMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.entity.PrfKpiTarget">
+        <id     column="ID"               property="id"/>
+        <result column="KPI_CODE"         property="kpiCode"/>
+        <result column="KPI_NAME"         property="kpiName"/>
+        <result column="TARGET_VALUE"     property="targetValue"/>
+        <result column="UNIT"             property="unit"/>
+        <result column="YEAR_NO"          property="yearNo"/>
+        <result column="MONTH_NO"         property="monthNo"/>
+        <result column="IS_ENABLE"        property="isEnable"/>
+        <result column="COMPANY_ID"       property="companyId"/>
+        <result column="CREATE_USER_NO"   property="createUserNo"/>
+        <result column="CREATE_DATE_TIME" property="createDateTime"/>
+        <result column="UPDATE_USER_NO"   property="updateUserNo"/>
+        <result column="UPDATE_DATE_TIME" property="updateDateTime"/>
+    </resultMap>
+
+    <!-- 分页查询 -->
+    <select id="selectPageByQuery" resultMap="BaseResultMap">
+        SELECT *
+        FROM PRF_KPI_TARGET
+        <where>
+            <if test="query.kpiCode != null and query.kpiCode != ''">
+                AND KPI_CODE = #{query.kpiCode}
+            </if>
+            <if test="query.kpiName != null and query.kpiName != ''">
+                AND KPI_NAME LIKE CONCAT('%', #{query.kpiName}, '%')
+            </if>
+            <if test="query.yearNo != null and query.yearNo != ''">
+                AND YEAR_NO = #{query.yearNo}
+            </if>
+            <if test="query.monthNo != null and query.monthNo != ''">
+                AND MONTH_NO = #{query.monthNo}
+            </if>
+            <if test="query.isEnable != null">
+                AND IS_ENABLE = #{query.isEnable}
+            </if>
+            <if test="query.companyId != null and query.companyId != ''">
+                AND COMPANY_ID = #{query.companyId}
+            </if>
+        </where>
+        ORDER BY CREATE_DATE_TIME DESC
+    </select>
+
+</mapper>

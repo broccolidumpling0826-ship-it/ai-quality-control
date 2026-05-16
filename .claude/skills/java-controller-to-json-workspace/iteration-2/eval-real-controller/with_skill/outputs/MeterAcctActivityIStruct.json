@@ -1,0 +1,391 @@
+{
+  "controllerName": "MeterAcctActivityController",
+  "controllerDescription": "计量核算活动",
+  "baseUrl": "/meterAcctActivity",
+  "interfaces": [
+    {
+      "purpose": "获取列表",
+      "method": "GET",
+      "path": "/meterAcctActivity/list",
+      "inputParam": {
+        "paramStyle": "query",
+        "pagination": {
+          "description": "分页参数（由框架注入，前端传 pageNum/pageSize）",
+          "fields": {
+            "pageNum": { "type": "Integer", "description": "当前页码，默认1" },
+            "pageSize": { "type": "Integer", "description": "每页大小，默认10" }
+          }
+        },
+        "queryFields": {
+          "id": { "type": "String", "description": "id,新增时不填,修改时必填" },
+          "companyId": { "type": "String", "description": "公司ID", "hidden": true },
+          "createUserNo": { "type": "String", "description": "创建人工号:strAccount", "hidden": true },
+          "updateUserNo": { "type": "String", "description": "修改人工号:strAccount", "hidden": true },
+          "createDateTime": { "type": "String", "description": "创建日期", "hidden": true },
+          "updateDateTime": { "type": "String", "description": "修改日期", "hidden": true },
+          "activityName": { "type": "String", "description": "活动名称" },
+          "activityStatus": { "type": "String (enum)", "description": "活动状态", "enumValues": ["NEW(0,新建)", "ACCOUNTING(1,核算中)", "ACCOUNT_FINISH(7,待审批)", "IN_APPROVAL(2,审批中)", "WITHDRAW_APPROVAL(3,审批撤回)", "REJECT_APPROVAL(4,审批驳回)", "FINISH(5,已完成)", "TERMINATED(6,终止)", "START_FAIL(8,审批发起失败)"] },
+          "year": { "type": "String", "description": "年度" },
+          "month": { "type": "String (enum)", "description": "月份", "enumValues": ["JANUARY(1,1月)", "FEBRUARY(2,2月)", "MARCH(3,3月)", "APRIL(4,4月)", "MAY(5,5月)", "JUNE(6,6月)", "JULY(7,7月)", "AUGUST(8,8月)", "SEPTEMBER(9,9月)", "OCTOBER(10,10月)", "NOVEMBER(11,11月)", "DECEMBER(12,12月)"] },
+          "acctOrgId": { "type": "String", "description": "核算组织id" },
+          "manageOrgId": { "type": "String", "description": "管理组织id" },
+          "copyFromId": { "type": "String", "description": "复制源id" },
+          "flowInstId": { "type": "String", "description": "流程实例id" },
+          "formInstId": { "type": "String", "description": "表单实例id" },
+          "curUserParentOrgIdPrefix": { "type": "String", "description": "用于数据权限，当前登录用户所属组织的上一级组织的id前缀" },
+          "ids": { "type": "array", "itemType": "String", "description": "id列表" },
+          "yearMonth": { "type": "String", "description": "年月" }
+        }
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": {
+            "type": "object",
+            "fields": {
+              "records": {
+                "type": "array",
+                "itemType": "object",
+                "fields": {
+                  "id": { "type": "String", "description": "id,新增时不填,修改时必填" },
+                  "companyId": { "type": "String", "description": "公司ID", "hidden": true },
+                  "createUserNo": { "type": "String", "description": "创建人工号:strAccount", "hidden": true },
+                  "updateUserNo": { "type": "String", "description": "修改人工号:strAccount", "hidden": true },
+                  "createDateTime": { "type": "String", "description": "创建日期", "hidden": true },
+                  "updateDateTime": { "type": "String", "description": "修改日期", "hidden": true },
+                  "activityName": { "type": "String", "description": "活动名称" },
+                  "activityStatus": { "type": "String (enum)", "description": "活动状态", "enumValues": ["NEW(0,新建)", "ACCOUNTING(1,核算中)", "ACCOUNT_FINISH(7,待审批)", "IN_APPROVAL(2,审批中)", "WITHDRAW_APPROVAL(3,审批撤回)", "REJECT_APPROVAL(4,审批驳回)", "FINISH(5,已完成)", "TERMINATED(6,终止)", "START_FAIL(8,审批发起失败)"] },
+                  "year": { "type": "String", "description": "年度" },
+                  "month": { "type": "String (enum)", "description": "月份", "enumValues": ["JANUARY(1,1月)", "FEBRUARY(2,2月)", "MARCH(3,3月)", "APRIL(4,4月)", "MAY(5,5月)", "JUNE(6,6月)", "JULY(7,7月)", "AUGUST(8,8月)", "SEPTEMBER(9,9月)", "OCTOBER(10,10月)", "NOVEMBER(11,11月)", "DECEMBER(12,12月)"] },
+                  "acctOrgId": { "type": "String", "description": "核算组织id" },
+                  "manageOrgId": { "type": "String", "description": "管理组织id" },
+                  "copyFromId": { "type": "String", "description": "复制源id" },
+                  "flowInstId": { "type": "String", "description": "流程实例id" },
+                  "formInstId": { "type": "String", "description": "表单实例id" },
+                  "acctOrgName": { "type": "String", "description": "核算组织名" },
+                  "manageOrgName": { "type": "String", "description": "管理组织名" },
+                  "meterStds": {
+                    "type": "array",
+                    "itemType": "object",
+                    "description": "关联的计量标准集合",
+                    "fields": {
+                      "id": { "type": "String", "description": "id,新增时不填,修改时必填" },
+                      "companyId": { "type": "String", "description": "公司ID", "hidden": true },
+                      "createUserNo": { "type": "String", "description": "创建人工号:strAccount", "hidden": true },
+                      "updateUserNo": { "type": "String", "description": "修改人工号:strAccount", "hidden": true },
+                      "createDateTime": { "type": "String", "description": "创建日期", "hidden": true },
+                      "updateDateTime": { "type": "String", "description": "修改日期", "hidden": true },
+                      "indCode": { "type": "String", "description": "指标编码" },
+                      "meterIndName": { "type": "String", "description": "计量指标名" },
+                      "meterUnit": { "type": "String", "description": "计量单位" },
+                      "useOrgId": { "type": "String", "description": "使用组织id" },
+                      "manageOrgId": { "type": "String", "description": "管理组织id" },
+                      "fixedUnitPriceFlag": { "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+                      "status": { "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+                      "citedFlag": { "type": "String", "description": "是否被引用标识（0-否，1-是），若被相关业务引用，则无法删除只能被禁用" }
+                    }
+                  }
+                }
+              },
+              "total": { "type": "long", "description": "总记录数" },
+              "size": { "type": "long", "description": "每页大小" },
+              "current": { "type": "long", "description": "当前页码" },
+              "pages": { "type": "long", "description": "总页数" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "purpose": "通过id获取详情",
+      "method": "GET",
+      "path": "/meterAcctActivity/getById",
+      "inputParam": {
+        "paramStyle": "query",
+        "type": "object",
+        "fields": {
+          "id": { "type": "String", "description": "记录ID" }
+        }
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": {
+            "type": "object",
+            "fields": {
+              "id": { "type": "String", "description": "id,新增时不填,修改时必填" },
+              "companyId": { "type": "String", "description": "公司ID", "hidden": true },
+              "createUserNo": { "type": "String", "description": "创建人工号:strAccount", "hidden": true },
+              "updateUserNo": { "type": "String", "description": "修改人工号:strAccount", "hidden": true },
+              "createDateTime": { "type": "String", "description": "创建日期", "hidden": true },
+              "updateDateTime": { "type": "String", "description": "修改日期", "hidden": true },
+              "activityName": { "type": "String", "description": "活动名称" },
+              "activityStatus": { "type": "String (enum)", "description": "活动状态", "enumValues": ["NEW(0,新建)", "ACCOUNTING(1,核算中)", "ACCOUNT_FINISH(7,待审批)", "IN_APPROVAL(2,审批中)", "WITHDRAW_APPROVAL(3,审批撤回)", "REJECT_APPROVAL(4,审批驳回)", "FINISH(5,已完成)", "TERMINATED(6,终止)", "START_FAIL(8,审批发起失败)"] },
+              "year": { "type": "String", "description": "年度" },
+              "month": { "type": "String (enum)", "description": "月份", "enumValues": ["JANUARY(1,1月)", "FEBRUARY(2,2月)", "MARCH(3,3月)", "APRIL(4,4月)", "MAY(5,5月)", "JUNE(6,6月)", "JULY(7,7月)", "AUGUST(8,8月)", "SEPTEMBER(9,9月)", "OCTOBER(10,10月)", "NOVEMBER(11,11月)", "DECEMBER(12,12月)"] },
+              "acctOrgId": { "type": "String", "description": "核算组织id" },
+              "manageOrgId": { "type": "String", "description": "管理组织id" },
+              "copyFromId": { "type": "String", "description": "复制源id" },
+              "flowInstId": { "type": "String", "description": "流程实例id" },
+              "formInstId": { "type": "String", "description": "表单实例id" },
+              "acctOrgName": { "type": "String", "description": "核算组织名" },
+              "manageOrgName": { "type": "String", "description": "管理组织名" },
+              "meterStds": {
+                "type": "array",
+                "itemType": "object",
+                "description": "关联的计量标准集合",
+                "fields": {
+                  "id": { "type": "String", "description": "id,新增时不填,修改时必填" },
+                  "companyId": { "type": "String", "description": "公司ID", "hidden": true },
+                  "createUserNo": { "type": "String", "description": "创建人工号:strAccount", "hidden": true },
+                  "updateUserNo": { "type": "String", "description": "修改人工号:strAccount", "hidden": true },
+                  "createDateTime": { "type": "String", "description": "创建日期", "hidden": true },
+                  "updateDateTime": { "type": "String", "description": "修改日期", "hidden": true },
+                  "indCode": { "type": "String", "description": "指标编码" },
+                  "meterIndName": { "type": "String", "description": "计量指标名" },
+                  "meterUnit": { "type": "String", "description": "计量单位" },
+                  "useOrgId": { "type": "String", "description": "使用组织id" },
+                  "manageOrgId": { "type": "String", "description": "管理组织id" },
+                  "fixedUnitPriceFlag": { "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+                  "status": { "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+                  "citedFlag": { "type": "String", "description": "是否被引用标识（0-否，1-是），若被相关业务引用，则无法删除只能被禁用" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "purpose": "新增",
+      "method": "POST",
+      "path": "/meterAcctActivity/save",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "object",
+        "fields": {
+          "id": { "type": "String", "description": "id,新增时不填,修改时必填" },
+          "companyId": { "type": "String", "description": "公司ID", "hidden": true },
+          "createUserNo": { "type": "String", "description": "创建人工号:strAccount", "hidden": true },
+          "updateUserNo": { "type": "String", "description": "修改人工号:strAccount", "hidden": true },
+          "createDateTime": { "type": "String", "description": "创建日期", "hidden": true },
+          "updateDateTime": { "type": "String", "description": "修改日期", "hidden": true },
+          "activityName": { "type": "String", "description": "活动名称" },
+          "activityStatus": { "type": "String (enum)", "description": "活动状态", "enumValues": ["NEW(0,新建)", "ACCOUNTING(1,核算中)", "ACCOUNT_FINISH(7,待审批)", "IN_APPROVAL(2,审批中)", "WITHDRAW_APPROVAL(3,审批撤回)", "REJECT_APPROVAL(4,审批驳回)", "FINISH(5,已完成)", "TERMINATED(6,终止)", "START_FAIL(8,审批发起失败)"] },
+          "year": { "type": "String", "description": "年度" },
+          "month": { "type": "String (enum)", "description": "月份", "enumValues": ["JANUARY(1,1月)", "FEBRUARY(2,2月)", "MARCH(3,3月)", "APRIL(4,4月)", "MAY(5,5月)", "JUNE(6,6月)", "JULY(7,7月)", "AUGUST(8,8月)", "SEPTEMBER(9,9月)", "OCTOBER(10,10月)", "NOVEMBER(11,11月)", "DECEMBER(12,12月)"] },
+          "acctOrgId": { "type": "String", "description": "核算组织id" },
+          "manageOrgId": { "type": "String", "description": "管理组织id" },
+          "copyFromId": { "type": "String", "description": "复制源id" },
+          "flowInstId": { "type": "String", "description": "流程实例id" },
+          "formInstId": { "type": "String", "description": "表单实例id" },
+          "meterStdIds": { "type": "array", "itemType": "String", "description": "关联的计量标准id集合" },
+          "meterStds": {
+            "type": "array",
+            "itemType": "object",
+            "description": "关联的计量标准集合",
+            "fields": {
+              "id": { "type": "String", "description": "id,新增时不填,修改时必填" },
+              "companyId": { "type": "String", "description": "公司ID", "hidden": true },
+              "createUserNo": { "type": "String", "description": "创建人工号:strAccount", "hidden": true },
+              "updateUserNo": { "type": "String", "description": "修改人工号:strAccount", "hidden": true },
+              "createDateTime": { "type": "String", "description": "创建日期", "hidden": true },
+              "updateDateTime": { "type": "String", "description": "修改日期", "hidden": true },
+              "indCode": { "type": "String", "description": "指标编码" },
+              "meterIndName": { "type": "String", "description": "计量指标名" },
+              "meterUnit": { "type": "String", "description": "计量单位" },
+              "useOrgId": { "type": "String", "description": "使用组织id" },
+              "manageOrgId": { "type": "String", "description": "管理组织id" },
+              "fixedUnitPriceFlag": { "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+              "status": { "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+              "citedFlag": { "type": "String", "description": "是否被引用标识（0-否，1-是），若被相关业务引用，则无法删除只能被禁用" }
+            }
+          }
+        }
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": {
+            "type": "object",
+            "description": "MeterAcctActivity 实体对象",
+            "fields": {
+              "id": { "type": "String", "description": "id,新增时不填,修改时必填" },
+              "companyId": { "type": "String", "description": "公司ID", "hidden": true },
+              "createUserNo": { "type": "String", "description": "创建人工号:strAccount", "hidden": true },
+              "updateUserNo": { "type": "String", "description": "修改人工号:strAccount", "hidden": true },
+              "createDateTime": { "type": "String", "description": "创建日期", "hidden": true },
+              "updateDateTime": { "type": "String", "description": "修改日期", "hidden": true },
+              "activityName": { "type": "String", "description": "活动名称" },
+              "activityStatus": { "type": "String (enum)", "description": "活动状态", "enumValues": ["NEW(0,新建)", "ACCOUNTING(1,核算中)", "ACCOUNT_FINISH(7,待审批)", "IN_APPROVAL(2,审批中)", "WITHDRAW_APPROVAL(3,审批撤回)", "REJECT_APPROVAL(4,审批驳回)", "FINISH(5,已完成)", "TERMINATED(6,终止)", "START_FAIL(8,审批发起失败)"] },
+              "year": { "type": "String", "description": "年度" },
+              "month": { "type": "String (enum)", "description": "月份", "enumValues": ["JANUARY(1,1月)", "FEBRUARY(2,2月)", "MARCH(3,3月)", "APRIL(4,4月)", "MAY(5,5月)", "JUNE(6,6月)", "JULY(7,7月)", "AUGUST(8,8月)", "SEPTEMBER(9,9月)", "OCTOBER(10,10月)", "NOVEMBER(11,11月)", "DECEMBER(12,12月)"] },
+              "acctOrgId": { "type": "String", "description": "核算组织id" },
+              "manageOrgId": { "type": "String", "description": "管理组织id" },
+              "copyFromId": { "type": "String", "description": "复制源id" },
+              "flowInstId": { "type": "String", "description": "流程实例id" },
+              "formInstId": { "type": "String", "description": "表单实例id" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "purpose": "编辑",
+      "method": "PUT",
+      "path": "/meterAcctActivity/update",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "object",
+        "fields": {
+          "id": { "type": "String", "description": "id,新增时不填,修改时必填" },
+          "companyId": { "type": "String", "description": "公司ID", "hidden": true },
+          "createUserNo": { "type": "String", "description": "创建人工号:strAccount", "hidden": true },
+          "updateUserNo": { "type": "String", "description": "修改人工号:strAccount", "hidden": true },
+          "createDateTime": { "type": "String", "description": "创建日期", "hidden": true },
+          "updateDateTime": { "type": "String", "description": "修改日期", "hidden": true },
+          "activityName": { "type": "String", "description": "活动名称" },
+          "activityStatus": { "type": "String (enum)", "description": "活动状态", "enumValues": ["NEW(0,新建)", "ACCOUNTING(1,核算中)", "ACCOUNT_FINISH(7,待审批)", "IN_APPROVAL(2,审批中)", "WITHDRAW_APPROVAL(3,审批撤回)", "REJECT_APPROVAL(4,审批驳回)", "FINISH(5,已完成)", "TERMINATED(6,终止)", "START_FAIL(8,审批发起失败)"] },
+          "year": { "type": "String", "description": "年度" },
+          "month": { "type": "String (enum)", "description": "月份", "enumValues": ["JANUARY(1,1月)", "FEBRUARY(2,2月)", "MARCH(3,3月)", "APRIL(4,4月)", "MAY(5,5月)", "JUNE(6,6月)", "JULY(7,7月)", "AUGUST(8,8月)", "SEPTEMBER(9,9月)", "OCTOBER(10,10月)", "NOVEMBER(11,11月)", "DECEMBER(12,12月)"] },
+          "acctOrgId": { "type": "String", "description": "核算组织id" },
+          "manageOrgId": { "type": "String", "description": "管理组织id" },
+          "copyFromId": { "type": "String", "description": "复制源id" },
+          "flowInstId": { "type": "String", "description": "流程实例id" },
+          "formInstId": { "type": "String", "description": "表单实例id" },
+          "meterStdIds": { "type": "array", "itemType": "String", "description": "关联的计量标准id集合" },
+          "meterStds": {
+            "type": "array",
+            "itemType": "object",
+            "description": "关联的计量标准集合",
+            "fields": {
+              "id": { "type": "String", "description": "id,新增时不填,修改时必填" },
+              "companyId": { "type": "String", "description": "公司ID", "hidden": true },
+              "createUserNo": { "type": "String", "description": "创建人工号:strAccount", "hidden": true },
+              "updateUserNo": { "type": "String", "description": "修改人工号:strAccount", "hidden": true },
+              "createDateTime": { "type": "String", "description": "创建日期", "hidden": true },
+              "updateDateTime": { "type": "String", "description": "修改日期", "hidden": true },
+              "indCode": { "type": "String", "description": "指标编码" },
+              "meterIndName": { "type": "String", "description": "计量指标名" },
+              "meterUnit": { "type": "String", "description": "计量单位" },
+              "useOrgId": { "type": "String", "description": "使用组织id" },
+              "manageOrgId": { "type": "String", "description": "管理组织id" },
+              "fixedUnitPriceFlag": { "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+              "status": { "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+              "citedFlag": { "type": "String", "description": "是否被引用标识（0-否，1-是），若被相关业务引用，则无法删除只能被禁用" }
+            }
+          }
+        }
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null" }
+        }
+      }
+    },
+    {
+      "purpose": "复制",
+      "method": "POST",
+      "path": "/meterAcctActivity/copy",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "array",
+        "itemType": "String",
+        "description": "需要复制的记录id列表"
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null" }
+        }
+      }
+    },
+    {
+      "purpose": "删除",
+      "method": "DELETE",
+      "path": "/meterAcctActivity/remove",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "array",
+        "itemType": "String",
+        "description": "需要删除的记录id列表"
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null" }
+        }
+      }
+    },
+    {
+      "purpose": "开启计量核算活动",
+      "method": "POST",
+      "path": "/meterAcctActivity/startActivity",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "array",
+        "itemType": "String",
+        "description": "需要开启的活动id列表"
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null" }
+        }
+      }
+    },
+    {
+      "purpose": "终止计量核算活动",
+      "method": "POST",
+      "path": "/meterAcctActivity/terminateActivity",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "array",
+        "itemType": "String",
+        "description": "需要终止的活动id列表"
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null" }
+        }
+      }
+    },
+    {
+      "purpose": "重启计量核算活动",
+      "method": "POST",
+      "path": "/meterAcctActivity/restartActivity",
+      "inputParam": {
+        "paramStyle": "body",
+        "type": "array",
+        "itemType": "String",
+        "description": "需要重启的活动id列表"
+      },
+      "outputParam": {
+        "type": "object",
+        "fields": {
+          "code": { "type": "int", "description": "状态码，200为成功" },
+          "message": { "type": "String", "description": "提示信息" },
+          "data": { "type": "null" }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ai-quality-control | 质量工作台</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-base:      #060E1C;
+  --bg-panel:     #0B1929;
+  --bg-card:      #0F2137;
+  --bg-hover:     #162C47;
+  --border:       #1A3352;
+  --border-bright:#234569;
+  --text-primary: #E8F0FA;
+  --text-secondary:#7A9BBE;
+  --text-muted:   #3A5B7A;
+  --cyan:         #00D4FF;
+  --cyan-dim:     #0090B0;
+  --green:        #16C974;
+  --green-dim:    #0D6B3C;
+  --red:          #FF3B5C;
+  --red-dim:      #7A1228;
+  --orange:       #FF8C00;
+  --orange-dim:   #7A4000;
+  --blue:         #3D9EFF;
+  --blue-dim:     #1A4A80;
+  --gold:         #FFB400;
+  --font-data:    'IBM Plex Mono', 'Courier New', monospace;
+  --font-ui:      'IBM Plex Sans', 'Helvetica Neue', sans-serif;
+  --font-cond:    'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body { background: var(--bg-base); color: var(--text-primary); font-family: var(--font-ui); display: flex; height: 100vh; overflow: hidden; font-size: 13px; }
+
+.sidebar { width: 220px; min-width: 220px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.sidebar::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,212,255,0.015) 3px, rgba(0,212,255,0.015) 4px); pointer-events: none; }
+
+.sidebar-header { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); }
+.sidebar-logo { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.logo-mark { width: 28px; height: 28px; background: linear-gradient(135deg, var(--cyan), var(--blue)); clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.logo-text { font-family: var(--font-data); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--cyan); text-transform: uppercase; line-height: 1.3; }
+.logo-sub { font-family: var(--font-data); font-size: 9px; color: var(--text-muted); letter-spacing: 0.05em; margin-top: 4px; }
+
+.nav-section-label { font-family: var(--font-data); font-size: 9px; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; padding: 16px 20px 8px; }
+
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; transition: all 0.15s ease; border-left: 2px solid transparent; color: var(--text-secondary); font-size: 13px; font-weight: 400; position: relative; user-select: none; }
+.nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+.nav-item.active { background: linear-gradient(90deg, rgba(0,212,255,0.12) 0%, transparent 100%); border-left-color: var(--cyan); color: var(--text-primary); }
+.nav-item .nav-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-badge { margin-left: auto; background: var(--red); color: #fff; font-family: var(--font-data); font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 8px; min-width: 18px; text-align: center; }
+.nav-badge.blue { background: var(--blue); }
+.nav-badge.orange { background: var(--orange); }
+
+.sidebar-footer { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border); }
+.user-info { display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--blue-dim), var(--cyan-dim)); display: flex; align-items: center; justify-content: center; font-family: var(--font-data); font-size: 11px; font-weight: 600; color: var(--cyan); flex-shrink: 0; }
+.user-name { font-size: 12px; font-weight: 500; }
+.user-role { font-size: 10px; color: var(--text-muted); font-family: var(--font-data); }
+
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 28px; height: 52px; border-bottom: 1px solid var(--border); background: var(--bg-panel); flex-shrink: 0; }
+.topbar-breadcrumb { display: flex; align-items: center; gap: 8px; font-family: var(--font-data); font-size: 11px; color: var(--text-muted); }
+.topbar-breadcrumb .current { color: var(--text-primary); }
+.topbar-sep { color: var(--border-bright); }
+.topbar-actions { display: flex; align-items: center; gap: 12px; }
+.topbar-time { font-family: var(--font-data); font-size: 11px; color: var(--text-secondary); }
+.notif-btn { width: 32px; height: 32px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.15s; }
+.notif-btn:hover { border-color: var(--cyan); }
+.notif-dot { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--red); border: 1px solid var(--bg-panel); animation: pulse-red 2s ease-in-out infinite; }
+@keyframes pulse-red { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,92,0.4); } 50% { box-shadow: 0 0 0 4px rgba(255,59,92,0); } }
+
+.content { flex: 1; overflow-y: auto; padding: 24px 28px; }
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-track { background: transparent; }
+.content::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+.section-title { font-family: var(--font-data); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.panel-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); }
+.panel-title { font-family: var(--font-data); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: var(--text-primary); }
+.panel-body { padding: 16px; }
+
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 3px; font-family: var(--font-data); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.badge-qualified { background: var(--green-dim); color: var(--green); border: 1px solid rgba(22,201,116,0.3); }
+.badge-unqualified { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,59,92,0.3); }
+.badge-reinspection { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,140,0,0.3); }
+.badge-concession { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(61,158,255,0.3); }
+.badge-pending { background: rgba(122,155,190,0.15); color: var(--text-secondary); border: 1px solid rgba(122,155,190,0.2); }
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.badge-qualified .badge-dot { animation: pulse-green 2s ease-in-out infinite; }
+@keyframes pulse-green { 0%,100% { box-shadow: 0 0 0 0 rgba(22,201,116,0.5); } 50% { box-shadow: 0 0 0 3px rgba(22,201,116,0); } }
+
+.form-select { background: var(--bg-base); border: 1px solid var(--border-bright); color: var(--text-primary); padding: 8px 12px; border-radius: 3px; font-family: var(--font-data); font-size: 12px; width: 100%; outline: none; cursor: pointer; }
+.form-select:focus { border-color: var(--cyan); }
+
+.dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+.metric-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px; padding: 18px 20px; position: relative; overflow: hidden; cursor: pointer; transition: all 0.2s ease; }
+.metric-card:hover { border-color: var(--border-bright); transform: translateY(-1px); }
+.metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--card-color, var(--cyan)); }
+.metric-card.green { --card-color: var(--green); }
+.metric-card.red { --card-color: var(--red); }
+.metric-card.orange { --card-color: var(--orange); }
+.metric-card.blue { --card-color: var(--blue); }
+.metric-label { font-family: var(--font-data); font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+.metric-value { font-family: var(--font-data); font-size: 36px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; color: var(--card-color, var(--cyan)); }
+.metric-sub { font-family: var(--font-data); font-size: 10px; color: var(--text-muted); margin-top: 6px; }
+.metric-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 28px; opacity: 0.08; }
+.metric-trend { font-family: var(--font-data); font-size: 10px; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+
+.dashboard-layout { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
+.pending-list .pending-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); transition: background 0.15s; cursor: pointer; }
+.pending-item:last-child { border-bottom: none; }
+.pending-item:hover { background: var(--bg-hover); }
+.pending-type { width: 3px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+.pending-info { flex: 1; min-width: 0; }
+.pending-title { font-size: 12px; font-weight: 500; margin-bottom: 2px; }
+.pending-meta { font-family: var(--font-data); font-size: 10px; color: var(--text-muted); }
+.pending-time { font-family: var(--font-data); font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+
+.notif-list .notif-item { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.notif-item:hover { background: var(--bg-hover); }
+.notif-item:last-child { border-bottom: none; }
+.notif-dot2 { width: 6px; height: 6px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.notif-text { font-size: 12px; line-height: 1.5; }
+.notif-time { font-family: var(--font-data); font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+select option { background: #0B1929; color: #E8F0FA; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <div class="logo-mark"></div>
+      <div>
+        <div class="logo-text">AQC</div>
+        <div class="logo-sub">ai-quality-control</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-section-label">质量管理</div>
+  <div class="nav-item active">
+    <span class="nav-icon">⬡</span> 质量工作台
+    <span class="nav-badge">9</span>
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">✎</span> 检验录入
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">◈</span> 判定解释
+  </div>
+
+  <div class="nav-section-label">流程管理</div>
+  <div class="nav-item">
+    <span class="nav-icon">⟳</span> 复检管理
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">↻</span> 改判申请
+    <span class="nav-badge orange">3</span>
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">◎</span> 让步接收
+    <span class="nav-badge blue">2</span>
+  </div>
+
+  <div class="nav-section-label">数据分析</div>
+  <div class="nav-item">
+    <span class="nav-icon">⊞</span> 质保书数据
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">▦</span> 质量统计
+  </div>
+
+  <div class="nav-section-label">系统管理</div>
+  <div class="nav-item">
+    <span class="nav-icon">◉</span> 标准库
+    <span style="font-size:9px;margin-left:auto;color:var(--text-muted)">▼</span>
+  </div>
+  <div class="nav-item" style="padding-left:40px;font-size:12px">
+    <span class="nav-icon" style="margin-left:-14px">├</span> 标准维护
+  </div>
+  <div class="nav-item" style="padding-left:40px;font-size:12px">
+    <span class="nav-icon" style="margin-left:-14px">└</span> 指标项目管理
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">⊕</span> 权限与审计
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">👤</span> 账号管理
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">📋</span> 数据字典
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar">ZJ</div>
+      <div>
+        <div class="user-name">张建国</div>
+        <div class="user-role">QUALITY_SUPERVISOR</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-breadcrumb">
+      <span>ai-quality-control</span>
+      <span class="topbar-sep">›</span>
+      <span class="current">质量工作台</span>
+    </div>
+    <div class="topbar-actions">
+      <span class="topbar-time" id="clock">2026-05-15 14:32:07</span>
+      <div class="notif-btn">
+        <span style="font-size:14px">🔔</span>
+        <div class="notif-dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="section-title">实时指标</div>
+    <div class="dashboard-grid">
+      <div class="metric-card" style="--card-color:var(--cyan)">
+        <div class="metric-label">待判样品</div>
+        <div class="metric-value">23</div>
+        <div class="metric-sub">本班次待处理</div>
+        <div class="metric-trend"><span style="color:var(--red)">↑</span> +5 较昨日</div>
+        <div class="metric-icon">◈</div>
+      </div>
+      <div class="metric-card red">
+        <div class="metric-label">不合格批次</div>
+        <div class="metric-value">7</div>
+        <div class="metric-sub">本月累计</div>
+        <div class="metric-trend"><span style="color:var(--green)">↓</span> -2 较上月</div>
+        <div class="metric-icon">✗</div>
+      </div>
+      <div class="metric-card orange">
+        <div class="metric-label">待处理复检</div>
+        <div class="metric-value">4</div>
+        <div class="metric-sub">3 项超时提醒</div>
+        <div class="metric-trend"><span style="color:var(--orange)">→</span> 持平</div>
+        <div class="metric-icon">↻</div>
+      </div>
+      <div class="metric-card blue">
+        <div class="metric-label">待审批让步</div>
+        <div class="metric-value">2</div>
+        <div class="metric-sub">1 项客户未确认</div>
+        <div class="metric-trend"><span style="color:var(--red)">↑</span> +1 新增</div>
+        <div class="metric-icon">◎</div>
+      </div>
+    </div>
+
+    <div class="dashboard-layout">
+      <div>
+        <div class="section-title">待处理事项</div>
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">ALL PENDING ITEMS</div>
+            <select class="form-select" style="width:120px;padding:4px 8px;font-size:10px">
+              <option>全部类型</option>
+              <option>复检任务</option>
+              <option>改判审批</option>
+              <option>让步审批</option>
+            </select>
+          </div>
+          <div class="pending-list">
+            <div class="pending-item">
+              <div class="pending-type" style="background:var(--orange)"></div>
+              <div class="pending-info">
+                <div class="pending-title">Z123456 复检任务待处理</div>
+                <div class="pending-meta">炉号 H20250514001 · 抗拉强度偏差 -10 MPa · 责任人 李明</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                <span class="badge badge-reinspection"><span class="badge-dot"></span>需复检</span>
+                <span class="pending-time">2小时前</span>
+              </div>
+            </div>
+            <div class="pending-item">
+              <div class="pending-type" style="background:var(--red)"></div>
+              <div class="pending-info">
+                <div class="pending-title">改判申请 RJ-2025-089 待审批（逆向改判）</div>
+                <div class="pending-meta">Z098765 · 合格→不合格 · 申请人 王强 · 需质量部长审批</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                <span class="badge badge-unqualified">逆向改判</span>
+                <span class="pending-time">4小时前</span>
+              </div>
+            </div>
+            <div class="pending-item">
+              <div class="pending-type" style="background:var(--blue)"></div>
+              <div class="pending-info">
+                <div class="pending-title">让步接收 CA-2025-034 客户确认超时提醒</div>
+                <div class="pending-meta">Z234567 · 延伸率偏差 -1.5% · 距发货还有 3 天</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                <span class="badge badge-pending">待确认</span>
+                <span class="pending-time">1天前</span>
+              </div>
+            </div>
+            <div class="pending-item">
+              <div class="pending-type" style="background:var(--orange)"></div>
+              <div class="pending-info">
+                <div class="pending-title">Z345678 第2次复检结果待录入</div>
+                <div class="pending-meta">炉号 H20250513002 · 厚度偏差 +0.12mm · 责任人 陈伟</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                <span class="badge badge-reinspection"><span class="badge-dot"></span>需复检</span>
+                <span class="pending-time">昨天</span>
+              </div>
+            </div>
+            <div class="pending-item">
+              <div class="pending-type" style="background:var(--gold)"></div>
+              <div class="pending-info">
+                <div class="pending-title">StandardGap：品种"冷轧板" Q235B 缺少 n 值指标限值</div>
+                <div class="pending-meta">触发自 Z123456 · 2 次检验均无标准覆盖 · 需标准维护人员补充</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                <span style="background:rgba(255,180,0,0.12);color:var(--gold);border:1px solid rgba(255,180,0,0.3);border-radius:2px;font-family:var(--font-data);font-size:9px;padding:2px 8px;font-weight:700">标准缺口</span>
+                <span class="pending-time">2天前</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">站内消息</div>
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">NOTIFICATIONS</div>
+            <span style="font-family:var(--font-data);font-size:9px;color:var(--cyan);cursor:pointer">全部标读</span>
+          </div>
+          <div class="notif-list">
+            <div class="notif-item">
+              <div class="notif-dot2" style="background:var(--red)"></div>
+              <div>
+                <div class="notif-text">改判申请 RJ-2025-089 需您审批（逆向改判，质量部长权限）</div>
+                <div class="notif-time">14:28</div>
+              </div>
+            </div>
+            <div class="notif-item">
+              <div class="notif-dot2" style="background:var(--orange)"></div>
+              <div>
+                <div class="notif-text">让步 CA-2025-034 客户超时未确认，距发货仅余 3 天，请跟进</div>
+                <div class="notif-time">11:00</div>
+              </div>
+            </div>
+            <div class="notif-item">
+              <div class="notif-dot2" style="background:var(--gold)"></div>
+              <div>
+                <div class="notif-text">标准覆盖缺口：冷轧板 Q235B 缺少 n 值限值，建议补充</div>
+                <div class="notif-time">昨天 16:45</div>
+              </div>
+            </div>
+            <div class="notif-item">
+              <div class="notif-dot2" style="background:var(--text-muted)"></div>
+              <div>
+                <div class="notif-text" style="color:var(--text-muted)">Z567890 让步已自动失效（改判审批通过）</div>
+                <div class="notif-time">昨天 09:12</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function updateClock() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('clock').textContent =
+    `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,78 @@
+{
+  "metadata": {
+    "skill_name": "db-code-gen",
+    "skill_path": "/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/db-code-gen",
+    "executor_model": "claude-sonnet-4-6",
+    "analyzer_model": "claude-sonnet-4-6",
+    "timestamp": "2026-04-21T00:00:00Z",
+    "evals_run": ["markdown-table-with-base-fields", "oracle-ddl-sql-input"],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "run_id": "eval-1-with_skill",
+      "eval_name": "markdown-table-with-base-fields",
+      "configuration": "with_skill",
+      "pass_rate": 1.0,
+      "assertions_passed": 9,
+      "assertions_total": 9,
+      "time_seconds": 70.3,
+      "tokens": 23254
+    },
+    {
+      "run_id": "eval-1-without_skill",
+      "eval_name": "markdown-table-with-base-fields",
+      "configuration": "without_skill",
+      "pass_rate": 0.0,
+      "assertions_passed": 0,
+      "assertions_total": 9,
+      "time_seconds": 80.1,
+      "tokens": 18787
+    },
+    {
+      "run_id": "eval-2-with_skill",
+      "eval_name": "oracle-ddl-sql-input",
+      "configuration": "with_skill",
+      "pass_rate": 1.0,
+      "assertions_passed": 9,
+      "assertions_total": 9,
+      "time_seconds": 73.3,
+      "tokens": 23320
+    },
+    {
+      "run_id": "eval-2-without_skill",
+      "eval_name": "oracle-ddl-sql-input",
+      "configuration": "without_skill",
+      "pass_rate": 0.0,
+      "assertions_passed": 0,
+      "assertions_total": 9,
+      "time_seconds": 70.2,
+      "tokens": 18420
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate_mean": 1.0,
+      "pass_rate_stddev": 0.0,
+      "time_seconds_mean": 71.8,
+      "tokens_mean": 23287
+    },
+    "without_skill": {
+      "pass_rate_mean": 0.0,
+      "pass_rate_stddev": 0.0,
+      "time_seconds_mean": 75.15,
+      "tokens_mean": 18604
+    },
+    "delta": {
+      "pass_rate": "+1.00",
+      "time_seconds": "-3.35",
+      "tokens": "+4683"
+    }
+  },
+  "notes": [
+    "with_skill: 9/9 断言通过（100%），两个 eval 均完全符合项目规范",
+    "without_skill: 0/9 断言通过（0%），基线生成的代码不继承 CoreEntity、不用 ApiResult、不含批量操作模板",
+    "with_skill 多消耗约 4700 tokens，主要来自读取 SKILL.md 规范文件的上下文开销",
+    "两个 eval 结果一致，skill 触发稳定，无随机性问题"
+  ]
+}

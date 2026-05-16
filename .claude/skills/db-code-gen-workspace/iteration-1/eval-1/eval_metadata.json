@@ -1,0 +1,6 @@
+{
+  "eval_id": 1,
+  "eval_name": "markdown-table-with-base-fields",
+  "prompt": "根据以下表结构帮我生成后端业务代码：...(OA_LEAVE_RECORD 表，含基础字段)",
+  "assertions": []
+}

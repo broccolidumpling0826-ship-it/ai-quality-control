@@ -1,0 +1,37 @@
+{
+  "eval_id": 1,
+  "eval_name": "full-controller-parse",
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "生成了 MeterAcctActivityIStruct.json 文件",
+      "passed": true,
+      "evidence": "文件已写入 outputs/MeterAcctActivityIStruct.json"
+    },
+    {
+      "text": "interfaces 数组包含 5 个接口（save/update/delete/list/detail）",
+      "passed": true,
+      "evidence": "JSON 中 interfaces 数组长度为 5，覆盖 save/update/delete/list/detail"
+    },
+    {
+      "text": "save 接口：method=POST，path=/meterAcctActivity/save，inputParam.paramStyle=body，inputParam 包含 DTO 字段",
+      "passed": true,
+      "evidence": "method=POST, path=/meterAcctActivity/save, paramStyle=body, fields 包含 id/activityName/activityCode/startDate/endDate/status/remark"
+    },
+    {
+      "text": "list 接口出参 data 展开了分页结构（records/total/size/current/pages）",
+      "passed": true,
+      "evidence": "outputParam.data.fields 包含 records(array)/total/size/current/pages"
+    },
+    {
+      "text": "delete 接口：method=DELETE，path=/meterAcctActivity/delete/{id}，inputParam.paramStyle=path",
+      "passed": true,
+      "evidence": "method=DELETE, path=/meterAcctActivity/delete/{id}, paramStyle=path"
+    },
+    {
+      "text": "实体类字段（如 activityName、status）已从 DTO/Entity 类中读取并展开，包含 description",
+      "passed": true,
+      "evidence": "所有字段均有 type 和 description，来自 @ApiModelProperty 注解"
+    }
+  ]
+}

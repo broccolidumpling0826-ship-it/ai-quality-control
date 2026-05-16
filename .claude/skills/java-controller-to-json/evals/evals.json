@@ -1,0 +1,25 @@
+{
+  "skill_name": "java-controller-to-json",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我需要解析这个 Controller 文件，提取所有接口信息生成 JSON 文件。\n\nController 文件路径：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/src/main/java/com/example/controller/MeterAcctActivityController.java\n\n输出目录：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/output",
+      "expected_output": "应生成 MeterAcctActivityIStruct.json 文件，包含 5 个接口（save/update/delete/list/detail）的完整信息，入参和出参中的实体类字段需展开，分页接口出参需展开 IPage 结构",
+      "files": [
+        "/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/src/main/java/com/example/controller/MeterAcctActivityController.java"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "帮我把这个 Controller 接口的信息提取出来，我要用来生成前端代码。\n\n只需要解析 save 和 list 这两个接口。\n\nController 路径：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/src/main/java/com/example/controller/MeterAcctActivityController.java\n输出目录：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/output",
+      "expected_output": "应生成 MeterAcctActivityIStruct.json，包含 save（POST，RequestBody 入参展开 DTO 字段）和 list（POST，分页出参展开 Page<MeterAcctActivity> 结构）两个接口",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "我想生成接口的 json 结构文件，但我只提供了 Controller 文件路径，还没提供输出目录：\n\nController 路径：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/src/main/java/com/example/controller/MeterAcctActivityController.java",
+      "expected_output": "应拒绝执行并提示用户补充输出目录路径，不应尝试读取任何文件",
+      "files": []
+    }
+  ]
+}

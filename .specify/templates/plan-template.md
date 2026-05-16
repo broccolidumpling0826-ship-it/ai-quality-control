@@ -40,7 +40,20 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify compliance with the project constitution (`.specify/memory/constitution.md`) before proceeding:
+
+| # | Gate | Status |
+|---|------|--------|
+| 1 | **命名规范 (Principle I)**: Class/method/variable names follow Java conventions; no magic values | ⬜ |
+| 2 | **方法规模 (Principle II)**: Methods ≤160 lines, classes ≤1000 lines, nesting ≤3 levels, cyclomatic < 20 | ⬜ |
+| 3 | **Service入口编排 (Principle III)**: Complex Service entry methods only orchestrate steps; details pushed to named private methods | ⬜ |
+| 4 | **外部依赖收敛 (Principle III)**: All DB/RPC/HTTP/MQ/Cache calls are consolidated in dedicated methods with failure strategy | ⬜ |
+| 5 | **前端规范 (Principle IV)**: Vue components: multi-word name, scoped style, typed props with required/default, no for...in | ⬜ |
+| 6 | **可测试性 (Principle V)**: Core business methods are unit-testable; no excessive static dependencies | ⬜ |
+| 7 | **安全 (Principle V)**: No sensitive data in variables; parameterized queries to prevent SQL injection | ⬜ |
+| 8 | **技术栈合规**: Solution stays within Java/Spring Cloud/MySQL/Redis (backend) and Vue/Element UI/TS (frontend) | ⬜ |
+
+*Any ⬜ that cannot be satisfied MUST be documented in the Complexity Tracking section below with justification.*
 
 ## Project Structure
 

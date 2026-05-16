@@ -1,0 +1,52 @@
+{
+  "eval_id": 1,
+  "eval_name": "markdown-table-with-base-fields",
+  "prompt": "根据以下表结构帮我生成后端业务代码（OA_LEAVE_RECORD，含基础字段）",
+  "assertions": [
+    {
+      "text": "Entity 继承 CoreEntity",
+      "passed": true,
+      "evidence": "OaLeaveRecord extends CoreEntity"
+    },
+    {
+      "text": "Entity 不包含基础字段（id/companyId/createUserNo等）",
+      "passed": true,
+      "evidence": "文件中只有 employeeNo/deptCode/leaveType/leaveDays/valid/remark 6个业务字段，无基础字段重复声明"
+    },
+    {
+      "text": "IS_VALID 映射为 Boolean（非 Integer）",
+      "passed": true,
+      "evidence": "private Boolean valid;"
+    },
+    {
+      "text": "LEAVE_TYPE 有枚举提示（3种状态）",
+      "passed": true,
+      "evidence": "// TODO: 如需枚举管理，请按枚举规范创建 LeaveStatusType 枚举类"
+    },
+    {
+      "text": "Service 包含 NOT_BLANK_FIELDS 和 UNIQUE_FIELDS 常量（留空）",
+      "passed": true,
+      "evidence": "两个常量均存在，内容为空注释，等待开发者填充"
+    },
+    {
+      "text": "Service 包含完整批量操作方法（saveBatch/updateBatch/saveOrUpdateBatch）",
+      "passed": true,
+      "evidence": "三个方法均存在且实现正确"
+    },
+    {
+      "text": "Controller 所有方法返回 ApiResult",
+      "passed": true,
+      "evidence": "全部6个接口返回 ApiResult.success(...)"
+    },
+    {
+      "text": "Controller 接口路径以 list/get/save/update/remove/page 开头",
+      "passed": true,
+      "evidence": "page/list/get/save/update/remove 全部符合规范"
+    },
+    {
+      "text": "使用 lambdaQuery() 而非 new LambdaQueryWrapper<>()",
+      "passed": true,
+      "evidence": "Service 中使用 lambdaQuery() 写法"
+    }
+  ]
+}

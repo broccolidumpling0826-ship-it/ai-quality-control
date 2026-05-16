@@ -1,0 +1,6 @@
+{
+  "eval_id": 2,
+  "eval_name": "oracle-ddl-sql-input",
+  "prompt": "帮我根据这个建表语句生成 Entity、Mapper、Service、Controller 代码：...(PRF_KPI_TARGET Oracle DDL)",
+  "assertions": []
+}

@@ -1,0 +1,52 @@
+{
+  "eval_id": 1,
+  "eval_name": "markdown-table-with-base-fields",
+  "prompt": "根据以下表结构帮我生成后端业务代码（OA_LEAVE_RECORD，含基础字段）",
+  "assertions": [
+    {
+      "text": "Entity 继承 CoreEntity",
+      "passed": false,
+      "evidence": "OaLeaveRecord 没有继承任何基类，是普通 POJO"
+    },
+    {
+      "text": "Entity 不包含基础字段（id/companyId/createUserNo等）",
+      "passed": false,
+      "evidence": "文件中包含 id/createUserNo/createDateTime/updateUserNo/updateDateTime/companyId 全部基础字段"
+    },
+    {
+      "text": "IS_VALID 映射为 Boolean（非 Integer）",
+      "passed": false,
+      "evidence": "private Integer isValid; — 用了 Integer 且命名 isXxx"
+    },
+    {
+      "text": "LEAVE_TYPE 有枚举提示（3种状态）",
+      "passed": false,
+      "evidence": "只有普通注释，没有枚举建议"
+    },
+    {
+      "text": "Service 包含 NOT_BLANK_FIELDS 和 UNIQUE_FIELDS 常量（留空）",
+      "passed": false,
+      "evidence": "Service 是接口定义，无任何批量操作结构"
+    },
+    {
+      "text": "Service 包含完整批量操作方法（saveBatch/updateBatch/saveOrUpdateBatch）",
+      "passed": false,
+      "evidence": "Service 接口只有 page/getById/save/update/deleteById，无批量操作"
+    },
+    {
+      "text": "Controller 所有方法返回 ApiResult",
+      "passed": false,
+      "evidence": "全部接口返回 ResponseEntity<Map<String,Object>>，不是 ApiResult"
+    },
+    {
+      "text": "Controller 接口路径以 list/get/save/update/remove/page 开头",
+      "passed": false,
+      "evidence": "使用 /{id} 路径参数风格（@GetMapping(\"/{id}\")），违反规范"
+    },
+    {
+      "text": "使用 lambdaQuery() 而非 new LambdaQueryWrapper<>()",
+      "passed": false,
+      "evidence": "Service 是接口，实现类在 ServiceImpl 中，但无法确认，整体结构与规范不符"
+    }
+  ]
+}

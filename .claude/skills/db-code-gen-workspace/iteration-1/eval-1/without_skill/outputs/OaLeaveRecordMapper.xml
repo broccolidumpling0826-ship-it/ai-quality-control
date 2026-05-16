@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.mapper.OaLeaveRecordMapper">
+
+    <!-- 通用结果映射 -->
+    <resultMap id="BaseResultMap" type="com.example.entity.OaLeaveRecord">
+        <id     column="ID"               property="id"/>
+        <result column="EMPLOYEE_NO"      property="employeeNo"/>
+        <result column="DEPT_CODE"        property="deptCode"/>
+        <result column="LEAVE_TYPE"       property="leaveType"/>
+        <result column="LEAVE_DAYS"       property="leaveDays"/>
+        <result column="IS_VALID"         property="isValid"/>
+        <result column="REMARK"           property="remark"/>
+        <result column="CREATE_USER_NO"   property="createUserNo"/>
+        <result column="CREATE_DATE_TIME" property="createDateTime"/>
+        <result column="UPDATE_USER_NO"   property="updateUserNo"/>
+        <result column="UPDATE_DATE_TIME" property="updateDateTime"/>
+        <result column="COMPANY_ID"       property="companyId"/>
+    </resultMap>
+
+    <!-- 分页查询 -->
+    <select id="selectPageByQuery" resultMap="BaseResultMap">
+        SELECT
+            ID, EMPLOYEE_NO, DEPT_CODE, LEAVE_TYPE, LEAVE_DAYS,
+            IS_VALID, REMARK, CREATE_USER_NO, CREATE_DATE_TIME,
+            UPDATE_USER_NO, UPDATE_DATE_TIME, COMPANY_ID
+        FROM OA_LEAVE_RECORD
+        <where>
+            <if test="query.employeeNo != null and query.employeeNo != ''">
+                AND EMPLOYEE_NO = #{query.employeeNo}
+            </if>
+            <if test="query.deptCode != null and query.deptCode != ''">
+                AND DEPT_CODE = #{query.deptCode}
+            </if>
+            <if test="query.leaveType != null and query.leaveType != ''">
+                AND LEAVE_TYPE = #{query.leaveType}
+            </if>
+            <if test="query.isValid != null">
+                AND IS_VALID = #{query.isValid}
+            </if>
+            <if test="query.companyId != null and query.companyId != ''">
+                AND COMPANY_ID = #{query.companyId}
+            </if>
+            <if test="query.createDateTimeStart != null and query.createDateTimeStart != ''">
+                AND CREATE_DATE_TIME &gt;= #{query.createDateTimeStart}
+            </if>
+            <if test="query.createDateTimeEnd != null and query.createDateTimeEnd != ''">
+                AND CREATE_DATE_TIME &lt;= #{query.createDateTimeEnd}
+            </if>
+        </where>
+        ORDER BY CREATE_DATE_TIME DESC
+    </select>
+
+</mapper>

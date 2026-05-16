@@ -1,0 +1,22 @@
+{
+  "eval_id": 2,
+  "eval_name": "partial-interfaces",
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "生成了 MeterAcctActivityIStruct.json 文件",
+      "passed": true,
+      "evidence": "文件已写入 outputs/MeterAcctActivityIStruct.json"
+    },
+    {
+      "text": "包含 save 接口，method=POST，inputParam 展开了 MeterAcctActivityDTO 字段",
+      "passed": true,
+      "evidence": "save 接口 method=POST，paramStyle=body，fields 包含 7 个 DTO 字段含 description"
+    },
+    {
+      "text": "list 接口出参 data 中包含 records 数组和 total 等分页字段",
+      "passed": true,
+      "evidence": "outputParam.data.fields 包含 records(array with MeterAcctActivity fields)/total/size/current/pages"
+    }
+  ]
+}

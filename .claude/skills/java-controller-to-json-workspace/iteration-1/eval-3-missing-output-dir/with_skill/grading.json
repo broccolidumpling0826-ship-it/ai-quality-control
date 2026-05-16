@@ -1,0 +1,22 @@
+{
+  "eval_id": 3,
+  "eval_name": "missing-output-dir-validation",
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "没有写入任何 JSON 文件",
+      "passed": true,
+      "evidence": "outputs/ 目录中只有 response.txt，无任何 .json 文件"
+    },
+    {
+      "text": "回复中明确告知用户需要提供输出目录路径",
+      "passed": true,
+      "evidence": "response.txt 明确说明缺少输出目录路径，并告知用户需要提供"
+    },
+    {
+      "text": "没有尝试读取 Controller 文件或 DTO 文件",
+      "passed": true,
+      "evidence": "运行报告显示只有 3 次工具调用（read skill + write response），未读取任何 Controller 或 DTO 文件"
+    }
+  ]
+}

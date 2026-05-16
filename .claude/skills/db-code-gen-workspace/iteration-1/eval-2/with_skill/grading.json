@@ -1,0 +1,52 @@
+{
+  "eval_id": 2,
+  "eval_name": "oracle-ddl-sql-input",
+  "prompt": "帮我根据这个建表语句生成代码（PRF_KPI_TARGET Oracle DDL）",
+  "assertions": [
+    {
+      "text": "Entity 继承 CoreEntity",
+      "passed": true,
+      "evidence": "PrfKpiTarget extends CoreEntity"
+    },
+    {
+      "text": "Entity 不包含基础字段（id/companyId/createUserNo等）",
+      "passed": true,
+      "evidence": "只有 kpiCode/kpiName/targetValue/unit/yearNo/monthNo/enable 7个业务字段"
+    },
+    {
+      "text": "IS_ENABLE 映射为 Boolean（非 Integer）",
+      "passed": true,
+      "evidence": "private Boolean enable; — 且正确去掉了 is 前缀"
+    },
+    {
+      "text": "Service 包含 NOT_BLANK_FIELDS 和 UNIQUE_FIELDS 常量（留空）",
+      "passed": true,
+      "evidence": "两个常量存在且留空，待开发者填充"
+    },
+    {
+      "text": "Service 包含完整批量操作方法（saveBatch/updateBatch/saveOrUpdateBatch）",
+      "passed": true,
+      "evidence": "三个批量操作方法及四个私有校验方法均存在"
+    },
+    {
+      "text": "Controller 所有方法返回 ApiResult",
+      "passed": true,
+      "evidence": "全部接口返回 ApiResult.success(...)"
+    },
+    {
+      "text": "Controller 接口路径以 list/get/save/update/remove/page 开头",
+      "passed": true,
+      "evidence": "page/list/get/save/update/remove 符合规范"
+    },
+    {
+      "text": "使用 lambdaQuery() 而非 new LambdaQueryWrapper<>()",
+      "passed": true,
+      "evidence": "Service 使用 lambdaQuery() 写法"
+    },
+    {
+      "text": "包路径体现 prf/performance 模块标识",
+      "passed": true,
+      "evidence": "com.jhict.performance 包路径，Controller 路径 /performance/prf-kpi-target"
+    }
+  ]
+}

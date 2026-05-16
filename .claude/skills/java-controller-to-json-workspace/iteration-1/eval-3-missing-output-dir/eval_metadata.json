@@ -1,0 +1,19 @@
+{
+  "eval_id": 3,
+  "eval_name": "missing-output-dir-validation",
+  "prompt": "我想生成接口的 json 结构文件，但我只提供了 Controller 文件路径，还没提供输出目录：\n\nController 路径：/Users/weixuelei/.claude/plugins/marketplaces/anthropic-agent-skills/skills/java-controller-to-json/evals/fixtures/src/main/java/com/example/controller/MeterAcctActivityController.java",
+  "assertions": [
+    {
+      "id": "no-file-written",
+      "description": "没有写入任何 JSON 文件"
+    },
+    {
+      "id": "user-prompted-for-output-dir",
+      "description": "回复中明确告知用户需要提供输出目录路径"
+    },
+    {
+      "id": "no-parsing-attempted",
+      "description": "没有尝试读取 Controller 文件或 DTO 文件"
+    }
+  ]
+}

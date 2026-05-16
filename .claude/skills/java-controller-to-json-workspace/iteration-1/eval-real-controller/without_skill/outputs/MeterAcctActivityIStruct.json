@@ -1,0 +1,464 @@
+{
+  "controllerName": "MeterAcctActivityController",
+  "controllerDescription": "计量核算活动",
+  "baseUrl": "/meterAcctActivity",
+  "interfaces": [
+    {
+      "purpose": "获取列表",
+      "method": "GET",
+      "path": "/meterAcctActivity/list",
+      "inputParam": {
+        "paramStyle": "query",
+        "fields": [
+          {
+            "source": "JhPage (pagination param, @ApiIgnore)",
+            "name": "page",
+            "type": "JhPage",
+            "description": "分页参数（框架自动注入，接口调用方传 pageNum/pageSize）",
+            "fields": [
+              { "name": "pageNum", "type": "Integer", "description": "当前页码，默认1" },
+              { "name": "pageSize", "type": "Integer", "description": "每页条数，默认10" }
+            ]
+          },
+          {
+            "source": "MeterAcctActivityQuery extends MeterAcctActivity extends CoreEntity",
+            "name": "query",
+            "type": "MeterAcctActivityQuery",
+            "description": "查询条件",
+            "fields": [
+              {
+                "group": "CoreEntity (best-effort common base fields)",
+                "fields": [
+                  { "name": "id", "type": "String", "description": "主键ID" },
+                  { "name": "createBy", "type": "String", "description": "创建人" },
+                  { "name": "createTime", "type": "Date", "description": "创建时间" },
+                  { "name": "updateBy", "type": "String", "description": "更新人" },
+                  { "name": "updateTime", "type": "Date", "description": "更新时间" },
+                  { "name": "delFlag", "type": "Integer", "description": "删除标志（0-未删除，1-已删除）" },
+                  { "name": "tenantId", "type": "String", "description": "租户ID" }
+                ]
+              },
+              {
+                "group": "MeterAcctActivity own fields",
+                "fields": [
+                  { "name": "activityName", "type": "String", "description": "活动名称", "column": "ACTIVITY_NAME" },
+                  { "name": "activityStatus", "type": "MeterActivityStatusEnum", "description": "活动状态", "column": "ACTIVITY_STATUS" },
+                  { "name": "year", "type": "String", "description": "年度", "column": "YEAR" },
+                  { "name": "month", "type": "MonthEnum", "description": "月份", "column": "MONTH" },
+                  { "name": "acctOrgId", "type": "String", "description": "核算组织id", "column": "ACCT_ORG_ID" },
+                  { "name": "manageOrgId", "type": "String", "description": "管理组织id", "column": "MANAGE_ORG_ID" },
+                  { "name": "copyFromId", "type": "String", "description": "复制源id", "column": "COPY_FROM_ID" },
+                  { "name": "flowInstId", "type": "String", "description": "流程实例id", "column": "FLOW_INST_ID" },
+                  { "name": "formInstId", "type": "String", "description": "表单实例id", "column": "FORM_INST_ID" }
+                ]
+              },
+              {
+                "group": "MeterAcctActivityQuery own fields",
+                "fields": [
+                  { "name": "curUserParentOrgIdPrefix", "type": "String", "description": "数据权限：当前登录用户所属组织的上一级组织的id前缀" },
+                  { "name": "ids", "type": "List<String>", "description": "id列表" },
+                  { "name": "yearMonth", "type": "String", "description": "年月" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "outputParam": {
+        "wrapper": "ApiResult<JhPage<List<MeterAcctActivityVO>>>",
+        "apiResultFields": [
+          { "name": "code", "type": "Integer", "description": "响应状态码（200表示成功）" },
+          { "name": "msg", "type": "String", "description": "响应消息" },
+          { "name": "data", "type": "JhPage<List<MeterAcctActivityVO>>", "description": "分页数据" }
+        ],
+        "dataType": "JhPage<List<MeterAcctActivityVO>>",
+        "jhPageFields": [
+          { "name": "pageNum", "type": "Integer", "description": "当前页码" },
+          { "name": "pageSize", "type": "Integer", "description": "每页条数" },
+          { "name": "total", "type": "Long", "description": "总记录数" },
+          { "name": "pages", "type": "Integer", "description": "总页数" },
+          { "name": "records", "type": "List<MeterAcctActivityVO>", "description": "数据列表" }
+        ],
+        "recordType": "MeterAcctActivityVO",
+        "recordFields": [
+          {
+            "group": "CoreEntity (best-effort common base fields)",
+            "fields": [
+              { "name": "id", "type": "String", "description": "主键ID" },
+              { "name": "createBy", "type": "String", "description": "创建人" },
+              { "name": "createTime", "type": "Date", "description": "创建时间" },
+              { "name": "updateBy", "type": "String", "description": "更新人" },
+              { "name": "updateTime", "type": "Date", "description": "更新时间" },
+              { "name": "delFlag", "type": "Integer", "description": "删除标志（0-未删除，1-已删除）" },
+              { "name": "tenantId", "type": "String", "description": "租户ID" }
+            ]
+          },
+          {
+            "group": "MeterAcctActivity own fields",
+            "fields": [
+              { "name": "activityName", "type": "String", "description": "活动名称" },
+              { "name": "activityStatus", "type": "MeterActivityStatusEnum", "description": "活动状态" },
+              { "name": "year", "type": "String", "description": "年度" },
+              { "name": "month", "type": "MonthEnum", "description": "月份" },
+              { "name": "acctOrgId", "type": "String", "description": "核算组织id" },
+              { "name": "manageOrgId", "type": "String", "description": "管理组织id" },
+              { "name": "copyFromId", "type": "String", "description": "复制源id" },
+              { "name": "flowInstId", "type": "String", "description": "流程实例id" },
+              { "name": "formInstId", "type": "String", "description": "表单实例id" }
+            ]
+          },
+          {
+            "group": "MeterAcctActivityVO own fields",
+            "fields": [
+              { "name": "acctOrgName", "type": "String", "description": "核算组织名" },
+              { "name": "manageOrgName", "type": "String", "description": "管理组织名" },
+              {
+                "name": "meterStds",
+                "type": "List<MeterStd>",
+                "description": "关联的计量标准集合",
+                "itemFields": [
+                  { "name": "id", "type": "String", "description": "主键ID（继承CoreEntity）" },
+                  { "name": "createBy", "type": "String", "description": "创建人（继承CoreEntity）" },
+                  { "name": "createTime", "type": "Date", "description": "创建时间（继承CoreEntity）" },
+                  { "name": "updateBy", "type": "String", "description": "更新人（继承CoreEntity）" },
+                  { "name": "updateTime", "type": "Date", "description": "更新时间（继承CoreEntity）" },
+                  { "name": "delFlag", "type": "Integer", "description": "删除标志（继承CoreEntity）" },
+                  { "name": "tenantId", "type": "String", "description": "租户ID（继承CoreEntity）" },
+                  { "name": "indCode", "type": "String", "description": "指标编码" },
+                  { "name": "meterIndName", "type": "String", "description": "计量指标名" },
+                  { "name": "meterUnit", "type": "String", "description": "计量单位" },
+                  { "name": "useOrgId", "type": "String", "description": "使用组织id" },
+                  { "name": "manageOrgId", "type": "String", "description": "管理组织id" },
+                  { "name": "fixedUnitPriceFlag", "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+                  { "name": "status", "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+                  { "name": "citedFlag", "type": "String", "description": "是否被引用标识（0-否，1-是）" }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "purpose": "通过id获取详情",
+      "method": "GET",
+      "path": "/meterAcctActivity/getById",
+      "inputParam": {
+        "paramStyle": "query",
+        "fields": [
+          { "name": "id", "type": "String", "description": "记录主键ID", "required": true }
+        ]
+      },
+      "outputParam": {
+        "wrapper": "ApiResult<MeterAcctActivityVO>",
+        "apiResultFields": [
+          { "name": "code", "type": "Integer", "description": "响应状态码" },
+          { "name": "msg", "type": "String", "description": "响应消息" },
+          { "name": "data", "type": "MeterAcctActivityVO", "description": "详情数据" }
+        ],
+        "dataType": "MeterAcctActivityVO",
+        "dataFields": [
+          {
+            "group": "CoreEntity (best-effort common base fields)",
+            "fields": [
+              { "name": "id", "type": "String", "description": "主键ID" },
+              { "name": "createBy", "type": "String", "description": "创建人" },
+              { "name": "createTime", "type": "Date", "description": "创建时间" },
+              { "name": "updateBy", "type": "String", "description": "更新人" },
+              { "name": "updateTime", "type": "Date", "description": "更新时间" },
+              { "name": "delFlag", "type": "Integer", "description": "删除标志（0-未删除，1-已删除）" },
+              { "name": "tenantId", "type": "String", "description": "租户ID" }
+            ]
+          },
+          {
+            "group": "MeterAcctActivity own fields",
+            "fields": [
+              { "name": "activityName", "type": "String", "description": "活动名称" },
+              { "name": "activityStatus", "type": "MeterActivityStatusEnum", "description": "活动状态" },
+              { "name": "year", "type": "String", "description": "年度" },
+              { "name": "month", "type": "MonthEnum", "description": "月份" },
+              { "name": "acctOrgId", "type": "String", "description": "核算组织id" },
+              { "name": "manageOrgId", "type": "String", "description": "管理组织id" },
+              { "name": "copyFromId", "type": "String", "description": "复制源id" },
+              { "name": "flowInstId", "type": "String", "description": "流程实例id" },
+              { "name": "formInstId", "type": "String", "description": "表单实例id" }
+            ]
+          },
+          {
+            "group": "MeterAcctActivityVO own fields",
+            "fields": [
+              { "name": "acctOrgName", "type": "String", "description": "核算组织名" },
+              { "name": "manageOrgName", "type": "String", "description": "管理组织名" },
+              {
+                "name": "meterStds",
+                "type": "List<MeterStd>",
+                "description": "关联的计量标准集合",
+                "itemFields": [
+                  { "name": "id", "type": "String", "description": "主键ID（继承CoreEntity）" },
+                  { "name": "createBy", "type": "String", "description": "创建人（继承CoreEntity）" },
+                  { "name": "createTime", "type": "Date", "description": "创建时间（继承CoreEntity）" },
+                  { "name": "updateBy", "type": "String", "description": "更新人（继承CoreEntity）" },
+                  { "name": "updateTime", "type": "Date", "description": "更新时间（继承CoreEntity）" },
+                  { "name": "delFlag", "type": "Integer", "description": "删除标志（继承CoreEntity）" },
+                  { "name": "tenantId", "type": "String", "description": "租户ID（继承CoreEntity）" },
+                  { "name": "indCode", "type": "String", "description": "指标编码" },
+                  { "name": "meterIndName", "type": "String", "description": "计量指标名" },
+                  { "name": "meterUnit", "type": "String", "description": "计量单位" },
+                  { "name": "useOrgId", "type": "String", "description": "使用组织id" },
+                  { "name": "manageOrgId", "type": "String", "description": "管理组织id" },
+                  { "name": "fixedUnitPriceFlag", "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+                  { "name": "status", "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+                  { "name": "citedFlag", "type": "String", "description": "是否被引用标识（0-否，1-是）" }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "purpose": "新增",
+      "method": "POST",
+      "path": "/meterAcctActivity/save",
+      "inputParam": {
+        "paramStyle": "body (application/json)",
+        "bodyType": "MeterAcctActivityDTO",
+        "fields": [
+          {
+            "group": "CoreEntity (best-effort common base fields)",
+            "fields": [
+              { "name": "id", "type": "String", "description": "主键ID（新增时通常由框架生成，可不传）" },
+              { "name": "createBy", "type": "String", "description": "创建人（框架自动注入）" },
+              { "name": "createTime", "type": "Date", "description": "创建时间（框架自动注入）" },
+              { "name": "updateBy", "type": "String", "description": "更新人（框架自动注入）" },
+              { "name": "updateTime", "type": "Date", "description": "更新时间（框架自动注入）" },
+              { "name": "delFlag", "type": "Integer", "description": "删除标志" },
+              { "name": "tenantId", "type": "String", "description": "租户ID" }
+            ]
+          },
+          {
+            "group": "MeterAcctActivity own fields",
+            "fields": [
+              { "name": "activityName", "type": "String", "description": "活动名称" },
+              { "name": "activityStatus", "type": "MeterActivityStatusEnum", "description": "活动状态" },
+              { "name": "year", "type": "String", "description": "年度" },
+              { "name": "month", "type": "MonthEnum", "description": "月份" },
+              { "name": "acctOrgId", "type": "String", "description": "核算组织id" },
+              { "name": "manageOrgId", "type": "String", "description": "管理组织id" },
+              { "name": "copyFromId", "type": "String", "description": "复制源id" },
+              { "name": "flowInstId", "type": "String", "description": "流程实例id" },
+              { "name": "formInstId", "type": "String", "description": "表单实例id" }
+            ]
+          },
+          {
+            "group": "MeterAcctActivityDTO own fields",
+            "fields": [
+              { "name": "meterStdIds", "type": "List<String>", "description": "关联的计量标准id集合" },
+              {
+                "name": "meterStds",
+                "type": "List<MeterStd>",
+                "description": "关联的计量标准集合",
+                "itemFields": [
+                  { "name": "id", "type": "String", "description": "主键ID（继承CoreEntity）" },
+                  { "name": "indCode", "type": "String", "description": "指标编码" },
+                  { "name": "meterIndName", "type": "String", "description": "计量指标名" },
+                  { "name": "meterUnit", "type": "String", "description": "计量单位" },
+                  { "name": "useOrgId", "type": "String", "description": "使用组织id" },
+                  { "name": "manageOrgId", "type": "String", "description": "管理组织id" },
+                  { "name": "fixedUnitPriceFlag", "type": "String", "description": "是否固定单价标识（0-否，1-是）" },
+                  { "name": "status", "type": "String", "description": "启用或禁用状态（0-禁用，1-启用）" },
+                  { "name": "citedFlag", "type": "String", "description": "是否被引用标识（0-否，1-是）" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "outputParam": {
+        "wrapper": "ApiResult<MeterAcctActivity>",
+        "apiResultFields": [
+          { "name": "code", "type": "Integer", "description": "响应状态码" },
+          { "name": "msg", "type": "String", "description": "响应消息" },
+          { "name": "data", "type": "MeterAcctActivity", "description": "新增后的实体数据" }
+        ],
+        "dataType": "MeterAcctActivity",
+        "dataFields": [
+          { "name": "id", "type": "String", "description": "主键ID（继承CoreEntity）" },
+          { "name": "createBy", "type": "String", "description": "创建人（继承CoreEntity）" },
+          { "name": "createTime", "type": "Date", "description": "创建时间（继承CoreEntity）" },
+          { "name": "updateBy", "type": "String", "description": "更新人（继承CoreEntity）" },
+          { "name": "updateTime", "type": "Date", "description": "更新时间（继承CoreEntity）" },
+          { "name": "delFlag", "type": "Integer", "description": "删除标志（继承CoreEntity）" },
+          { "name": "tenantId", "type": "String", "description": "租户ID（继承CoreEntity）" },
+          { "name": "activityName", "type": "String", "description": "活动名称" },
+          { "name": "activityStatus", "type": "MeterActivityStatusEnum", "description": "活动状态" },
+          { "name": "year", "type": "String", "description": "年度" },
+          { "name": "month", "type": "MonthEnum", "description": "月份" },
+          { "name": "acctOrgId", "type": "String", "description": "核算组织id" },
+          { "name": "manageOrgId", "type": "String", "description": "管理组织id" },
+          { "name": "copyFromId", "type": "String", "description": "复制源id" },
+          { "name": "flowInstId", "type": "String", "description": "流程实例id" },
+          { "name": "formInstId", "type": "String", "description": "表单实例id" }
+        ]
+      }
+    },
+    {
+      "purpose": "编辑",
+      "method": "PUT",
+      "path": "/meterAcctActivity/update",
+      "inputParam": {
+        "paramStyle": "body (application/json)",
+        "bodyType": "MeterAcctActivityDTO",
+        "note": "与新增接口入参结构相同，id字段必传；service方法为updateExceptActivityStatus，activityStatus字段不会被更新",
+        "fields": [
+          {
+            "group": "CoreEntity (best-effort common base fields)",
+            "fields": [
+              { "name": "id", "type": "String", "description": "主键ID（必传）", "required": true },
+              { "name": "createBy", "type": "String", "description": "创建人" },
+              { "name": "createTime", "type": "Date", "description": "创建时间" },
+              { "name": "updateBy", "type": "String", "description": "更新人（框架自动注入）" },
+              { "name": "updateTime", "type": "Date", "description": "更新时间（框架自动注入）" },
+              { "name": "delFlag", "type": "Integer", "description": "删除标志" },
+              { "name": "tenantId", "type": "String", "description": "租户ID" }
+            ]
+          },
+          {
+            "group": "MeterAcctActivity own fields",
+            "fields": [
+              { "name": "activityName", "type": "String", "description": "活动名称" },
+              { "name": "activityStatus", "type": "MeterActivityStatusEnum", "description": "活动状态（该字段不会被编辑接口更新）" },
+              { "name": "year", "type": "String", "description": "年度" },
+              { "name": "month", "type": "MonthEnum", "description": "月份" },
+              { "name": "acctOrgId", "type": "String", "description": "核算组织id" },
+              { "name": "manageOrgId", "type": "String", "description": "管理组织id" },
+              { "name": "copyFromId", "type": "String", "description": "复制源id" },
+              { "name": "flowInstId", "type": "String", "description": "流程实例id" },
+              { "name": "formInstId", "type": "String", "description": "表单实例id" }
+            ]
+          },
+          {
+            "group": "MeterAcctActivityDTO own fields",
+            "fields": [
+              { "name": "meterStdIds", "type": "List<String>", "description": "关联的计量标准id集合" },
+              { "name": "meterStds", "type": "List<MeterStd>", "description": "关联的计量标准集合" }
+            ]
+          }
+        ]
+      },
+      "outputParam": {
+        "wrapper": "ApiResult (raw, no generic type)",
+        "apiResultFields": [
+          { "name": "code", "type": "Integer", "description": "响应状态码" },
+          { "name": "msg", "type": "String", "description": "响应消息" },
+          { "name": "data", "type": "Object", "description": "null（编辑接口不返回具体数据）" }
+        ]
+      }
+    },
+    {
+      "purpose": "复制",
+      "method": "POST",
+      "path": "/meterAcctActivity/copy",
+      "inputParam": {
+        "paramStyle": "body (application/json)",
+        "bodyType": "List<String>",
+        "fields": [
+          { "name": "ids", "type": "List<String>", "description": "要复制的计量核算活动id列表", "required": true }
+        ]
+      },
+      "outputParam": {
+        "wrapper": "ApiResult (raw, no generic type)",
+        "apiResultFields": [
+          { "name": "code", "type": "Integer", "description": "响应状态码" },
+          { "name": "msg", "type": "String", "description": "响应消息" },
+          { "name": "data", "type": "Object", "description": "null" }
+        ]
+      }
+    },
+    {
+      "purpose": "删除",
+      "method": "DELETE",
+      "path": "/meterAcctActivity/remove",
+      "inputParam": {
+        "paramStyle": "body (application/json)",
+        "bodyType": "List<String>",
+        "fields": [
+          { "name": "ids", "type": "List<String>", "description": "要删除的计量核算活动id列表", "required": true }
+        ]
+      },
+      "outputParam": {
+        "wrapper": "ApiResult (raw, no generic type)",
+        "apiResultFields": [
+          { "name": "code", "type": "Integer", "description": "响应状态码" },
+          { "name": "msg", "type": "String", "description": "响应消息" },
+          { "name": "data", "type": "Object", "description": "null" }
+        ]
+      }
+    },
+    {
+      "purpose": "开启计量核算活动",
+      "method": "POST",
+      "path": "/meterAcctActivity/startActivity",
+      "inputParam": {
+        "paramStyle": "body (application/json)",
+        "bodyType": "List<String>",
+        "fields": [
+          { "name": "ids", "type": "List<String>", "description": "要开启的计量核算活动id列表", "required": true }
+        ]
+      },
+      "outputParam": {
+        "wrapper": "ApiResult (raw, no generic type)",
+        "apiResultFields": [
+          { "name": "code", "type": "Integer", "description": "响应状态码" },
+          { "name": "msg", "type": "String", "description": "响应消息" },
+          { "name": "data", "type": "Object", "description": "null" }
+        ]
+      }
+    },
+    {
+      "purpose": "终止计量核算活动",
+      "method": "POST",
+      "path": "/meterAcctActivity/terminateActivity",
+      "inputParam": {
+        "paramStyle": "body (application/json)",
+        "bodyType": "List<String>",
+        "fields": [
+          { "name": "ids", "type": "List<String>", "description": "要终止的计量核算活动id列表", "required": true }
+        ]
+      },
+      "outputParam": {
+        "wrapper": "ApiResult (raw, no generic type)",
+        "apiResultFields": [
+          { "name": "code", "type": "Integer", "description": "响应状态码" },
+          { "name": "msg", "type": "String", "description": "响应消息" },
+          { "name": "data", "type": "Object", "description": "null" }
+        ]
+      }
+    },
+    {
+      "purpose": "重启计量核算活动",
+      "method": "POST",
+      "path": "/meterAcctActivity/restartActivity",
+      "inputParam": {
+        "paramStyle": "body (application/json)",
+        "bodyType": "List<String>",
+        "fields": [
+          { "name": "ids", "type": "List<String>", "description": "要重启的计量核算活动id列表", "required": true }
+        ]
+      },
+      "outputParam": {
+        "wrapper": "ApiResult (raw, no generic type)",
+        "apiResultFields": [
+          { "name": "code", "type": "Integer", "description": "响应状态码" },
+          { "name": "msg", "type": "String", "description": "响应消息" },
+          { "name": "data", "type": "Object", "description": "null" }
+        ]
+      }
+    }
+  ],
+  "_notes": {
+    "CoreEntity": "CoreEntity source code was not found in this repository. The fields listed under 'CoreEntity (best-effort common base fields)' are inferred from common JhICT framework conventions: id, createBy, createTime, updateBy, updateTime, delFlag, tenantId.",
+    "JhPage": "JhPage source code was not found in this repository. Fields listed (pageNum, pageSize, total, pages, records) are inferred from standard pagination conventions.",
+    "ApiResult": "ApiResult source code was not found in this repository. Fields listed (code, msg, data) are inferred from standard REST response wrapper conventions."
+  }
+}
