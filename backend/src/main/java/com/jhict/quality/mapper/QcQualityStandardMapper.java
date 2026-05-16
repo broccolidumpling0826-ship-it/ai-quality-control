@@ -46,8 +46,8 @@ public interface QcQualityStandardMapper extends BaseMapper<QcQualityStandard> {
             "AND customer_id = #{customerId} " +
             "AND variety = #{variety} " +
             "AND grade = #{grade} " +
-            "AND effective_date &lt;= #{testDate} " +
-            "AND expiry_date &gt;= #{testDate} " +
+            "AND effective_date <= #{testDate} " +
+            "AND expiry_date >= #{testDate} " +
             "AND status = 'PUBLISHED' " +
             "ORDER BY effective_date DESC " +
             "LIMIT 1")
@@ -65,8 +65,8 @@ public interface QcQualityStandardMapper extends BaseMapper<QcQualityStandard> {
             "WHERE standard_type = 'ENTERPRISE' " +
             "AND variety = #{variety} " +
             "AND grade = #{grade} " +
-            "AND effective_date &lt;= #{testDate} " +
-            "AND expiry_date &gt;= #{testDate} " +
+            "AND effective_date <= #{testDate} " +
+            "AND expiry_date >= #{testDate} " +
             "AND status = 'PUBLISHED' " +
             "ORDER BY effective_date DESC " +
             "LIMIT 1")
@@ -83,8 +83,8 @@ public interface QcQualityStandardMapper extends BaseMapper<QcQualityStandard> {
             "WHERE standard_type = 'NATIONAL' " +
             "AND variety = #{variety} " +
             "AND grade = #{grade} " +
-            "AND effective_date &lt;= #{testDate} " +
-            "AND expiry_date &gt;= #{testDate} " +
+            "AND effective_date <= #{testDate} " +
+            "AND expiry_date >= #{testDate} " +
             "AND status = 'PUBLISHED' " +
             "ORDER BY effective_date DESC " +
             "LIMIT 1")
