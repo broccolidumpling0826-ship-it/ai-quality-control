@@ -98,7 +98,9 @@ public class JudgmentEngine {
         }
 
         // Step 4: 逐指标比较，计算偏差，收集evidence和gap
+        // 四段优先级：UNQUALIFIED > NEED_REINSPECTION > CAN_CONCESSION > QUALIFIED（D-015）
         boolean hasUnqualified = false;
+        boolean hasReinspection = false;
         boolean hasConcession = false;
 
         for (JudgmentInput.InspectionValueItem valueItem : input.getValues()) {
@@ -153,12 +155,14 @@ public class JudgmentEngine {
                         .passed(true)
                         .build());
             } else {
-                // 超出正常范围，检查是否在让步范围内
+                // 超出正常范围，按四段优先级判断（D-015）
                 BigDecimal deviation = calcDeviation(testValue, lowerLimit, upperLimit);
-                boolean withinConcession = (concessionUpper != null || concessionLower != null)
+                boolean hasConcessionRange = (concessionUpper != null || concessionLower != null);
+                boolean withinConcession = hasConcessionRange
                         && isWithinRange(testValue, concessionLower, concessionUpper);
 
                 if (withinConcession) {
+                    // ② 在让步范围内 → CAN_CONCESSION
                     hasConcession = true;
                     evidences.add(JudgmentOutput.EvidenceItem.builder()
                             .standardId(matchedStandard.getId())
@@ -170,7 +174,21 @@ public class JudgmentEngine {
                             .triggerRule(buildConcessionRule(lowerLimit, upperLimit, concessionLower, concessionUpper))
                             .passed(false)
                             .build());
+                } else if (!hasConcessionRange) {
+                    // ③ 超出合格限且未配置让步范围 → NEED_REINSPECTION
+                    hasReinspection = true;
+                    evidences.add(JudgmentOutput.EvidenceItem.builder()
+                            .standardId(matchedStandard.getId())
+                            .indicatorId(indicatorId)
+                            .testValue(testValue)
+                            .upperLimit(upperLimit)
+                            .lowerLimit(lowerLimit)
+                            .deviation(deviation)
+                            .triggerRule(buildReinspectionRule(lowerLimit, upperLimit, testValue, deviation))
+                            .passed(false)
+                            .build());
                 } else {
+                    // ④ 超出合格限且超出让步范围 → UNQUALIFIED
                     hasUnqualified = true;
                     evidences.add(JudgmentOutput.EvidenceItem.builder()
                             .standardId(matchedStandard.getId())
@@ -186,10 +204,12 @@ public class JudgmentEngine {
             }
         }
 
-        // Step 5: 汇总结论（优先级：UNQUALIFIED > CAN_CONCESSION > QUALIFIED）
+        // Step 5: 汇总结论（四段优先级：UNQUALIFIED > NEED_REINSPECTION > CAN_CONCESSION > QUALIFIED）
         JudgmentType judgmentType;
         if (hasUnqualified) {
             judgmentType = JudgmentType.UNQUALIFIED;
+        } else if (hasReinspection) {
+            judgmentType = JudgmentType.NEED_REINSPECTION;
         } else if (hasConcession) {
             judgmentType = JudgmentType.CAN_CONCESSION;
         } else {
@@ -305,7 +325,24 @@ public class JudgmentEngine {
 
     private String buildUnqualifiedRule(BigDecimal lowerLimit, BigDecimal upperLimit,
                                         BigDecimal testValue, BigDecimal deviation) {
-        StringBuilder sb = new StringBuilder("实测值超出标准范围");
+        StringBuilder sb = new StringBuilder("实测值超出标准范围且超出让步范围");
+        if (upperLimit != null && testValue != null && testValue.compareTo(upperLimit) > 0) {
+            sb.append("，超上限").append(deviation.abs().stripTrailingZeros().toPlainString());
+        } else if (lowerLimit != null && testValue != null && testValue.compareTo(lowerLimit) < 0) {
+            sb.append("，低于下限").append(deviation.abs().stripTrailingZeros().toPlainString());
+        }
+        if (lowerLimit != null) {
+            sb.append("，下限=").append(lowerLimit.stripTrailingZeros().toPlainString());
+        }
+        if (upperLimit != null) {
+            sb.append("，上限=").append(upperLimit.stripTrailingZeros().toPlainString());
+        }
+        return sb.toString();
+    }
+
+    private String buildReinspectionRule(BigDecimal lowerLimit, BigDecimal upperLimit,
+                                         BigDecimal testValue, BigDecimal deviation) {
+        StringBuilder sb = new StringBuilder("实测值超出标准范围且未配置让步范围，需复检");
         if (upperLimit != null && testValue != null && testValue.compareTo(upperLimit) > 0) {
             sb.append("，超上限").append(deviation.abs().stripTrailingZeros().toPlainString());
         } else if (lowerLimit != null && testValue != null && testValue.compareTo(lowerLimit) < 0) {

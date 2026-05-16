@@ -85,3 +85,53 @@
 
 - [ ] CHK039 - 5 条核心业务需求（标准维护/检验录入/自动判定/复检改判/质保书）之间的数据流链路是否完整定义：检验时间 → 标准匹配 → 判定 → 复检 → 改判 → 质保书汇总？[Consistency, Gap]
 - [ ] CHK040 - 各模块间"判定时间"、"检验时间"、"复检时间"、"改判时间"的语义是否有统一定义，避免跨模块引用时产生歧义？[Consistency, Ambiguity]
+
+---
+
+## 6. Session 2026-05-16 澄清项实现就绪性（D-015 ~ D-019）
+
+> 以下各项检验 Session 2026-05-16 五条澄清（D-015 四段优先级 / D-016 规格下拉 / D-017 质保书指标范围 / D-018 可用性 / D-019 日志）的需求描述是否足够清晰，可直接指导 T106–T110 实现，无需再次澄清。
+
+### D-015：判定四段优先级（FR-005）
+
+- [ ] CHK041 - 当实测值**恰好等于**合格限边界值（testValue == upperLimit 或 testValue == lowerLimit）时，判定结论是 QUALIFIED 还是 UNQUALIFIED？规格书中边界是否为闭区间（≤/≥）？[Clarity, Spec §FR-005, Ambiguity]
+- [ ] CHK042 - 当三级标准匹配全部返回空（客协/企标/国标均无匹配结果）时，判定引擎输出什么结论？规格书是否定义了"无匹配标准时的 fallback 结论"？[Coverage, Edge Case, Spec §FR-002, Gap]
+- [ ] CHK043 - 当某批次所有检验项目均属于"无标准覆盖"（全部写入 StandardGap）时，整体判定结论是什么？是否定义了"无任何有效判定指标"时的特殊处理？[Coverage, Edge Case, Spec §FR-005]
+- [ ] CHK044 - 当 standard_indicator 的 upper_limit 和 lower_limit 均为 NULL（指标无具体限值）时，该指标是否应视同"无标准覆盖"跳过，还是视为"无限制=自动通过"？规格书是否区分了这两种情形？[Clarity, Spec §FR-001, Ambiguity]
+- [ ] CHK045 - 让步范围（concession_upper/lower）可否合法地设置为比合格限更宽（如 lower_limit=370 而 concession_lower=360）？若让步范围比合格限更严，判定引擎行为是否有定义？[Clarity, Spec §FR-005, Edge Case]
+
+### D-016：product_spec 规格下拉约束（FR-004）
+
+- [ ] CHK046 - 规格下拉列表为空（所选客户+品种+牌号下无有效标准，无 spec_range 可选）时，检验录入界面是否有明确的提示要求（如"请先维护对应标准"），还是允许跳过规格字段？[Coverage, Edge Case, Spec §FR-004]
+- [ ] CHK047 - 当用户已选择 spec_range 后，再次更改品种或牌号时，是否要求 product_spec 字段自动清空并重新加载选项？规格书是否明确此交互规则？[Clarity, Spec §FR-004]
+- [ ] CHK048 - product_spec 的选定值（即 spec_range 字符串）是否应完整存入检验快照，还是仅存 standard_id 外键？规格书是否明确快照字段的存储内容？[Completeness, Spec §FR-004, Spec §FR-005]
+
+### D-017：质保书关键指标分类过滤（FR-010）
+
+- [ ] CHK049 - 当某批次完全没有 COMPOSITION/PERFORMANCE/DIMENSION 三类指标的检验记录时（如仅录入了表面/外形检验），系统是否允许生成空快照？是否有失败/警告要求？[Coverage, Edge Case, Spec §FR-010]
+- [ ] CHK050 - ADMIN 修改指标类别纳入配置后，是否对**历史**已生成的质保书快照产生影响？规格书是否明确历史快照的不变性？[Clarity, Spec §FR-010, Ambiguity]
+- [ ] CHK051 - 质保书快照（snapshot_data JSON）的字段结构是否有任何规格定义（至少列出顶层必要字段），还是完全由实现决定？[Completeness, Spec §FR-010, Gap]
+
+### D-019：结构化 JSON 日志（FR-019）
+
+- [ ] CHK052 - 日志中的业务字段（coilId、grade、customerId、testerNo）是否属于需要脱敏处理的个人/业务敏感信息？规格书或安全需求中是否有日志数据分类要求？[Completeness, Spec §FR-019, Gap]
+- [ ] CHK053 - File Appender 发生写入失败（磁盘满、权限不足）时，系统是否应继续正常运行，还是进入降级/告警状态？规格书是否定义了日志基础设施故障的处理策略？[Coverage, Edge Case, Spec §FR-019, Gap]
+- [ ] CHK054 - MDC traceId 的传播要求是否涵盖异步场景（@Async 注解方法、Spring @Scheduled 定时任务）？MDC 默认不跨线程传播，规格书是否明确此类异步场景的 traceId 要求？[Completeness, Spec §FR-019, Gap]
+
+---
+
+## 7. 异常流与边界条件覆盖
+
+- [ ] CHK055 - 当针对某判定结论发起复检（复检次数尚未达到上限），而该判定结论在复检进行中被改判时，复检记录的最终状态是否有明确规则？[Coverage, Edge Case, Spec §FR-007, Spec §FR-008]
+- [ ] CHK056 - 同一批次并发提交两条改判申请时，哪条应被接受、哪条应被拒绝？规格书是否定义了并发改判的互斥或排队规则？[Coverage, Edge Case, Spec §FR-008, Gap]
+- [ ] CHK057 - 当判定结论为 NEED_REINSPECTION 且 2 次复检次数已耗尽时，是否允许发起让步接收申请（结论非 CAN_CONCESSION）？还是强制走改判流程？规格书是否定义了此路径？[Coverage, Edge Case, Spec §FR-007, Spec §FR-009]
+- [ ] CHK058 - 让步催促提醒阈值（app.concession.remind-days）变更时，是否立即对所有当前处于"待确认"状态的让步申请生效，还是仅对新发起的让步生效？规格书是否明确此实时性？[Clarity, Spec §FR-009]
+- [ ] CHK059 - 当质保书数据生成时，批次中存在尚未完成客户确认的让步申请（confirm_status=PENDING）时，质保书快照是否附加让步说明，还是等待确认后再生成？[Coverage, Edge Case, Spec §FR-010, Spec §FR-009]
+- [ ] CHK060 - 当让步接收附件（confirm_attachment_url）写入后，关联的改判申请同时被提交审批通过，让步自动置为 INVALID——此时是否应要求通知曾上传附件的销售人员（而非仅让步申请人）？[Coverage, Spec §FR-009]
+
+---
+
+## 8. 新旧需求一致性验证
+
+- [ ] CHK061 - FR-005 中"四段优先级"最严重结论合并规则（UNQUALIFIED > NEED_REINSPECTION > CAN_CONCESSION > QUALIFIED）是否与 FR-002 中"任一不满足则结论为不合格"的 AND 逻辑完全一致？是否存在可能的语义冲突？[Consistency, Spec §FR-002, Spec §FR-005]
+- [ ] CHK062 - FR-019（结构化日志）要求记录业务主键，FR-012（审计日志）要求记录操作人/时间/变更内容——当两者都被触发（如改判审批时），是否明确两套日志的写入顺序或事务关系？[Consistency, Spec §FR-012, Spec §FR-019]

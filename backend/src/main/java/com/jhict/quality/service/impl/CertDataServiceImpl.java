@@ -12,11 +12,14 @@ import com.jhict.quality.mapper.*;
 import com.jhict.quality.service.api.CertDataService;
 import com.jhict.quality.vo.QcQualityCertDataVO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -44,6 +47,10 @@ public class CertDataServiceImpl implements CertDataService {
     private QcJudgmentEvidenceMapper judgmentEvidenceMapper;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /** 质保书纳入的指标类别（D-017），默认成分/性能/尺寸；ADMIN 可通过 application.yml 调整 */
+    @Value("${app.cert.included-categories:COMPOSITION,PERFORMANCE,DIMENSION}")
+    private String includedCategoriesConfig;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -101,8 +108,19 @@ public class CertDataServiceImpl implements CertDataService {
             Map<String, QcJudgmentEvidence> evidenceByIndicator = evidences.stream()
                     .collect(Collectors.toMap(QcJudgmentEvidence::getIndicatorId, e -> e, (a, b) -> a));
 
+            // D-017: 仅纳入配置的指标类别（默认 COMPOSITION/PERFORMANCE/DIMENSION）
+            Set<String> includedCategories = new HashSet<>(
+                    Arrays.asList(includedCategoriesConfig.split(",")));
+
             for (QcInspectionValue value : values) {
                 QcIndicatorItem indicator = indicatorItemMapper.selectById(value.getIndicatorId());
+
+                // 过滤：不在纳入类别内的指标跳过
+                if (indicator != null && StringUtils.hasText(indicator.getIndicatorCategory())
+                        && !includedCategories.contains(indicator.getIndicatorCategory())) {
+                    continue;
+                }
+
                 QcJudgmentEvidence evidence = evidenceByIndicator.get(value.getIndicatorId());
 
                 QcQualityCertDataVO.IndicatorSnapshot snap = new QcQualityCertDataVO.IndicatorSnapshot();

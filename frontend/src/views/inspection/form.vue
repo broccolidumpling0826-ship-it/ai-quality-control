@@ -55,7 +55,27 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="规格" prop="specification">
-              <el-input v-model="baseForm.specification" placeholder="如：3.0×1250mm" />
+              <!-- D-016：product_spec 强制下拉，禁止自由文本输入；随品种/牌号/客户变化动态加载 -->
+              <el-select
+                v-model="baseForm.specification"
+                placeholder="请先选择品种和牌号"
+                style="width:100%"
+                :disabled="!baseForm.productVariety || !baseForm.productGrade"
+                :loading="specRangeLoading"
+                clearable
+              >
+                <el-option
+                  v-for="opt in specRangeOptions"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+                <template v-if="specRangeOptions.length === 0 && !specRangeLoading" #empty>
+                  <div style="padding:8px 16px;color:#7A9BBE;font-size:12px;">
+                    暂无有效规格，请先在标准库维护对应标准
+                  </div>
+                </template>
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -196,7 +216,7 @@ import type { FormInstance } from 'element-plus'
 import { useDictStore } from '@/store/dict'
 import { useAuthStore } from '@/store/auth'
 import { addInspection } from '@/api/inspection'
-import { listIndicators } from '@/api/standard'
+import { listIndicators, getSpecRanges, type SpecRangeOption } from '@/api/standard'
 
 const router = useRouter()
 const dictStore = useDictStore()
@@ -250,8 +270,38 @@ function syncBatchNo() {
   }
 }
 
+// D-016: spec-range dropdown state
+const specRangeOptions = ref<SpecRangeOption[]>([])
+const specRangeLoading = ref(false)
+
+async function loadSpecRanges() {
+  if (!baseForm.productVariety || !baseForm.productGrade) {
+    specRangeOptions.value = []
+    baseForm.specification = ''
+    return
+  }
+  specRangeLoading.value = true
+  try {
+    const opts = await getSpecRanges({
+      variety: baseForm.productVariety,
+      grade: baseForm.productGrade,
+      customerId: baseForm.customer || undefined,
+    })
+    specRangeOptions.value = opts ?? []
+    // 清空已选规格（品种或牌号已变更）
+    if (!specRangeOptions.value.some(o => o.value === baseForm.specification)) {
+      baseForm.specification = ''
+    }
+  } catch {
+    specRangeOptions.value = []
+  } finally {
+    specRangeLoading.value = false
+  }
+}
+
 function onProductChange() {
   indicatorRows.value = []
+  loadSpecRanges()
 }
 
 async function loadStandardIndicators() {

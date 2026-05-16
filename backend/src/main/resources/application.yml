@@ -57,6 +57,12 @@ app:
     base-path: /opt/quality-control/uploads
     url-prefix: /api/v1/files
     max-size: 20971520
+  cert:
+    # 质保书纳入的指标类别（D-017）：默认成分/性能/尺寸；ADMIN 可修改此配置项
+    included-categories: COMPOSITION,PERFORMANCE,DIMENSION
+  concession:
+    # 让步催促提醒阈值（天数，FR-009）：confirm_status=PENDING 超过此天数自动提醒
+    remind-days: 7
 
 logging:
   level:

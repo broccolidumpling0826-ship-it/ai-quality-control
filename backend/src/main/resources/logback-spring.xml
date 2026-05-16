@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- dev：项目目录 logs/；prod：/var/log/qc（FR-019） -->
+    <springProfile name="dev">
+        <property name="LOG_PATH" value="./logs"/>
+    </springProfile>
+    <springProfile name="!dev">
+        <property name="LOG_PATH" value="/var/log/qc"/>
+    </springProfile>
+
+    <!-- ══ 控制台 Appender（开发友好格式） ════════════════════════ -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>false</includeContext>
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <message>message</message>
+                <logger>logger</logger>
+                <thread>thread</thread>
+                <level>level</level>
+                <levelValue>[ignore]</levelValue>
+                <version>[ignore]</version>
+            </fieldNames>
+            <customFields>{"app":"ai-quality-control"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- ══ 错误日志 File Appender（FR-019：WARN+ 写文件，按日滚动，保留 30 天） ══ -->
+    <appender name="FILE_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/application-error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/application-error.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>false</includeContext>
+            <customFields>{"app":"ai-quality-control"}</customFields>
+        </encoder>
+        <!-- 仅写入 WARN 及以上级别 -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+    </appender>
+
+    <!-- ══ 根 Logger ══════════════════════════════════════════════ -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE_ERROR" />
+    </root>
+
+    <!-- 判定引擎详细日志（生产环境可调高至 WARN） -->
+    <logger name="com.jhict.quality.engine" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE_ERROR" />
+    </logger>
+
+    <!-- 定时任务日志（ConcessionScheduler 等） -->
+    <logger name="com.jhict.quality.scheduler" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE_ERROR" />
+    </logger>
+
+</configuration>

@@ -252,20 +252,20 @@ description: "Task list for 质量判定解释与让步管理系统"
 
 ### D-015：判定引擎四段优先级修正
 
-- [ ] T106 [US1] 修复 JudgmentEngine.java 判定逻辑，添加 NEED_REINSPECTION 触发：超出合格限且 concessionUpper/concessionLower 均为 NULL 时设 `hasReinspection=true`；更新 Step 5 优先级为 UNQUALIFIED > NEED_REINSPECTION > CAN_CONCESSION > QUALIFIED；相应更新 `buildReinspectionRule()` 触发规则描述 — `backend/src/main/java/com/jhict/quality/engine/JudgmentEngine.java`
+- [X] T106 [US1] 修复 JudgmentEngine.java 判定逻辑，添加 NEED_REINSPECTION 触发：超出合格限且 concessionUpper/concessionLower 均为 NULL 时设 `hasReinspection=true`；更新 Step 5 优先级为 UNQUALIFIED > NEED_REINSPECTION > CAN_CONCESSION > QUALIFIED；相应更新 `buildReinspectionRule()` 触发规则描述 — `backend/src/main/java/com/jhict/quality/engine/JudgmentEngine.java`
 
 ### D-016：检验录入 product_spec 下拉 UI 约束
 
-- [ ] T107 [US1] 在 StandardController 新增接口 `GET /api/v1/standards/spec-ranges?variety=&grade=&customerId=`，返回标准库中按 variety+grade+customerId 过滤的有效 spec_range 去重列表（含版本号），供检验录入规格下拉使用 — `backend/src/main/java/com/jhict/quality/controller/StandardController.java`
-- [ ] T108 [P] [US1] 在 frontend/src/api/standard.ts 添加 `getSpecRanges(params)` 方法；更新 frontend/src/views/inspection/form.vue 将 product_spec 字段从文本输入改为 `el-select`，数据源调用 `getSpecRanges`，随 customer/variety/grade 变化动态加载，显示格式 "厚度 X.Xmm / 宽度 XXXXmm (版本号)" — `frontend/src/api/standard.ts` + `frontend/src/views/inspection/form.vue`
+- [X] T107 [US1] 在 StandardController 新增接口 `GET /api/v1/standards/spec-ranges?variety=&grade=&customerId=`，返回标准库中按 variety+grade+customerId 过滤的有效 spec_range 去重列表（含版本号），供检验录入规格下拉使用 — `backend/src/main/java/com/jhict/quality/controller/StandardController.java`
+- [X] T108 [P] [US1] 在 frontend/src/api/standard.ts 添加 `getSpecRanges(params)` 方法；更新 frontend/src/views/inspection/form.vue 将 product_spec 字段从文本输入改为 `el-select`，数据源调用 `getSpecRanges`，随 customer/variety/grade 变化动态加载，显示格式 "厚度 X.Xmm / 宽度 XXXXmm (版本号)" — `frontend/src/api/standard.ts` + `frontend/src/views/inspection/form.vue`
 
 ### D-017：质保书关键指标按类别过滤
 
-- [ ] T109 [US4] 更新 CertDataServiceImpl 汇总逻辑：在聚合 InspectionValue 时按 indicator_category 过滤，默认仅纳入 COMPOSITION/PERFORMANCE/DIMENSION 三类；从系统配置（application.yml `app.cert.included-categories`，默认 `COMPOSITION,PERFORMANCE,DIMENSION`）读取配置，支持 ADMIN 通过配置调整 — `backend/src/main/java/com/jhict/quality/service/impl/CertDataServiceImpl.java` + `backend/src/main/resources/application.yml`
+- [X] T109 [US4] 更新 CertDataServiceImpl 汇总逻辑：在聚合 InspectionValue 时按 indicator_category 过滤，默认仅纳入 COMPOSITION/PERFORMANCE/DIMENSION 三类；从系统配置（application.yml `app.cert.included-categories`，默认 `COMPOSITION,PERFORMANCE,DIMENSION`）读取配置，支持 ADMIN 通过配置调整 — `backend/src/main/java/com/jhict/quality/service/impl/CertDataServiceImpl.java` + `backend/src/main/resources/application.yml`
 
 ### D-019：结构化 JSON 日志（FR-019）
 
-- [ ] T110 [P] 创建 logback-spring.xml：配置 LogstashEncoder 输出结构化 JSON；添加 `FILE_ERROR` Appender（WARN 及以上写入 `/var/log/qc/application-error.log`，按日滚动，保留 30 天）；在 pom.xml 添加 `logstash-logback-encoder` 依赖（版本 7.x）；创建 MdcTraceFilter.java（Servlet Filter，每请求生成 UUID 注入 MDC traceId，请求结束后 MDC.remove） — `backend/src/main/resources/logback-spring.xml` + `backend/pom.xml` + `backend/src/main/java/com/jhict/quality/common/filter/MdcTraceFilter.java`
+- [X] T110 [P] 创建 logback-spring.xml：配置 LogstashEncoder 输出结构化 JSON；添加 `FILE_ERROR` Appender（WARN 及以上写入 `/var/log/qc/application-error.log`，按日滚动，保留 30 天）；在 pom.xml 添加 `logstash-logback-encoder` 依赖（版本 7.x）；创建 MdcTraceFilter.java（Servlet Filter，每请求生成 UUID 注入 MDC traceId，请求结束后 MDC.remove） — `backend/src/main/resources/logback-spring.xml` + `backend/pom.xml` + `backend/src/main/java/com/jhict/quality/common/filter/MdcTraceFilter.java`
 
 ---
 
