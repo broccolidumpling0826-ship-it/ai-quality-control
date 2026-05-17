@@ -18,6 +18,12 @@ public class QcQualityStandard extends CoreEntity {
     @ApiModelProperty(value = "标准类型（NATIONAL/ENTERPRISE/CUSTOMER）")
     private String standardType;
 
+    @ApiModelProperty(value = "标准编号")
+    private String standardCode;
+
+    @ApiModelProperty(value = "标准名称")
+    private String standardName;
+
     @ApiModelProperty(value = "品种")
     private String variety;
 

@@ -17,7 +17,8 @@ INSERT IGNORE INTO sys_dict (id, dict_code, dict_name, is_system, sort_no, statu
 ('d013', 'NEW_EVIDENCE_SOURCE', '新证据来源',     1, 13, 1, NOW(), NOW()),
 ('d014', 'PRODUCT_VARIETY',     '品种',           0, 14, 1, NOW(), NOW()),
 ('d015', 'PRODUCT_GRADE',       '牌号',           0, 15, 1, NOW(), NOW()),
-('d016', 'AUDIT_OPERATION_TYPE','审计操作类型',   1, 16, 1, NOW(), NOW());
+('d016', 'AUDIT_OPERATION_TYPE','审计操作类型',   1, 16, 1, NOW(), NOW()),
+('d017', 'QC_CUSTOMER',         '关联客户',       0, 17, 1, NOW(), NOW());
 
 -- 标准类型
 INSERT IGNORE INTO sys_dict_item (id, dict_code, item_value, item_label, color_tag, sort_no, status, is_system, create_date_time, update_date_time) VALUES
@@ -121,6 +122,11 @@ INSERT IGNORE INTO sys_dict_item (id, dict_code, item_value, item_label, color_t
 ('di153', 'AUDIT_OPERATION_TYPE', 'CONFIRM_CONCESSION', '确认让步',       'success', 3, 1, 1, NOW(), NOW()),
 ('di154', 'AUDIT_OPERATION_TYPE', 'APPROVE_CONCESSION', '审批让步',       'primary', 4, 1, 1, NOW(), NOW()),
 ('di155', 'AUDIT_OPERATION_TYPE', 'PUBLISH_STANDARD',   '发布质量标准',   'info',    5, 1, 1, NOW(), NOW());
+
+-- 关联客户（客协标准绑定，item_value 为客户ID）
+INSERT IGNORE INTO sys_dict_item (id, dict_code, item_value, item_label, color_tag, sort_no, status, is_system, create_date_time, update_date_time) VALUES
+('di161', 'QC_CUSTOMER', 'CUST-001', '华东汽车配件有限公司', '', 1, 1, 0, NOW(), NOW()),
+('di162', 'QC_CUSTOMER', 'CUST-002', '西南建材集团',         '', 2, 1, 0, NOW(), NOW());
 
 -- 初始管理员用户（密码: Admin123456，BCrypt哈希）
 INSERT IGNORE INTO sys_user (id, user_no, username, password, role, department, status, create_date_time, update_date_time) VALUES

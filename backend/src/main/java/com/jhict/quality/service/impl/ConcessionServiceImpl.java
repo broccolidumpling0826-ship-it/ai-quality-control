@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jhict.quality.common.annotation.AuditLog;
 import com.jhict.quality.common.exception.ServiceException;
+import com.jhict.quality.common.util.AuthUtils;
 import com.jhict.quality.dto.ConcessionConfirmCmd;
 import com.jhict.quality.dto.QcConcessionAddCmd;
 import com.jhict.quality.dto.QcConcessionPageQuery;
@@ -136,7 +137,17 @@ public class ConcessionServiceImpl implements ConcessionService {
 
         String currentApprovalStatus = acceptance.getApprovalStatus();
 
-        if ("SALES_MANAGER".equals(operatorRole)) {
+        if (AuthUtils.isAdmin()) {
+            // 系统管理员：跳过角色与前置状态校验，可直接推进或终审
+            if ("PENDING_APPROVAL".equals(currentApprovalStatus)) {
+                acceptance.setApprovalStatus("SALES_APPROVED");
+            } else if ("SALES_APPROVED".equals(currentApprovalStatus)) {
+                acceptance.setApprovalStatus("APPROVED");
+            } else if (!"APPROVED".equals(currentApprovalStatus) && !"REJECTED".equals(currentApprovalStatus)) {
+                acceptance.setApprovalStatus("APPROVED");
+            }
+            log.info("让步接收管理员审批通过，id={}", id);
+        } else if ("SALES_MANAGER".equals(operatorRole)) {
             // 销售经理：只能在 PENDING_APPROVAL 状态下做第一次审批
             if (!"PENDING_APPROVAL".equals(currentApprovalStatus)) {
                 throw new ServiceException("销售经理只能审批状态为【待审批】的申请，当前状态：" + currentApprovalStatus);

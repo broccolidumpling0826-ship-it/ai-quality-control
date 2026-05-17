@@ -16,6 +16,12 @@ public class QcQualityStandardVO {
     @ApiModelProperty(value = "标准类型")
     private String standardType;
 
+    @ApiModelProperty(value = "标准编号")
+    private String standardCode;
+
+    @ApiModelProperty(value = "标准名称")
+    private String standardName;
+
     @ApiModelProperty(value = "品种")
     private String variety;
 

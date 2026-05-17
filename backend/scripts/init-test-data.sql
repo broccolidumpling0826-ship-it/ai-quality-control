@@ -12,8 +12,8 @@ INSERT IGNORE INTO qc_indicator_item (id, indicator_name, indicator_code, indica
 ('ind008', 'n值',      'n',    'PERFORMANCE', '-',   '应变硬化指数',             0, NOW(), NOW());
 
 -- 测试质量标准：国标 Q235B
-INSERT IGNORE INTO qc_quality_standard (id, standard_type, variety, grade, spec_range, version_no, effective_date, expiry_date, status, customer_id, remark, create_date_time, update_date_time) VALUES
-('std001', 'NATIONAL', '冷轧板', 'Q235B', '厚度0.5-3.0mm，宽度600-1500mm', 'GB/T 912-2008', '2009-06-01', '9999-12-31', 'PUBLISHED', NULL, '冷轧碳素钢板国家标准', NOW(), NOW());
+INSERT IGNORE INTO qc_quality_standard (id, standard_type, standard_code, standard_name, variety, grade, spec_range, version_no, effective_date, expiry_date, status, customer_id, remark, create_date_time, update_date_time) VALUES
+('std001', 'NATIONAL', 'GB/T 912-2008', '冷轧碳素钢板国家标准', '冷轧板', 'Q235B', '厚度0.5-3.0mm，宽度600-1500mm', 'GB/T 912-2008', '2009-06-01', '9999-12-31', 'PUBLISHED', NULL, '冷轧碳素钢板国家标准', NOW(), NOW());
 
 -- 国标 Q235B 指标限值
 INSERT IGNORE INTO qc_standard_indicator (id, standard_id, indicator_id, upper_limit, lower_limit, is_required, concession_upper, concession_lower, create_date_time, update_date_time) VALUES
@@ -23,8 +23,8 @@ INSERT IGNORE INTO qc_standard_indicator (id, standard_id, indicator_id, upper_l
 ('si004', 'std001', 'ind004', 0.120000, -0.120000, 1, 0.150000, -0.150000, NOW(), NOW());
 
 -- 测试质量标准：客户协议（引用较严要求）
-INSERT IGNORE INTO qc_quality_standard (id, standard_type, variety, grade, spec_range, version_no, effective_date, expiry_date, status, customer_id, remark, create_date_time, update_date_time) VALUES
-('std002', 'CUSTOMER', '冷轧板', 'Q235B', '厚度1.0-2.0mm', '协议C2025-088-v1', '2025-01-01', '2025-12-31', 'PUBLISHED', 'CUST-001', '华南汽车零配件厂客户协议', NOW(), NOW());
+INSERT IGNORE INTO qc_quality_standard (id, standard_type, standard_code, standard_name, variety, grade, spec_range, version_no, effective_date, expiry_date, status, customer_id, remark, create_date_time, update_date_time) VALUES
+('std002', 'CUSTOMER', '协议C2025-088-v1', '华南汽车零配件厂客户协议', '冷轧板', 'Q235B', '厚度1.0-2.0mm', '协议C2025-088-v1', '2025-01-01', '2025-12-31', 'PUBLISHED', 'CUST-001', '华南汽车零配件厂客户协议', NOW(), NOW());
 
 -- 客协指标限值（抗拉强度下限更高）
 INSERT IGNORE INTO qc_standard_indicator (id, standard_id, indicator_id, upper_limit, lower_limit, is_required, concession_upper, concession_lower, create_date_time, update_date_time) VALUES

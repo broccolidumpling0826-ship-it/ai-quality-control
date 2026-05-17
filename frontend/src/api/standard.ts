@@ -1,26 +1,34 @@
 import { get, post, put } from '@/utils/request'
 
+function parseLimit(val: unknown): number | undefined {
+  if (val === '' || val === null || val === undefined) return undefined
+  const n = Number(val)
+  return Number.isNaN(n) ? undefined : n
+}
+
 /** 将前端标准表单映射为后端 QcQualityStandardAddCmd */
 export function mapStandardPayload(form: Record<string, unknown>) {
   const indicators = (form.indicators as Array<Record<string, unknown>>) || []
   return {
     id: form.id as string | undefined,
     standardType: form.standardType,
+    standardCode: form.standardCode,
+    standardName: form.standardName,
     variety: form.variety ?? form.productVariety,
     grade: form.grade ?? form.productGrade,
-    specRange: form.specRange ?? form.standardName ?? 'DEFAULT',
+    specRange: form.specRange || 'DEFAULT',
     versionNo: form.versionNo ?? form.version,
     effectiveDate: form.effectiveDate,
-    expiryDate: form.expiryDate,
-    customerId: form.customerId,
+    expiryDate: form.expiryDate || '9999-12-31',
+    customerId: form.standardType === 'CUSTOMER' ? (form.customerId as string | undefined) : undefined,
     remark: form.remark ?? form.description,
     indicators: indicators.map((ind) => ({
       indicatorId: ind.indicatorId ?? ind.id,
-      upperLimit: ind.upperLimit,
-      lowerLimit: ind.lowerLimit,
-      isRequired: ind.isRequired,
-      concessionUpper: ind.concessionUpper,
-      concessionLower: ind.concessionLower
+      upperLimit: parseLimit(ind.upperLimit),
+      lowerLimit: parseLimit(ind.lowerLimit),
+      isRequired: ind.isRequired ?? 1,
+      concessionUpper: parseLimit(ind.concessionUpper),
+      concessionLower: parseLimit(ind.concessionLower)
     }))
   }
 }

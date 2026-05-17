@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -60,18 +61,9 @@ public class StandardServiceImpl implements StandardService {
             throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "客户协议标准必须填写客户ID");
         }
 
-        // 构建并保存标准
         QcQualityStandard standard = new QcQualityStandard();
-        standard.setStandardType(cmd.getStandardType());
-        standard.setVariety(cmd.getVariety());
-        standard.setGrade(cmd.getGrade());
-        standard.setSpecRange(cmd.getSpecRange());
-        standard.setVersionNo(cmd.getVersionNo());
-        standard.setEffectiveDate(cmd.getEffectiveDate());
-        standard.setExpiryDate(cmd.getExpiryDate());
+        applyCmdToEntity(standard, cmd);
         standard.setStatus("DRAFT");
-        standard.setCustomerId(cmd.getCustomerId());
-        standard.setRemark(cmd.getRemark());
         qualityStandardMapper.insert(standard);
 
         // 批量保存指标配置
@@ -107,16 +99,7 @@ public class StandardServiceImpl implements StandardService {
             throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "客户协议标准必须填写客户ID");
         }
 
-        // 更新标准主体
-        existing.setStandardType(cmd.getStandardType());
-        existing.setVariety(cmd.getVariety());
-        existing.setGrade(cmd.getGrade());
-        existing.setSpecRange(cmd.getSpecRange());
-        existing.setVersionNo(cmd.getVersionNo());
-        existing.setEffectiveDate(cmd.getEffectiveDate());
-        existing.setExpiryDate(cmd.getExpiryDate());
-        existing.setCustomerId(cmd.getCustomerId());
-        existing.setRemark(cmd.getRemark());
+        applyCmdToEntity(existing, cmd);
         qualityStandardMapper.updateById(existing);
 
         // 删除旧指标配置，重新保存
@@ -218,6 +201,8 @@ public class StandardServiceImpl implements StandardService {
             QcQualityStandardVO vo = new QcQualityStandardVO();
             vo.setId(s.getId());
             vo.setStandardType(s.getStandardType());
+            vo.setStandardCode(s.getStandardCode());
+            vo.setStandardName(s.getStandardName());
             vo.setVariety(s.getVariety());
             vo.setProductVariety(s.getVariety());
             vo.setGrade(s.getGrade());
@@ -268,6 +253,8 @@ public class StandardServiceImpl implements StandardService {
         QcQualityStandardDetailVO detailVO = new QcQualityStandardDetailVO();
         detailVO.setId(standard.getId());
         detailVO.setStandardType(standard.getStandardType());
+        detailVO.setStandardCode(standard.getStandardCode());
+        detailVO.setStandardName(standard.getStandardName());
         detailVO.setVariety(standard.getVariety());
         detailVO.setProductVariety(standard.getVariety());
         detailVO.setGrade(standard.getGrade());
@@ -306,6 +293,22 @@ public class StandardServiceImpl implements StandardService {
     @Override
     public List<QcIndicatorItemVO> listIndicators(String keyword, String category) {
         return indicatorService.listForSelect(keyword, category);
+    }
+
+    private static final LocalDate DEFAULT_EXPIRY_DATE = LocalDate.of(9999, 12, 31);
+
+    private void applyCmdToEntity(QcQualityStandard standard, QcQualityStandardAddCmd cmd) {
+        standard.setStandardType(cmd.getStandardType());
+        standard.setStandardCode(cmd.getStandardCode());
+        standard.setStandardName(cmd.getStandardName());
+        standard.setVariety(cmd.getVariety());
+        standard.setGrade(cmd.getGrade());
+        standard.setSpecRange(cmd.getSpecRange());
+        standard.setVersionNo(cmd.getVersionNo());
+        standard.setEffectiveDate(cmd.getEffectiveDate());
+        standard.setExpiryDate(cmd.getExpiryDate() != null ? cmd.getExpiryDate() : DEFAULT_EXPIRY_DATE);
+        standard.setCustomerId(cmd.getCustomerId());
+        standard.setRemark(cmd.getRemark());
     }
 
     /**

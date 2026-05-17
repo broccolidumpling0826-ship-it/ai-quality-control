@@ -1,7 +1,7 @@
 package com.jhict.quality.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
-import cn.dev33.satoken.stp.StpUtil;
+import com.jhict.quality.common.util.AuthUtils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.ConcessionConfirmCmd;
@@ -58,8 +58,7 @@ public class ConcessionController {
     public ApiResult<Void> approve(
             @ApiParam(value = "让步接收申请ID", required = true) @PathVariable String id,
             @ApiParam(value = "审批意见") @RequestParam(required = false) String comment) {
-        String role = StpUtil.getExtra("role") != null ? StpUtil.getExtra("role").toString() : "";
-        concessionService.approve(id, comment, role);
+        concessionService.approve(id, comment, AuthUtils.currentRole());
         return ApiResult.success();
     }
 

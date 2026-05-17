@@ -315,7 +315,10 @@ public class JudgmentServiceImpl implements JudgmentService {
             QcQualityStandard hit = byType.get(type.getCode());
             if (hit != null) {
                 match.setHit(Boolean.TRUE);
-                match.setStandardName(hit.getSpecRange() + " (" + hit.getVersionNo() + ")");
+                String name = StringUtils.hasText(hit.getStandardName())
+                        ? hit.getStandardName()
+                        : hit.getSpecRange() + " (" + hit.getVersionNo() + ")";
+                match.setStandardName(name);
             } else {
                 match.setHit(Boolean.FALSE);
                 match.setSkipReason(JudgmentExplainConstants.SKIP_REASON_NOT_MATCHED);

@@ -22,6 +22,14 @@ public class QcQualityStandardAddCmd {
     @NotBlank(message = "标准类型不能为空")
     private String standardType;
 
+    @ApiModelProperty(value = "标准编号", required = true)
+    @NotBlank(message = "标准编号不能为空")
+    private String standardCode;
+
+    @ApiModelProperty(value = "标准名称", required = true)
+    @NotBlank(message = "标准名称不能为空")
+    private String standardName;
+
     @ApiModelProperty(value = "品种", required = true)
     @NotBlank(message = "品种不能为空")
     private String variety;
@@ -42,8 +50,7 @@ public class QcQualityStandardAddCmd {
     @NotNull(message = "生效日期不能为空")
     private LocalDate effectiveDate;
 
-    @ApiModelProperty(value = "失效日期", required = true)
-    @NotNull(message = "失效日期不能为空")
+    @ApiModelProperty(value = "失效日期（默认 9999-12-31 表示长期有效）")
     private LocalDate expiryDate;
 
     @ApiModelProperty(value = "客户ID（客户协议标准必填）")

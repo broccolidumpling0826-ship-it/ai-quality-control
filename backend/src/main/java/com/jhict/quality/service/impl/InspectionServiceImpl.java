@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jhict.quality.common.annotation.AuditLog;
+import com.jhict.quality.common.util.AuthUtils;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.common.exception.ServiceException;
 import com.jhict.quality.dto.QcInspectionRecordAddCmd;
@@ -161,11 +162,9 @@ public class InspectionServiceImpl implements InspectionService {
             throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "作废原因不能为空");
         }
 
-        // Step 3: 校验权限（仅质检主管或系统管理员可作废，普通质检员不可操作 — TC-B013）
+        // Step 3: 校验权限（仅质检主管或系统管理员可作废 — TC-B013）
         String currentUserNo = getCurrentUserNo();
-        boolean isSupervisor = hasRole("QUALITY_SUPERVISOR");
-        boolean isAdmin = hasRole("ADMIN");
-        if (!isSupervisor && !isAdmin) {
+        if (!AuthUtils.hasRole("QUALITY_SUPERVISOR")) {
             throw new ServiceException(ApiResult.CODE_FORBIDDEN, "无权作废该检验记录，仅质量主管可操作");
         }
 
@@ -247,13 +246,6 @@ public class InspectionServiceImpl implements InspectionService {
         }
     }
 
-    private boolean hasRole(String role) {
-        try {
-            return StpUtil.hasRole(role);
-        } catch (Exception e) {
-            return false;
-        }
-    }
 
     /**
      * 通过Spring应用上下文获取JudgmentResultMapper（避免构造循环依赖）

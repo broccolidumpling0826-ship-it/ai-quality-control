@@ -153,6 +153,8 @@ class TestRunner:
 
         body = {
             "standardType": "ENTERPRISE",
+            "standardCode": f"STD-{SUFFIX}",
+            "standardName": f"自动化测试标准 {SUFFIX}",
             "variety": "热轧板",
             "grade": "Q235B",
             "specRange": "2.0-3.0mm",

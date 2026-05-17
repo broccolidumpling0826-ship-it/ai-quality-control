@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jhict.quality.common.annotation.AuditLog;
 import com.jhict.quality.common.exception.ServiceException;
+import com.jhict.quality.common.util.AuthUtils;
 import com.jhict.quality.dto.QcRejudgmentRequestAddCmd;
 import com.jhict.quality.dto.RejudgmentApproveCmd;
 import com.jhict.quality.entity.QcConcessionAcceptance;
@@ -118,12 +119,10 @@ public class RejudgmentServiceImpl implements RejudgmentService {
             throw new ServiceException("改判申请当前状态不可审批，status=" + request.getApprovalStatus());
         }
 
-        // 2. 校验审批人角色（ENHANCED 需要 QUALITY_MANAGER）
-        if ("ENHANCED".equals(request.getApprovalLevel())) {
-            Object role = StpUtil.getSession().get("role");
-            if (!"QUALITY_MANAGER".equals(role)) {
-                throw new ServiceException("逆向改判（加强审批）需要质量经理权限");
-            }
+        // 2. 校验审批人角色（ENHANCED 需要 QUALITY_MANAGER；ADMIN 跳过）
+        if (!AuthUtils.isAdmin() && "ENHANCED".equals(request.getApprovalLevel())
+                && !AuthUtils.hasRole("QUALITY_MANAGER")) {
+            throw new ServiceException("逆向改判（加强审批）需要质量经理权限");
         }
 
         String approverNo = StpUtil.getLoginIdAsString();

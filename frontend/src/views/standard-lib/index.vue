@@ -76,10 +76,32 @@
           </template>
         </el-table-column>
         <el-table-column
+          prop="customerId"
+          label="关联客户"
+          min-width="140"
+          show-overflow-tooltip
+          :filters="getFilters('customerId')"
+          :filter-method="filterMethod"
+          filter-placement="bottom-start"
+        >
+          <template #default="{ row }">
+            {{ formatCustomerLabel(row.customerId) }}
+          </template>
+        </el-table-column>
+        <el-table-column
           prop="standardName"
           label="标准名称"
-          min-width="180"
+          min-width="160"
           :filters="getFilters('standardName')"
+          :filter-method="filterMethod"
+          filter-placement="bottom-start"
+        />
+        <el-table-column
+          prop="specRange"
+          label="规格范围"
+          min-width="160"
+          show-overflow-tooltip
+          :filters="getFilters('specRange')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
@@ -177,7 +199,7 @@
     <el-drawer
       v-model="drawerVisible"
       :title="drawerMode === 'add' ? '新增标准' : (drawerMode === 'edit' ? '编辑标准' : '查看标准')"
-      size="800px"
+      size="960px"
       destroy-on-close
     >
       <el-form
@@ -200,9 +222,33 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="标准类型" prop="standardType">
-              <el-select v-model="formData.standardType" placeholder="请选择" style="width:100%">
+              <el-select
+                v-model="formData.standardType"
+                placeholder="请选择"
+                style="width:100%"
+                @change="onStandardTypeChange"
+              >
                 <el-option
                   v-for="item in dictStore.getItems('STANDARD_TYPE')"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="关联客户" prop="customerId">
+              <el-select
+                v-model="formData.customerId"
+                :disabled="!isCustomerStandard || drawerMode === 'view'"
+                :placeholder="isCustomerStandard ? '请选择关联客户' : '仅客户协议标准需选择'"
+                filterable
+                clearable
+                style="width:100%"
+              >
+                <el-option
+                  v-for="item in customerOptions"
                   :key="item.value"
                   :label="item.label"
                   :value="item.value"
@@ -270,6 +316,7 @@
         <div style="margin-top:16px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <span style="font-weight:600;font-size:14px">指标列表</span>
+            <span class="text-meta" style="margin-left:8px">合格限必填；让步上下限选填（未配置则超出合格限判定为需复检）</span>
             <el-button
               v-if="drawerMode !== 'view'"
               type="primary"
@@ -278,49 +325,68 @@
             >添加指标</el-button>
           </div>
           <el-table :data="formData.indicators" border size="small">
-            <el-table-column label="指标名称" min-width="130">
+            <el-table-column label="指标项目" min-width="200">
               <template #default="{ row }">
-                <el-input v-if="drawerMode !== 'view'" v-model="row.indicatorName" size="small" placeholder="指标名称" />
-                <span v-else>{{ row.indicatorName }}</span>
+                <el-select
+                  v-if="drawerMode !== 'view'"
+                  v-model="row.indicatorId"
+                  filterable
+                  clearable
+                  placeholder="请选择指标项目"
+                  style="width:100%"
+                  size="small"
+                  @change="(val: string) => handleIndicatorSelect(row, val)"
+                >
+                  <el-option
+                    v-for="opt in getIndicatorOptions(row)"
+                    :key="opt.id"
+                    :label="formatIndicatorOption(opt)"
+                    :value="opt.id"
+                  />
+                </el-select>
+                <span v-else>{{ formatIndicatorLabel(row) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="指标代码" width="110">
+            <el-table-column label="指标代码" width="100">
               <template #default="{ row }">
-                <el-input v-if="drawerMode !== 'view'" v-model="row.indicatorCode" size="small" placeholder="代码" />
-                <span v-else>{{ row.indicatorCode }}</span>
+                <span class="text-meta">{{ row.indicatorCode || '-' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="类别" width="110">
               <template #default="{ row }">
-                <el-select v-if="drawerMode !== 'view'" v-model="row.category" size="small" style="width:100%">
-                  <el-option
-                    v-for="item in dictStore.getItems('INDICATOR_CATEGORY')"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </el-select>
-                <el-tag v-else :type="dictStore.getColorTag('INDICATOR_CATEGORY', row.category) as any" size="small">
+                <el-tag v-if="row.category" :type="dictStore.getColorTag('INDICATOR_CATEGORY', row.category) as any" size="small">
                   {{ dictStore.getLabel('INDICATOR_CATEGORY', row.category) }}
                 </el-tag>
+                <span v-else class="text-meta">-</span>
               </template>
             </el-table-column>
             <el-table-column label="单位" width="70">
               <template #default="{ row }">
-                <el-input v-if="drawerMode !== 'view'" v-model="row.unit" size="small" placeholder="单位" />
-                <span v-else>{{ row.unit }}</span>
+                <span class="text-meta">{{ row.unit || '-' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="下限" width="90">
+            <el-table-column label="合格下限" width="88">
               <template #default="{ row }">
                 <el-input v-if="drawerMode !== 'view'" v-model="row.lowerLimit" size="small" placeholder="-" />
                 <span v-else>{{ row.lowerLimit ?? '-' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="上限" width="90">
+            <el-table-column label="合格上限" width="88">
               <template #default="{ row }">
                 <el-input v-if="drawerMode !== 'view'" v-model="row.upperLimit" size="small" placeholder="-" />
                 <span v-else>{{ row.upperLimit ?? '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="让步下限" width="88">
+              <template #default="{ row }">
+                <el-input v-if="drawerMode !== 'view'" v-model="row.concessionLower" size="small" placeholder="选填" />
+                <span v-else>{{ row.concessionLower ?? '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="让步上限" width="88">
+              <template #default="{ row }">
+                <el-input v-if="drawerMode !== 'view'" v-model="row.concessionUpper" size="small" placeholder="选填" />
+                <span v-else>{{ row.concessionUpper ?? '-' }}</span>
               </template>
             </el-table-column>
             <el-table-column v-if="drawerMode !== 'view'" label="操作" width="70" align="center">
@@ -366,15 +432,44 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { useDictStore } from '@/store/dict'
 import { useTableFilter } from '@/composables/use-table-filter'
 import { pageStandards, addStandard, updateStandard, publishStandard, getStandardById } from '@/api/standard'
+import { listActiveIndicators } from '@/api/indicator'
 import type { PageResult } from '@/types'
 
+interface IndicatorOption {
+  id: string
+  indicatorName: string
+  indicatorCode: string
+  category?: string
+  indicatorCategory?: string
+  unit?: string
+}
+
+interface StandardIndicatorRow {
+  indicatorId: string
+  indicatorName: string
+  indicatorCode: string
+  category: string
+  unit: string
+  lowerLimit: string | number
+  upperLimit: string | number
+  concessionLower?: string | number
+  concessionUpper?: string | number
+  isRequired?: number
+}
+
 const dictStore = useDictStore()
+
+/** 字典未同步时的演示客户兜底（与 init-dict-data.sql 一致） */
+const FALLBACK_CUSTOMERS = [
+  { value: 'CUST-001', label: '华东汽车配件有限公司', colorTag: '', sortNo: 1 },
+  { value: 'CUST-002', label: '西南建材集团', colorTag: '', sortNo: 2 }
+]
 
 // 搜索
 const searchForm = reactive({
@@ -408,12 +503,22 @@ const defaultForm = () => ({
   specRange: '',
   version: '',
   effectiveDate: '',
-  expiryDate: '',
+  expiryDate: '9999-12-31',
+  customerId: '',
   description: '',
   indicators: [] as any[]
 })
 
 const formData = reactive(defaultForm())
+const indicatorOptions = ref<IndicatorOption[]>([])
+const indicatorOptionsLoading = ref(false)
+
+const isCustomerStandard = computed(() => formData.standardType === 'CUSTOMER')
+
+const customerOptions = computed(() => {
+  const items = dictStore.getItems('QC_CUSTOMER')
+  return items.length ? items : FALLBACK_CUSTOMERS
+})
 
 const formRules = {
   standardCode: [{ required: true, message: '请输入标准编号', trigger: 'blur' }],
@@ -424,7 +529,28 @@ const formRules = {
   productGrade: [{ required: true, message: '请输入牌号', trigger: 'blur' }],
   version: [{ required: true, message: '请输入版本号', trigger: 'blur' }],
   effectiveDate: [{ required: true, message: '请选择生效日期', trigger: 'change' }],
-  expiryDate: [{ required: true, message: '请选择失效日期', trigger: 'change' }]
+  customerId: [{
+    validator: (_rule: unknown, value: string, callback: (err?: Error) => void) => {
+      if (formData.standardType === 'CUSTOMER' && !value) {
+        callback(new Error('客户协议标准请选择关联客户'))
+      } else {
+        callback()
+      }
+    },
+    trigger: 'change'
+  }]
+}
+
+function formatCustomerLabel(customerId?: string) {
+  if (!customerId) return '-'
+  const found = customerOptions.value.find((item) => item.value === customerId)
+  return found?.label ?? customerId
+}
+
+function onStandardTypeChange(type: string) {
+  if (type !== 'CUSTOMER') {
+    formData.customerId = ''
+  }
 }
 
 // 发布
@@ -439,6 +565,27 @@ function isExpiringSoon(date: string) {
   return diff > 0 && diff < 3 * 24 * 3600 * 1000
 }
 
+function mapStandardRow(row: Record<string, unknown>) {
+  return {
+    ...row,
+    productVariety: row.productVariety ?? row.variety,
+    productGrade: row.productGrade ?? row.grade,
+    version: row.version ?? row.versionNo
+  }
+}
+
+function mapStandardForm(detail: Record<string, unknown>) {
+  return {
+    ...defaultForm(),
+    ...detail,
+    productVariety: detail.variety ?? detail.productVariety,
+    productGrade: detail.grade ?? detail.productGrade,
+    version: detail.versionNo ?? detail.version ?? '',
+    description: detail.description ?? detail.remark ?? '',
+    expiryDate: detail.expiryDate ?? '9999-12-31'
+  }
+}
+
 async function loadData() {
   loading.value = true
   try {
@@ -447,15 +594,7 @@ async function loadData() {
       pageSize: pageSize.value,
       ...searchForm
     }) as PageResult<any>
-    tableData.value = (res.records || []).map((row) => ({
-      ...row,
-      productVariety: row.productVariety ?? row.variety,
-      productGrade: row.productGrade ?? row.grade,
-      version: row.version ?? row.versionNo,
-      specRange: row.specRange,
-      standardName: row.standardName ?? row.specRange,
-      standardCode: row.standardCode ?? row.id
-    }))
+    tableData.value = (res.records || []).map((row) => mapStandardRow(row))
     total.value = res.total || 0
   } catch {
     // handled by request interceptor
@@ -475,32 +614,113 @@ function handleReset() {
   loadData()
 }
 
+async function loadIndicatorOptions() {
+  indicatorOptionsLoading.value = true
+  try {
+    const res = await listActiveIndicators() as IndicatorOption[]
+    indicatorOptions.value = Array.isArray(res) ? res : []
+  } finally {
+    indicatorOptionsLoading.value = false
+  }
+}
+
+function formatIndicatorOption(opt: IndicatorOption) {
+  return `${opt.indicatorName}（${opt.indicatorCode}）`
+}
+
+function formatIndicatorLabel(row: StandardIndicatorRow) {
+  if (row.indicatorName) {
+    return row.indicatorCode ? `${row.indicatorName}（${row.indicatorCode}）` : row.indicatorName
+  }
+  return row.indicatorId || '-'
+}
+
+function getIndicatorOptions(currentRow: StandardIndicatorRow) {
+  const usedIds = new Set(
+    formData.indicators
+      .filter((r) => r !== currentRow && r.indicatorId)
+      .map((r) => r.indicatorId)
+  )
+  return indicatorOptions.value.filter((opt) => !usedIds.has(opt.id))
+}
+
+function handleIndicatorSelect(row: StandardIndicatorRow, indicatorId: string) {
+  if (!indicatorId) {
+    row.indicatorId = ''
+    row.indicatorName = ''
+    row.indicatorCode = ''
+    row.category = ''
+    row.unit = ''
+    return
+  }
+  const item = indicatorOptions.value.find((i) => i.id === indicatorId)
+  if (!item) return
+  row.indicatorId = item.id
+  row.indicatorName = item.indicatorName
+  row.indicatorCode = item.indicatorCode
+  row.category = item.category ?? item.indicatorCategory ?? ''
+  row.unit = item.unit ?? ''
+}
+
+async function enrichIndicators(indicators: any[]): Promise<StandardIndicatorRow[]> {
+  if (!indicatorOptions.value.length) {
+    await loadIndicatorOptions()
+  }
+  return (indicators || []).map((ind) => {
+    const indicatorId = ind.indicatorId ?? ind.id ?? ''
+    const meta = indicatorOptions.value.find((o) => o.id === indicatorId)
+    return {
+      indicatorId,
+      indicatorName: ind.indicatorName ?? meta?.indicatorName ?? '',
+      indicatorCode: ind.indicatorCode ?? meta?.indicatorCode ?? '',
+      category: ind.category ?? ind.indicatorCategory ?? meta?.category ?? meta?.indicatorCategory ?? '',
+      unit: ind.unit ?? meta?.unit ?? '',
+      lowerLimit: ind.lowerLimit ?? '',
+      upperLimit: ind.upperLimit ?? '',
+      concessionLower: ind.concessionLower,
+      concessionUpper: ind.concessionUpper,
+      isRequired: ind.isRequired
+    }
+  })
+}
+
+async function ensureCustomerDict() {
+  if (dictStore.getItems('QC_CUSTOMER').length) return
+  try {
+    await dictStore.reload()
+  } catch {
+    // 使用 FALLBACK_CUSTOMERS
+  }
+}
+
+async function openDrawer(mode: 'add' | 'edit' | 'view', row?: any) {
+  drawerMode.value = mode
+  await Promise.all([loadIndicatorOptions(), ensureCustomerDict()])
+  if (mode === 'add') {
+    Object.assign(formData, defaultForm())
+  } else if (row) {
+    try {
+      const detail = await getStandardById(row.id) as any
+      const indicators = await enrichIndicators(detail.indicators || [])
+      Object.assign(formData, mapStandardForm(detail), { indicators })
+    } catch {
+      const indicators = await enrichIndicators(row.indicators || [])
+      Object.assign(formData, mapStandardForm(row), { indicators })
+    }
+  }
+  drawerVisible.value = true
+}
+
 function handleAdd() {
-  Object.assign(formData, defaultForm())
-  drawerMode.value = 'add'
-  drawerVisible.value = true
+  openDrawer('add')
 }
 
-async function handleEdit(row: any) {
-  try {
-    const detail = await getStandardById(row.id) as any
-    Object.assign(formData, { ...defaultForm(), ...detail, indicators: detail.indicators || [] })
-  } catch {
-    Object.assign(formData, { ...defaultForm(), ...row, indicators: row.indicators || [] })
-  }
-  drawerMode.value = 'edit'
-  drawerVisible.value = true
+function handleEdit(row: any) {
+  openDrawer('edit', row)
 }
 
-async function handleView(row: any) {
-  try {
-    const detail = await getStandardById(row.id) as any
-    Object.assign(formData, { ...defaultForm(), ...detail, indicators: detail.indicators || [] })
-  } catch {
-    Object.assign(formData, { ...defaultForm(), ...row, indicators: row.indicators || [] })
-  }
-  drawerMode.value = 'view'
-  drawerVisible.value = true
+function handleView(row: any) {
+  openDrawer('view', row)
 }
 
 function handlePublish(row: any) {
@@ -523,14 +743,20 @@ async function confirmPublish() {
 }
 
 function addIndicatorRow() {
+  if (!indicatorOptions.value.length && !indicatorOptionsLoading.value) {
+    loadIndicatorOptions()
+  }
   formData.indicators.push({
+    indicatorId: '',
     indicatorName: '',
     indicatorCode: '',
     category: '',
     unit: '',
     lowerLimit: '',
-    upperLimit: ''
-  })
+    upperLimit: '',
+    concessionLower: '',
+    concessionUpper: ''
+  } as StandardIndicatorRow)
 }
 
 function removeIndicatorRow(index: number) {
@@ -539,6 +765,17 @@ function removeIndicatorRow(index: number) {
 
 async function handleSubmit() {
   await formRef.value?.validate()
+  if (!formData.expiryDate) {
+    formData.expiryDate = '9999-12-31'
+  }
+  if (!formData.indicators.length) {
+    ElMessage.warning('请至少添加一条指标配置')
+    return
+  }
+  if (formData.indicators.some((row) => !row.indicatorId)) {
+    ElMessage.warning('请为每条指标选择指标项目')
+    return
+  }
   submitLoading.value = true
   try {
     if (drawerMode.value === 'add') {
@@ -567,5 +804,9 @@ onMounted(loadData)
 }
 .text-warning {
   color: #e6a23c;
+}
+.text-meta {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 </style>

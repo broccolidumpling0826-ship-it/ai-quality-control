@@ -132,6 +132,8 @@ CREATE TABLE IF NOT EXISTS `qc_quality_standard` (
   `create_date_time` VARCHAR(32)  DEFAULT NULL,
   `update_date_time` VARCHAR(32)  DEFAULT NULL,
   `standard_type`    VARCHAR(20)  NOT NULL COMMENT '标准类型（字典 STANDARD_TYPE）',
+  `standard_code`    VARCHAR(100) NOT NULL COMMENT '标准编号',
+  `standard_name`    VARCHAR(200) NOT NULL COMMENT '标准名称',
   `variety`          VARCHAR(100) NOT NULL COMMENT '品种',
   `grade`            VARCHAR(100) NOT NULL COMMENT '牌号',
   `spec_range`       VARCHAR(200) NOT NULL COMMENT '规格范围',

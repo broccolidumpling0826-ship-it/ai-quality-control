@@ -110,6 +110,8 @@ class Runner:
     def std_body(self, stype: str, version: str, indicators: list, customer: Optional[str] = None) -> dict:
         b = {
             "standardType": stype,
+            "standardCode": version,
+            "standardName": f"核心测试标准 {SUFFIX}",
             "variety": VARIETY,
             "grade": GRADE,
             "specRange": SPEC,
