@@ -3,7 +3,9 @@ package com.jhict.quality.service.api;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.dto.QcReinspectionAddCmd;
 import com.jhict.quality.dto.QcReinspectionPageQuery;
+import com.jhict.quality.dto.ReinspectionCandidateQuery;
 import com.jhict.quality.dto.ReinspectionCompleteCmd;
+import com.jhict.quality.vo.InspectionRecordCandidateVO;
 import com.jhict.quality.vo.QcReinspectionListVO;
 
 public interface ReinspectionService {
@@ -33,4 +35,9 @@ public interface ReinspectionService {
      * @return 分页结果
      */
     IPage<QcReinspectionListVO> page(QcReinspectionPageQuery query);
+
+    /**
+     * 查询可关联的新检验记录（排除原检验记录，支持炉号/卷号/批次/客户筛选）
+     */
+    IPage<InspectionRecordCandidateVO> listCandidateInspections(String reinspectionId, ReinspectionCandidateQuery query);
 }

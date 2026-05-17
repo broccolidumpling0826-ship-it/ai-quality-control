@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.QcRejudgmentRequestAddCmd;
 import com.jhict.quality.dto.RejudgmentApproveCmd;
-import com.jhict.quality.entity.QcRejudgmentRequest;
 import com.jhict.quality.service.api.RejudgmentService;
+import com.jhict.quality.vo.QcRejudgmentListVO;
 import com.jhict.quality.vo.QcRejudgmentRequestVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -42,7 +42,7 @@ public class RejudgmentController {
 
     @PostMapping("/page")
     @ApiOperation(value = "分页查询改判申请")
-    public ApiResult<IPage<QcRejudgmentRequest>> page(
+    public ApiResult<IPage<QcRejudgmentListVO>> page(
             @ApiParam(value = "页码") @RequestParam(defaultValue = "1") int pageNum,
             @ApiParam(value = "每页大小") @RequestParam(defaultValue = "10") int pageSize,
             @ApiParam(value = "审批状态") @RequestParam(required = false) String approvalStatus,

@@ -31,6 +31,13 @@ public interface StandardService {
     void updateStandard(QcQualityStandardAddCmd cmd);
 
     /**
+     * 删除质量标准（草稿与已发布均可删除）
+     *
+     * @param id 标准ID
+     */
+    void deleteStandard(String id);
+
+    /**
      * 发布质量标准
      *
      * @param id 标准ID

@@ -32,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,6 +40,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class ConcessionServiceImpl implements ConcessionService {
+
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Resource
     private QcConcessionAcceptanceMapper concessionMapper;
@@ -241,7 +245,23 @@ public class ConcessionServiceImpl implements ConcessionService {
         vo.setConfirmAttachmentUrl(acceptance.getConfirmAttachmentUrl());
         vo.setConfirmFileUrl(acceptance.getConfirmAttachmentUrl());
         vo.setConfirmNote(acceptance.getConfirmNote());
+        vo.setConfirmUploaderNo(acceptance.getConfirmUploaderNo());
+        if (acceptance.getConfirmUploadTime() != null) {
+            vo.setConfirmUploadTime(acceptance.getConfirmUploadTime().format(DATE_TIME_FORMATTER));
+        }
+        if (StringUtils.hasText(acceptance.getConfirmUploaderNo())) {
+            SysUser uploader = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
+                    .eq(SysUser::getUserNo, acceptance.getConfirmUploaderNo())
+                    .last("LIMIT 1"));
+            vo.setConfirmUploadByName(
+                    uploader != null ? uploader.getUsername() : acceptance.getConfirmUploaderNo());
+        }
+        if (StringUtils.hasText(acceptance.getConfirmAttachmentUrl())) {
+            vo.setConfirmFileName(extractDisplayFileName(acceptance.getConfirmAttachmentUrl()));
+        }
         vo.setApprovalStatus(acceptance.getApprovalStatus());
+        vo.setConcessionStatus(resolveConcessionStatus(
+                acceptance.getConfirmStatus(), acceptance.getApprovalStatus()));
 
         int remaining = 0;
         if (acceptance.getExpiryDate() != null) {
@@ -259,6 +279,31 @@ public class ConcessionServiceImpl implements ConcessionService {
         }
         enrichInspectionFields(vo, acceptance.getJudgmentId());
         return vo;
+    }
+
+    private String resolveConcessionStatus(String confirmStatus, String approvalStatus) {
+        if ("APPROVED".equals(approvalStatus)) {
+            return "APPROVED";
+        }
+        if ("REJECTED".equals(approvalStatus) || "INVALID".equals(approvalStatus)) {
+            return approvalStatus;
+        }
+        if ("CONFIRMED".equals(confirmStatus)) {
+            return "PENDING_APPROVAL";
+        }
+        if (StringUtils.hasText(approvalStatus) && !"PENDING".equals(approvalStatus)) {
+            return approvalStatus;
+        }
+        return null;
+    }
+
+    private String extractDisplayFileName(String relativePath) {
+        String name = relativePath.substring(relativePath.lastIndexOf('/') + 1);
+        int underscoreIdx = name.indexOf('_');
+        if (underscoreIdx >= 0 && underscoreIdx < name.length() - 1) {
+            return name.substring(underscoreIdx + 1);
+        }
+        return name;
     }
 
     private void enrichInspectionFields(QcConcessionVO vo, String judgmentId) {

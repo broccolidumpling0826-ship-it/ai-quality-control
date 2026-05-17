@@ -25,8 +25,15 @@ public class CertDataController {
 
     @PostMapping("/generate")
     @ApiOperation(value = "生成质保书数据")
-    public ApiResult<String> generate(@Validated @RequestBody QcQualityCertGenerateCmd cmd) {
+    public ApiResult<QcQualityCertDataVO> generate(@Validated @RequestBody QcQualityCertGenerateCmd cmd) {
         return ApiResult.success(certDataService.generate(cmd));
+    }
+
+    @GetMapping("/{id}")
+    @ApiOperation(value = "查询质保书数据详情")
+    public ApiResult<QcQualityCertDataVO> getById(
+            @ApiParam(value = "质保书数据ID", required = true) @PathVariable String id) {
+        return ApiResult.success(certDataService.getById(id));
     }
 
     @PostMapping("/page")

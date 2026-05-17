@@ -101,6 +101,12 @@ public class QcJudgmentResultVO {
         @ApiModelProperty(value = "标准上限")
         private BigDecimal upperLimit;
 
+        @ApiModelProperty(value = "让步下限")
+        private BigDecimal concessionLower;
+
+        @ApiModelProperty(value = "让步上限")
+        private BigDecimal concessionUpper;
+
         @ApiModelProperty(value = "偏差值")
         private BigDecimal deviation;
 

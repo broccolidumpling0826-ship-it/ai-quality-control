@@ -99,6 +99,12 @@
         <el-table-column prop="upperLimit" label="标准上限" width="100" align="center">
           <template #default="{ row }">{{ row.upperLimit ?? '-' }}</template>
         </el-table-column>
+        <el-table-column label="让步下限" width="90" align="center">
+          <template #default="{ row }">{{ row.concessionLower ?? '-' }}</template>
+        </el-table-column>
+        <el-table-column label="让步上限" width="90" align="center">
+          <template #default="{ row }">{{ row.concessionUpper ?? '-' }}</template>
+        </el-table-column>
         <el-table-column
           prop="deviation"
           label="偏差值"
@@ -128,7 +134,7 @@
           <template #default="{ row }">
             <el-tag v-if="row.noStandard" type="warning" size="small">无标准覆盖</el-tag>
             <el-tag v-else :type="indicatorResultColor(row.indicatorResult)" size="small">
-              {{ dictStore.getLabel('INDICATOR_RESULT', row.indicatorResult) || row.indicatorResult }}
+              {{ indicatorResultLabel(row.indicatorResult) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -201,19 +207,24 @@ const reinspectionRules = {
   reinspectionReason: [{ required: true, message: '请输入复检原因', trigger: 'blur' }]
 }
 
-const canInitiateReinspection = computed(() =>
-  detail.value?.judgmentType === 'UNQUALIFIED' || detail.value?.judgmentType === 'REINSPECTION'
-)
+function isConcessionJudgment(type?: string) {
+  return type === 'CAN_CONCESSION' || type === 'CONCESSION'
+}
+
+const canInitiateReinspection = computed(() => {
+  const t = detail.value?.judgmentType
+  return t === 'UNQUALIFIED' || t === 'NEED_REINSPECTION' || t === 'REINSPECTION'
+})
 const canApplyRejudgment = computed(() => !!detail.value?.judgmentType)
-const canApplyConcession = computed(() =>
-  detail.value?.judgmentType === 'UNQUALIFIED'
-)
+const canApplyConcession = computed(() => isConcessionJudgment(detail.value?.judgmentType))
 
 function judgmentColor(type: string): any {
   const map: Record<string, string> = {
     QUALIFIED: 'success',
     UNQUALIFIED: 'danger',
+    CAN_CONCESSION: 'warning',
     CONCESSION: 'warning',
+    NEED_REINSPECTION: 'info',
     REINSPECTION: 'info'
   }
   return map[type] || 'info'
@@ -233,10 +244,23 @@ function deviationClass(deviation: number | null) {
   return deviation > 0 ? 'text-danger' : ''
 }
 
+function indicatorResultLabel(result: string) {
+  const dictLabel = dictStore.getLabel('INDICATOR_RESULT', result)
+  if (dictLabel && dictLabel !== result) return dictLabel
+  const fallback: Record<string, string> = {
+    PASS: '合格',
+    FAIL: '不合格',
+    CONCESSION: '可让步',
+    WARNING: '无标准覆盖'
+  }
+  return fallback[result] || result
+}
+
 function indicatorResultColor(result: string): any {
   const map: Record<string, string> = {
     PASS: 'success',
     FAIL: 'danger',
+    CONCESSION: 'warning',
     WARNING: 'warning'
   }
   return map[result] || 'info'

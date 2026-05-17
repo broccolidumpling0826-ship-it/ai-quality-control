@@ -17,6 +17,24 @@ public class QcRejudgmentRequestVO {
     @ApiModelProperty(value = "原判定结论ID")
     private String originalJudgmentId;
 
+    @ApiModelProperty(value = "卷号")
+    private String coilNo;
+
+    @ApiModelProperty(value = "批次号")
+    private String batchNo;
+
+    @ApiModelProperty(value = "炉号")
+    private String heatNo;
+
+    @ApiModelProperty(value = "申请人工号")
+    private String applyBy;
+
+    @ApiModelProperty(value = "申请人姓名")
+    private String applyByName;
+
+    @ApiModelProperty(value = "申请时间")
+    private String applyTime;
+
     @ApiModelProperty(value = "原判定结论类型")
     private String originalJudgmentType;
 

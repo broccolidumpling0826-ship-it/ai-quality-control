@@ -158,27 +158,53 @@
         <el-table-column
           prop="status"
           label="状态"
-          width="90"
+          width="108"
+          class-name="status-col"
           :filters="getFilters('status')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         >
           <template #default="{ row }">
-            <el-tag :type="dictStore.getColorTag('STANDARD_STATUS', row.status) as any">
+            <el-tag
+              class="status-tag"
+              size="small"
+              :type="dictStore.getColorTag('STANDARD_STATUS', row.status) as any"
+            >
               {{ dictStore.getLabel('STANDARD_STATUS', row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right" class-name="op-col">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleView(row)">查看</el-button>
-            <el-button link type="warning" @click="handleEdit(row)">编辑</el-button>
-            <el-button
-              v-if="row.status !== 'PUBLISHED'"
-              link
-              type="success"
-              @click="handlePublish(row)"
-            >发布</el-button>
+            <div class="op-cell">
+              <template v-for="(group, gi) in [getRowActionGroups(row)]" :key="gi">
+                <el-button
+                  v-for="action in group.visible"
+                  :key="action.key"
+                  link
+                  :type="action.type"
+                  @click="action.handler"
+                >{{ action.label }}</el-button>
+                <el-dropdown
+                  v-if="group.more.length"
+                  trigger="click"
+                  @command="(key: string) => runRowAction(row, key)"
+                >
+                  <el-button link type="primary" class="op-more-btn">...</el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item
+                        v-for="action in group.more"
+                        :key="action.key"
+                        :command="action.key"
+                      >
+                      <span :class="`op-more-item op-more-item--${action.type}`">{{ action.label }}</span>
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </template>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -209,6 +235,14 @@
         label-width="100px"
         :disabled="drawerMode === 'view'"
       >
+        <el-alert
+          v-if="drawerMode === 'edit' && formData.status === 'PUBLISHED'"
+          type="info"
+          :closable="false"
+          show-icon
+          style="margin-bottom:12px"
+          title="已发布标准修改后仅影响后续检验判定，历史判定结论仍保留当时的标准快照。"
+        />
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="标准编号" prop="standardCode">
@@ -437,7 +471,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { useDictStore } from '@/store/dict'
 import { useTableFilter } from '@/composables/use-table-filter'
-import { pageStandards, addStandard, updateStandard, publishStandard, getStandardById } from '@/api/standard'
+import { pageStandards, addStandard, updateStandard, publishStandard, deleteStandard, getStandardById } from '@/api/standard'
 import { listActiveIndicators } from '@/api/indicator'
 import type { PageResult } from '@/types'
 
@@ -495,6 +529,7 @@ const submitLoading = ref(false)
 
 const defaultForm = () => ({
   id: '',
+  status: '',
   standardCode: '',
   standardName: '',
   standardType: '',
@@ -515,10 +550,7 @@ const indicatorOptionsLoading = ref(false)
 
 const isCustomerStandard = computed(() => formData.standardType === 'CUSTOMER')
 
-const customerOptions = computed(() => {
-  const items = dictStore.getItems('QC_CUSTOMER')
-  return items.length ? items : FALLBACK_CUSTOMERS
-})
+const customerOptions = ref<typeof FALLBACK_CUSTOMERS>([...FALLBACK_CUSTOMERS])
 
 const formRules = {
   standardCode: [{ required: true, message: '请输入标准编号', trigger: 'blur' }],
@@ -575,11 +607,24 @@ function mapStandardRow(row: Record<string, unknown>) {
 }
 
 function mapStandardForm(detail: Record<string, unknown>) {
+  // 不把 API 别名字段写入 formData，避免提交时 mapStandardPayload 读到旧值
+  const {
+    variety: _variety,
+    grade: _grade,
+    versionNo: _versionNo,
+    version: _version,
+    remark: _remark,
+    description: _description,
+    productVariety: _pv,
+    productGrade: _pg,
+    indicators: _indicators,
+    ...rest
+  } = detail
   return {
     ...defaultForm(),
-    ...detail,
-    productVariety: detail.variety ?? detail.productVariety,
-    productGrade: detail.grade ?? detail.productGrade,
+    ...rest,
+    productVariety: detail.variety ?? detail.productVariety ?? '',
+    productGrade: detail.grade ?? detail.productGrade ?? '',
     version: detail.versionNo ?? detail.version ?? '',
     description: detail.description ?? detail.remark ?? '',
     expiryDate: detail.expiryDate ?? '9999-12-31'
@@ -684,18 +729,19 @@ async function enrichIndicators(indicators: any[]): Promise<StandardIndicatorRow
   })
 }
 
-async function ensureCustomerDict() {
-  if (dictStore.getItems('QC_CUSTOMER').length) return
+/** 关联客户下拉：绕过登录时加载的 Redis 旧缓存，强制从 DB 刷新 */
+async function loadCustomerOptions() {
   try {
-    await dictStore.reload()
+    const items = await dictStore.refreshItems('QC_CUSTOMER')
+    customerOptions.value = items.length ? items : [...FALLBACK_CUSTOMERS]
   } catch {
-    // 使用 FALLBACK_CUSTOMERS
+    customerOptions.value = [...FALLBACK_CUSTOMERS]
   }
 }
 
 async function openDrawer(mode: 'add' | 'edit' | 'view', row?: any) {
   drawerMode.value = mode
-  await Promise.all([loadIndicatorOptions(), ensureCustomerDict()])
+  await Promise.all([loadIndicatorOptions(), loadCustomerOptions()])
   if (mode === 'add') {
     Object.assign(formData, defaultForm())
   } else if (row) {
@@ -727,6 +773,73 @@ function handlePublish(row: any) {
   publishTarget.value = row
   publishExpiryDate.value = ''
   publishDialogVisible.value = true
+}
+
+type RowActionType = 'primary' | 'warning' | 'success' | 'danger'
+
+interface RowAction {
+  key: string
+  label: string
+  type: RowActionType
+  handler: () => void
+}
+
+const VISIBLE_ACTION_LIMIT = 3
+
+function getRowActions(row: any): RowAction[] {
+  const actions: RowAction[] = [
+    { key: 'view', label: '查看', type: 'primary', handler: () => handleView(row) }
+  ]
+  if (row.status === 'DRAFT' || row.status === 'PUBLISHED') {
+    actions.push({ key: 'edit', label: '编辑', type: 'warning', handler: () => handleEdit(row) })
+  }
+  if (row.status === 'DRAFT') {
+    actions.push({ key: 'publish', label: '发布', type: 'success', handler: () => handlePublish(row) })
+  }
+  actions.push({ key: 'delete', label: '删除', type: 'danger', handler: () => handleDelete(row) })
+  return actions
+}
+
+function splitRowActions(actions: RowAction[]) {
+  if (actions.length <= VISIBLE_ACTION_LIMIT) {
+    return { visible: actions, more: [] as RowAction[] }
+  }
+  return {
+    visible: actions.slice(0, VISIBLE_ACTION_LIMIT),
+    more: actions.slice(VISIBLE_ACTION_LIMIT)
+  }
+}
+
+function getRowActionGroups(row: any) {
+  return splitRowActions(getRowActions(row))
+}
+
+function runRowAction(row: any, key: string) {
+  getRowActions(row).find((a) => a.key === key)?.handler()
+}
+
+async function handleDelete(row: any) {
+  const name = row.standardName || row.standardCode || row.id
+  const isPublished = row.status === 'PUBLISHED'
+  const tip = isPublished
+    ? `标准「${name}」已发布，删除后历史判定依据快照仍保留，但该标准将不再参与后续判定。确定删除？`
+    : `确定删除草稿标准「${name}」？删除后不可恢复。`
+  try {
+    await ElMessageBox.confirm(tip, '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+  } catch {
+    return
+  }
+  try {
+    await deleteStandard(row.id)
+    ElMessage.success('删除成功')
+    loadData()
+  } catch {
+    // handled by request interceptor
+  }
 }
 
 async function confirmPublish() {
@@ -764,7 +877,13 @@ function removeIndicatorRow(index: number) {
 }
 
 async function handleSubmit() {
-  await formRef.value?.validate()
+  if (!formRef.value) return
+  try {
+    await formRef.value.validate()
+  } catch {
+    ElMessage.warning('请完善必填项后再保存')
+    return
+  }
   if (!formData.expiryDate) {
     formData.expiryDate = '9999-12-31'
   }
@@ -792,7 +911,10 @@ async function handleSubmit() {
   }
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+  loadCustomerOptions()
+})
 </script>
 
 <style scoped>
@@ -808,5 +930,44 @@ onMounted(loadData)
 .text-meta {
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.standard-lib-page :deep(.status-col .cell) {
+  overflow: visible;
+}
+.standard-lib-page :deep(.status-col) {
+  overflow: visible;
+}
+.status-tag {
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.standard-lib-page :deep(.op-col .cell) {
+  overflow: visible;
+}
+.op-cell {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.op-more-btn {
+  padding: 0 4px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+.op-more-item--danger {
+  color: var(--el-color-danger);
+}
+.op-more-item--warning {
+  color: var(--el-color-warning);
+}
+.op-more-item--success {
+  color: var(--el-color-success);
+}
+.op-more-item--primary {
+  color: var(--el-color-primary);
 }
 </style>

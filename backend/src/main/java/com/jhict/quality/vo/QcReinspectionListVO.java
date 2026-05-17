@@ -32,6 +32,18 @@ public class QcReinspectionListVO {
     @ApiModelProperty(value = "卷号")
     private String coilNo;
 
+    @ApiModelProperty(value = "炉号")
+    private String heatNo;
+
+    @ApiModelProperty(value = "批次号")
+    private String batchNo;
+
+    @ApiModelProperty(value = "客户ID")
+    private String customerId;
+
+    @ApiModelProperty(value = "原检验记录ID（完成复检时需排除）")
+    private String originalRecordId;
+
     @ApiModelProperty(value = "原判定结论类型")
     private String originalJudgmentType;
 }

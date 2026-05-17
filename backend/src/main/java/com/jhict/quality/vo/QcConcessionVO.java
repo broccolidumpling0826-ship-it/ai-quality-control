@@ -37,8 +37,23 @@ public class QcConcessionVO {
     @ApiModelProperty(value = "客户确认备注")
     private String confirmNote;
 
+    @ApiModelProperty(value = "确认附件上传人工号")
+    private String confirmUploaderNo;
+
+    @ApiModelProperty(value = "确认附件上传人姓名")
+    private String confirmUploadByName;
+
+    @ApiModelProperty(value = "确认附件上传时间")
+    private String confirmUploadTime;
+
+    @ApiModelProperty(value = "确认附件原始文件名")
+    private String confirmFileName;
+
     @ApiModelProperty(value = "审批状态")
     private String approvalStatus;
+
+    @ApiModelProperty(value = "让步总状态（字典 CONCESSION_STATUS，供详情展示）")
+    private String concessionStatus;
 
     @ApiModelProperty(value = "剩余天数（到期日距今天数，已过期为负数）")
     private int remainingDays;

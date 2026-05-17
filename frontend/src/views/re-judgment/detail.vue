@@ -14,12 +14,12 @@
           </div>
         </template>
         <el-descriptions :column="3" border>
-          <el-descriptions-item label="卷号">{{ detail.coilNo }}</el-descriptions-item>
-          <el-descriptions-item label="批次号">{{ detail.batchNo }}</el-descriptions-item>
-          <el-descriptions-item label="申请人">{{ detail.applyByName }}</el-descriptions-item>
-          <el-descriptions-item label="申请时间">{{ detail.applyTime }}</el-descriptions-item>
+          <el-descriptions-item label="卷号">{{ detail.coilNo || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="批次号">{{ detail.batchNo || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="申请人">{{ detail.applyByName ?? detail.applyBy ?? detail.createUserNo ?? '—' }}</el-descriptions-item>
+          <el-descriptions-item label="申请时间">{{ detail.applyTime ?? detail.createDateTime ?? '—' }}</el-descriptions-item>
           <el-descriptions-item label="改判类型">
-            <el-tag v-if="detail.isReverse" type="danger" size="small">逆向改判</el-tag>
+            <el-tag v-if="detail.isReverse === 1 || detail.isReverse === true" type="danger" size="small">逆向改判</el-tag>
             <el-tag v-else type="info" size="small">常规改判</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="审批级别">{{ detail.approvalLevel || '-' }}</el-descriptions-item>

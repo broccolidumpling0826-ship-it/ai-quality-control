@@ -116,10 +116,9 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="viewDetail(row)">查看详情</el-button>
-            <el-button link type="success" @click="handleDownload(row)">下载</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -140,18 +139,25 @@
     <el-dialog v-model="detailDialogVisible" title="质保书数据详情" width="800px">
       <template v-if="currentDetail">
         <el-descriptions :column="3" border size="small" style="margin-bottom:16px">
-          <el-descriptions-item label="卷号">{{ currentDetail.coilNo }}</el-descriptions-item>
-          <el-descriptions-item label="批次号">{{ currentDetail.batchNo }}</el-descriptions-item>
-          <el-descriptions-item label="炉号">{{ currentDetail.heatNo }}</el-descriptions-item>
-          <el-descriptions-item label="品种">{{ currentDetail.productVariety }}</el-descriptions-item>
-          <el-descriptions-item label="牌号">{{ currentDetail.productGrade }}</el-descriptions-item>
-          <el-descriptions-item label="客户">{{ currentDetail.customer }}</el-descriptions-item>
+          <el-descriptions-item label="卷号">{{ currentDetail.coilNo || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="批次号">{{ currentDetail.batchNo || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="炉号">{{ currentDetail.heatNo || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="品种">{{ currentDetail.productVariety || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="牌号">{{ currentDetail.productGrade || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="客户">{{ currentDetail.customerLabel || '-' }}</el-descriptions-item>
+          <el-descriptions-item v-if="currentDetail.finalJudgmentType" label="综合判定" :span="3">
+            <el-tag :type="judgmentTagType(currentDetail.finalJudgmentType)" size="small">
+              {{ dictStore.getLabel('JUDGMENT_TYPE', currentDetail.finalJudgmentType) || currentDetail.finalJudgmentType }}
+            </el-tag>
+          </el-descriptions-item>
         </el-descriptions>
 
         <el-table :data="currentDetail.indicators" border size="small">
           <el-table-column prop="indicatorName" label="指标名称" min-width="130" />
           <el-table-column prop="indicatorCode" label="指标代码" width="120" />
-          <el-table-column prop="measuredValue" label="实测值" width="100" align="center" />
+          <el-table-column label="实测值" width="100" align="center">
+            <template #default="{ row }">{{ formatMeasuredValue(row) }}</template>
+          </el-table-column>
           <el-table-column prop="unit" label="单位" width="70" align="center" />
           <el-table-column prop="lowerLimit" label="标准下限" width="90" align="center">
             <template #default="{ row }">{{ row.lowerLimit ?? '-' }}</template>
@@ -161,8 +167,8 @@
           </el-table-column>
           <el-table-column label="结论" width="90" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.result === 'PASS' ? 'success' : 'danger'" size="small">
-                {{ row.result === 'PASS' ? '合格' : '不合格' }}
+              <el-tag :type="indicatorConclusionTag(row).type" size="small">
+                {{ indicatorConclusionTag(row).label }}
               </el-tag>
             </template>
           </el-table-column>
@@ -170,7 +176,6 @@
       </template>
       <template #footer>
         <el-button @click="detailDialogVisible = false">关闭</el-button>
-        <el-button v-if="currentDetail?.fileUrl" type="success" @click="handleDownload(currentDetail)">下载</el-button>
       </template>
     </el-dialog>
   </div>
@@ -180,9 +185,19 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
+import { useDictStore } from '@/store/dict'
 import { useTableFilter } from '@/composables/use-table-filter'
-import { generateCertData, pageCertData } from '@/api/cert-data'
+import {
+  generateCertData,
+  getCertDataById,
+  mapCertGeneratePayload,
+  pageCertData,
+  type CertDataDetail,
+  type CertIndicatorSnapshot
+} from '@/api/cert-data'
 import type { PageResult } from '@/types'
+
+const dictStore = useDictStore()
 
 const generateFormRef = ref<FormInstance>()
 const generateLoading = ref(false)
@@ -201,11 +216,74 @@ const pageNum = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 const loading = ref(false)
-const tableData = ref<any[]>([])
+
+interface CertDisplayRow extends CertDataDetail {
+  customerLabel?: string
+  operatorName?: string
+  indicators: CertIndicatorSnapshot[]
+}
+
+const tableData = ref<CertDisplayRow[]>([])
 const { getFilters, filterMethod } = useTableFilter(tableData)
 
 const detailDialogVisible = ref(false)
-const currentDetail = ref<any>(null)
+const currentDetail = ref<CertDisplayRow | null>(null)
+
+function formatCustomerLabel(customerId?: string) {
+  if (!customerId) return '-'
+  return dictStore.getLabel('QC_CUSTOMER', customerId)
+}
+
+function indicatorConclusionTag(row: CertIndicatorSnapshot): { label: string; type: string } {
+  const result = row.indicatorResult
+  if (result === 'CONCESSION') {
+    return { label: '可让步', type: 'warning' }
+  }
+  if (result === 'WARNING') {
+    return { label: '-', type: 'info' }
+  }
+  const overall = currentDetail.value?.finalJudgmentType ?? row.finalJudgmentType
+  if (overall === 'QUALIFIED' || result === 'PASS' || row.isPassed === 1 || row.isPassed === true) {
+    return { label: '合格', type: 'success' }
+  }
+  if (overall === 'CAN_CONCESSION' && (row.isPassed === 0 || row.isPassed === false)) {
+    return { label: '可让步', type: 'warning' }
+  }
+  return { label: '不合格', type: 'danger' }
+}
+
+function formatMeasuredValue(row: CertIndicatorSnapshot) {
+  const val = row.testValue ?? (row as { measuredValue?: unknown }).measuredValue
+  if (val === null || val === undefined || val === '') return '-'
+  return val
+}
+
+function judgmentTagType(type?: string) {
+  const map: Record<string, string> = {
+    QUALIFIED: 'success',
+    UNQUALIFIED: 'danger',
+    CONCESSION: 'warning',
+    NEED_REINSPECTION: 'info',
+    REINSPECTION: 'info',
+    CAN_CONCESSION: 'warning'
+  }
+  return (type && map[type]) || 'info'
+}
+
+function normalizeCertDetail(raw: CertDataDetail): CertDisplayRow {
+  const indicators = (raw.indicators || []).map((ind) => ({
+    ...ind,
+    indicatorCode: ind.indicatorCode ?? '',
+    testValue: ind.testValue
+  }))
+  return {
+    ...raw,
+    indicators,
+    status: raw.status ?? (indicators.length ? 'SUCCESS' : 'FAILED'),
+    operatorName: raw.generatedBy ?? '-',
+    customerLabel: formatCustomerLabel(raw.customerId)
+  }
+}
 
 async function handleGenerate() {
   if (!generateForm.coilNo && !generateForm.batchNo) {
@@ -214,19 +292,13 @@ async function handleGenerate() {
   }
   generateLoading.value = true
   try {
-    const res = await generateCertData({
-      coilNo: generateForm.coilNo || undefined,
-      batchNo: generateForm.batchNo || undefined
-    }) as any
+    const vo = await generateCertData(mapCertGeneratePayload(generateForm))
     ElMessage.success('质保书数据生成成功')
     generateForm.coilNo = ''
     generateForm.batchNo = ''
-    loadData()
-    // 自动展示详情
-    if (res) {
-      currentDetail.value = res
-      detailDialogVisible.value = true
-    }
+    await loadData()
+    currentDetail.value = normalizeCertDetail(vo)
+    detailDialogVisible.value = true
   } finally {
     generateLoading.value = false
   }
@@ -235,7 +307,7 @@ async function handleGenerate() {
 async function loadData() {
   loading.value = true
   try {
-    const params: any = {
+    const params: Record<string, unknown> = {
       pageNum: pageNum.value,
       pageSize: pageSize.value,
       coilNo: searchForm.coilNo || undefined,
@@ -245,8 +317,8 @@ async function loadData() {
       params.startTime = searchForm.timeRange[0]
       params.endTime = searchForm.timeRange[1]
     }
-    const res = await pageCertData(params) as PageResult<any>
-    tableData.value = res.records || []
+    const res = await pageCertData(params as Parameters<typeof pageCertData>[0])
+    tableData.value = (res.records || []).map((row) => normalizeCertDetail(row))
     total.value = res.total || 0
   } finally {
     loading.value = false
@@ -264,20 +336,30 @@ function handleReset() {
   loadData()
 }
 
-function viewDetail(row: any) {
-  currentDetail.value = row
-  detailDialogVisible.value = true
-}
-
-function handleDownload(row: any) {
-  if (row.fileUrl) {
-    window.open(row.fileUrl, '_blank')
-  } else {
-    ElMessage.warning('暂无可下载文件')
+async function viewDetail(row: CertDisplayRow) {
+  if (!row.id) {
+    currentDetail.value = normalizeCertDetail(row)
+    detailDialogVisible.value = true
+    return
+  }
+  try {
+    const detail = await getCertDataById(row.id)
+    currentDetail.value = normalizeCertDetail(detail)
+    detailDialogVisible.value = true
+  } catch {
+    // handled by request interceptor
   }
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await dictStore.loadAll()
+  try {
+    await dictStore.refreshItems('QC_CUSTOMER')
+  } catch {
+    // ignore
+  }
+  loadData()
+})
 </script>
 
 <style scoped>

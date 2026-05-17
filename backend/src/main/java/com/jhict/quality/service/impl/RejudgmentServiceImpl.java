@@ -10,15 +10,22 @@ import com.jhict.quality.common.util.AuthUtils;
 import com.jhict.quality.dto.QcRejudgmentRequestAddCmd;
 import com.jhict.quality.dto.RejudgmentApproveCmd;
 import com.jhict.quality.entity.QcConcessionAcceptance;
+import com.jhict.quality.entity.QcInspectionRecord;
+import com.jhict.quality.entity.QcJudgmentEvidence;
 import com.jhict.quality.entity.QcJudgmentResult;
 import com.jhict.quality.entity.QcRejudgmentApproval;
 import com.jhict.quality.entity.QcRejudgmentRequest;
+import com.jhict.quality.entity.SysUser;
 import com.jhict.quality.mapper.QcConcessionAcceptanceMapper;
+import com.jhict.quality.mapper.QcInspectionRecordMapper;
+import com.jhict.quality.mapper.QcJudgmentEvidenceMapper;
 import com.jhict.quality.mapper.QcJudgmentResultMapper;
 import com.jhict.quality.mapper.QcRejudgmentApprovalMapper;
 import com.jhict.quality.mapper.QcRejudgmentRequestMapper;
+import com.jhict.quality.mapper.SysUserMapper;
 import com.jhict.quality.service.api.NotificationService;
 import com.jhict.quality.service.api.RejudgmentService;
+import com.jhict.quality.vo.QcRejudgmentListVO;
 import com.jhict.quality.vo.QcRejudgmentRequestVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -28,9 +35,7 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -51,6 +56,15 @@ public class RejudgmentServiceImpl implements RejudgmentService {
 
     @Resource
     private QcJudgmentResultMapper judgmentResultMapper;
+
+    @Resource
+    private QcJudgmentEvidenceMapper judgmentEvidenceMapper;
+
+    @Resource
+    private QcInspectionRecordMapper inspectionRecordMapper;
+
+    @Resource
+    private SysUserMapper sysUserMapper;
 
     @Resource
     private QcConcessionAcceptanceMapper concessionAcceptanceMapper;
@@ -156,6 +170,7 @@ public class RejudgmentServiceImpl implements RejudgmentService {
                 newJudgment.setIsFinal(1);
                 newJudgment.setRemark("改判申请[" + requestId + "]审批通过后自动生成");
                 judgmentResultMapper.insert(newJudgment);
+                copyJudgmentEvidences(original.getId(), newJudgment.getId(), request.getTargetJudgmentType());
 
                 // 批量作废关联让步申请（APPROVED 或 PENDING_APPROVAL 状态）
                 List<QcConcessionAcceptance> concessions = concessionAcceptanceMapper.selectList(
@@ -204,7 +219,7 @@ public class RejudgmentServiceImpl implements RejudgmentService {
     }
 
     @Override
-    public IPage<QcRejudgmentRequest> page(int pageNum, int pageSize, String approvalStatus, Integer isReverse) {
+    public IPage<QcRejudgmentListVO> page(int pageNum, int pageSize, String approvalStatus, Integer isReverse) {
         LambdaQueryWrapper<QcRejudgmentRequest> wrapper = new LambdaQueryWrapper<QcRejudgmentRequest>()
                 .orderByDesc(QcRejudgmentRequest::getCreateDateTime);
         if (StringUtils.hasText(approvalStatus)) {
@@ -213,7 +228,59 @@ public class RejudgmentServiceImpl implements RejudgmentService {
         if (isReverse != null) {
             wrapper.eq(QcRejudgmentRequest::getIsReverse, isReverse);
         }
-        return rejudgmentRequestMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        IPage<QcRejudgmentRequest> entityPage = rejudgmentRequestMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+
+        Set<String> judgmentIds = entityPage.getRecords().stream()
+                .map(QcRejudgmentRequest::getOriginalJudgmentId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Map<String, QcJudgmentResult> judgmentMap = judgmentIds.isEmpty()
+                ? Collections.emptyMap()
+                : judgmentResultMapper.selectBatchIds(judgmentIds).stream()
+                .collect(Collectors.toMap(QcJudgmentResult::getId, j -> j, (a, b) -> a));
+
+        Set<String> recordIds = judgmentMap.values().stream()
+                .map(QcJudgmentResult::getRecordId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Map<String, QcInspectionRecord> recordMap = recordIds.isEmpty()
+                ? Collections.emptyMap()
+                : inspectionRecordMapper.selectBatchIds(recordIds).stream()
+                .collect(Collectors.toMap(QcInspectionRecord::getId, r -> r, (a, b) -> a));
+
+        List<QcRejudgmentListVO> voList = entityPage.getRecords().stream()
+                .map(r -> toRejudgmentListVO(r, judgmentMap, recordMap))
+                .collect(Collectors.toList());
+
+        Page<QcRejudgmentListVO> voPage = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
+        voPage.setRecords(voList);
+        return voPage;
+    }
+
+    private QcRejudgmentListVO toRejudgmentListVO(
+            QcRejudgmentRequest request,
+            Map<String, QcJudgmentResult> judgmentMap,
+            Map<String, QcInspectionRecord> recordMap) {
+        QcRejudgmentListVO vo = new QcRejudgmentListVO();
+        vo.setId(request.getId());
+        vo.setOriginalJudgmentType(request.getOriginalJudgmentType());
+        vo.setTargetJudgmentType(request.getTargetJudgmentType());
+        vo.setRejudgmentReason(request.getRejudgmentReason());
+        vo.setIsReverse(request.getIsReverse());
+        vo.setApprovalLevel(request.getApprovalLevel());
+        vo.setApprovalStatus(request.getApprovalStatus());
+        vo.setCreateDateTime(request.getCreateDateTime());
+        vo.setCreateUserNo(request.getCreateUserNo());
+
+        QcJudgmentResult judgment = judgmentMap.get(request.getOriginalJudgmentId());
+        if (judgment != null && StringUtils.hasText(judgment.getRecordId())) {
+            QcInspectionRecord record = recordMap.get(judgment.getRecordId());
+            if (record != null) {
+                vo.setCoilNo(record.getCoilNo());
+                vo.setBatchNo(record.getBatchNo());
+            }
+        }
+        return vo;
     }
 
     @Override
@@ -245,6 +312,15 @@ public class RejudgmentServiceImpl implements RejudgmentService {
         vo.setApprovalLevel(request.getApprovalLevel());
         vo.setApprovalStatus(request.getApprovalStatus());
         vo.setIsReverseLabel(Integer.valueOf(1).equals(request.getIsReverse()) ? "逆向改判" : "");
+        vo.setApplyTime(request.getCreateDateTime());
+        vo.setApplyBy(request.getCreateUserNo());
+        if (StringUtils.hasText(request.getCreateUserNo())) {
+            SysUser applicant = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
+                    .eq(SysUser::getUserNo, request.getCreateUserNo())
+                    .last("LIMIT 1"));
+            vo.setApplyByName(applicant != null ? applicant.getUsername() : request.getCreateUserNo());
+        }
+        enrichInspectionFields(vo, request.getOriginalJudgmentId());
 
         List<QcRejudgmentRequestVO.ApprovalRecordVO> approvalVOs = approvals.stream().map(a -> {
             QcRejudgmentRequestVO.ApprovalRecordVO r = new QcRejudgmentRequestVO.ApprovalRecordVO();
@@ -261,5 +337,47 @@ public class RejudgmentServiceImpl implements RejudgmentService {
         vo.setApprovalHistory(approvalVOs);
 
         return vo;
+    }
+
+    /**
+     * 改判后将原判定依据复制到新判定；若改判为合格，指标依据标记为通过（供质保书等下游使用）。
+     */
+    private void copyJudgmentEvidences(String originalJudgmentId, String newJudgmentId, String targetJudgmentType) {
+        List<QcJudgmentEvidence> sourceList = judgmentEvidenceMapper.selectList(
+                new LambdaQueryWrapper<QcJudgmentEvidence>()
+                        .eq(QcJudgmentEvidence::getJudgmentId, originalJudgmentId));
+        if (sourceList.isEmpty()) {
+            return;
+        }
+        boolean qualifiedOverride = "QUALIFIED".equals(targetJudgmentType);
+        for (QcJudgmentEvidence source : sourceList) {
+            QcJudgmentEvidence copy = new QcJudgmentEvidence();
+            copy.setJudgmentId(newJudgmentId);
+            copy.setStandardId(source.getStandardId());
+            copy.setIndicatorId(source.getIndicatorId());
+            copy.setTestValue(source.getTestValue());
+            copy.setUpperLimit(source.getUpperLimit());
+            copy.setLowerLimit(source.getLowerLimit());
+            copy.setDeviation(source.getDeviation());
+            copy.setTriggerRule(source.getTriggerRule());
+            copy.setIsPassed(qualifiedOverride ? 1 : source.getIsPassed());
+            judgmentEvidenceMapper.insert(copy);
+        }
+    }
+
+    private void enrichInspectionFields(QcRejudgmentRequestVO vo, String judgmentId) {
+        if (!StringUtils.hasText(judgmentId)) {
+            return;
+        }
+        QcJudgmentResult judgment = judgmentResultMapper.selectById(judgmentId);
+        if (judgment == null || !StringUtils.hasText(judgment.getRecordId())) {
+            return;
+        }
+        QcInspectionRecord record = inspectionRecordMapper.selectById(judgment.getRecordId());
+        if (record != null) {
+            vo.setCoilNo(record.getCoilNo());
+            vo.setBatchNo(record.getBatchNo());
+            vo.setHeatNo(record.getHeatNo());
+        }
     }
 }

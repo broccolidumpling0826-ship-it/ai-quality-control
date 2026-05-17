@@ -217,7 +217,7 @@ public class InspectionServiceImpl implements InspectionService {
                         QcInspectionRecord::getTestTime,
                         StringUtils.hasText(query.getTestTimeEnd())
                                 ? LocalDateTime.parse(query.getTestTimeEnd(), FORMATTER) : null)
-                .orderByDesc(QcInspectionRecord::getTestTime);
+                .orderByDesc(QcInspectionRecord::getCreateDateTime);
 
         return inspectionRecordMapper.selectPage(pageParam, wrapper);
     }

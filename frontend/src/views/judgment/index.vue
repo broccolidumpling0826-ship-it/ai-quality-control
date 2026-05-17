@@ -92,6 +92,31 @@
           filter-placement="bottom-start"
         />
         <el-table-column
+          prop="sampleType"
+          label="样品类型"
+          width="100"
+          :filters="getFilters('sampleType')"
+          :filter-method="filterMethod"
+          filter-placement="bottom-start"
+        >
+          <template #default="{ row }">
+            {{ dictStore.getLabel('SAMPLE_TYPE', row.sampleType) || '—' }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="customerId"
+          label="客户"
+          width="140"
+          show-overflow-tooltip
+          :filters="getFilters('customerId')"
+          :filter-method="filterMethod"
+          filter-placement="bottom-start"
+        >
+          <template #default="{ row }">
+            {{ formatCustomer(row.customerId) }}
+          </template>
+        </el-table-column>
+        <el-table-column
           prop="judgmentType"
           label="判定结论"
           width="120"
@@ -167,6 +192,11 @@ const loading = ref(false)
 const tableData = ref<any[]>([])
 const { getFilters, filterMethod } = useTableFilter(tableData)
 
+function formatCustomer(customerId?: string) {
+  if (!customerId) return '—'
+  return dictStore.getLabel('QC_CUSTOMER', customerId) || customerId
+}
+
 async function loadData() {
   loading.value = true
   try {
@@ -208,7 +238,10 @@ function viewExplanation(row: any) {
   router.push(`/judgment/explanation?id=${row.id ?? row.judgmentId}`)
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await dictStore.refreshItems('QC_CUSTOMER')
+  loadData()
+})
 </script>
 
 <style scoped>

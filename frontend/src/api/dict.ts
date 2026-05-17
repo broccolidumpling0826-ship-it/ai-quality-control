@@ -12,4 +12,5 @@ export const getAllDict = () => get<DictMap>('/dict/all')
  * GET /dict/items/:dictCode
  * @param dictCode 字典编码
  */
-export const getDictItems = (dictCode: string) => get<DictItem[]>(`/dict/items/${dictCode}`)
+export const getDictItems = (dictCode: string, refresh = false) =>
+  get<DictItem[]>(`/dict/items/${dictCode}`, refresh ? { refresh: true } : undefined)

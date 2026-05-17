@@ -1,4 +1,4 @@
-import { get, post, put } from '@/utils/request'
+import { get, post, put, del } from '@/utils/request'
 
 function parseLimit(val: unknown): number | undefined {
   if (val === '' || val === null || val === undefined) return undefined
@@ -6,22 +6,23 @@ function parseLimit(val: unknown): number | undefined {
   return Number.isNaN(n) ? undefined : n
 }
 
-/** 将前端标准表单映射为后端 QcQualityStandardAddCmd */
+/** 将前端标准表单映射为后端 QcQualityStandardAddCmd（表单绑定字段优先） */
 export function mapStandardPayload(form: Record<string, unknown>) {
   const indicators = (form.indicators as Array<Record<string, unknown>>) || []
   return {
-    id: form.id as string | undefined,
+    id: form.id != null && form.id !== '' ? String(form.id) : undefined,
     standardType: form.standardType,
     standardCode: form.standardCode,
     standardName: form.standardName,
-    variety: form.variety ?? form.productVariety,
-    grade: form.grade ?? form.productGrade,
+    // 编辑时 detail 会带回 variety/grade 等 API 字段；表单 v-model 绑定的是 product* / version / description
+    variety: form.productVariety ?? form.variety,
+    grade: form.productGrade ?? form.grade,
     specRange: form.specRange || 'DEFAULT',
-    versionNo: form.versionNo ?? form.version,
+    versionNo: form.version ?? form.versionNo,
     effectiveDate: form.effectiveDate,
     expiryDate: form.expiryDate || '9999-12-31',
     customerId: form.standardType === 'CUSTOMER' ? (form.customerId as string | undefined) : undefined,
-    remark: form.remark ?? form.description,
+    remark: form.description ?? form.remark,
     indicators: indicators.map((ind) => ({
       indicatorId: ind.indicatorId ?? ind.id,
       upperLimit: parseLimit(ind.upperLimit),
@@ -34,9 +35,15 @@ export function mapStandardPayload(form: Record<string, unknown>) {
 }
 
 export const addStandard = (data: Record<string, unknown>) => post('/standards', mapStandardPayload(data))
-export const updateStandard = (data: Record<string, unknown>) =>
-  put(`/standards/${data.id}`, mapStandardPayload(data))
+export const updateStandard = (data: Record<string, unknown>) => {
+  const payload = mapStandardPayload(data)
+  if (!payload.id) {
+    return Promise.reject(new Error('标准ID不能为空'))
+  }
+  return put(`/standards/${payload.id}`, payload)
+}
 export const publishStandard = (id: string) => put(`/standards/${id}/publish`)
+export const deleteStandard = (id: string) => del(`/standards/${id}`)
 export const pageStandards = (data: any) => post('/standards/page', data)
 export const getStandardById = (id: string) => get(`/standards/${id}`)
 export const listIndicators = (params?: any) => get('/standards/indicators', params)

@@ -20,7 +20,13 @@ public final class JudgmentExplainConstants {
 
     public static final String INDICATOR_RESULT_FAIL = "FAIL";
 
+    /** 超出合格限但在让步范围内 */
+    public static final String INDICATOR_RESULT_CONCESSION = "CONCESSION";
+
     public static final String INDICATOR_RESULT_WARNING = "WARNING";
+
+    /** 触发规则中含此片段表示指标在让步范围内 */
+    public static final String TRIGGER_RULE_CONCESSION_MARKER = "让步范围内";
 
     public static final int PASSED_FLAG = 1;
 

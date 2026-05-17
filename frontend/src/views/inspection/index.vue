@@ -82,6 +82,19 @@
           filter-placement="bottom-start"
         />
         <el-table-column
+          prop="customerId"
+          label="客户"
+          min-width="160"
+          show-overflow-tooltip
+          :filters="getFilters('customerLabel')"
+          :filter-method="filterMethod"
+          filter-placement="bottom-start"
+        >
+          <template #default="{ row }">
+            {{ formatCustomerLabel(row.customerId) }}
+          </template>
+        </el-table-column>
+        <el-table-column
           prop="sampleType"
           label="样品类型"
           width="110"
@@ -208,6 +221,11 @@ const voidRules = {
   reason: [{ required: true, message: '请输入作废原因', trigger: 'blur' }]
 }
 
+function formatCustomerLabel(customerId?: string) {
+  if (!customerId) return '-'
+  return dictStore.getLabel('QC_CUSTOMER', customerId)
+}
+
 async function loadData() {
   loading.value = true
   try {
@@ -227,7 +245,8 @@ async function loadData() {
     tableData.value = (res.records || []).map((row) => ({
       ...row,
       testTime: row.testTime ?? row.inspectionTime,
-      testerNo: row.testerNo ?? row.inspector
+      testerNo: row.testerNo ?? row.inspector,
+      customerLabel: formatCustomerLabel(row.customerId)
     }))
     total.value = res.total || 0
   } finally {
@@ -273,7 +292,15 @@ async function confirmVoid() {
   }
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await dictStore.loadAll()
+  try {
+    await dictStore.refreshItems('QC_CUSTOMER')
+  } catch {
+    // 字典加载失败时仍用 getLabel 兜底显示字典值
+  }
+  loadData()
+})
 </script>
 
 <style scoped>

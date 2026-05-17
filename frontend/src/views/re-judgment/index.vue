@@ -47,7 +47,7 @@
                 {{ dictStore.getLabel('JUDGMENT_TYPE', row.targetJudgmentType) }}
               </el-tag>
             </div>
-            <div class="text-meta-sm" style="margin-top:4px">卷号：{{ row.coilNo }}</div>
+            <div class="text-meta-sm" style="margin-top:4px">卷号：{{ row.coilNo || '—' }}</div>
           </template>
         </el-table-column>
         <el-table-column
@@ -119,10 +119,10 @@
     </el-card>
 
     <!-- 审批弹窗 -->
-    <el-dialog v-model="approveDialogVisible" title="改判审批" width="500px">
-      <div v-if="approveTarget" style="margin-bottom:12px">
+    <el-dialog v-model="approveDialogVisible" title="改判审批" width="760px" class="approve-dialog">
+      <div v-if="approveTarget" class="approve-summary">
         <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="卷号">{{ approveTarget.coilNo }}</el-descriptions-item>
+          <el-descriptions-item label="卷号">{{ approveTarget.coilNo || '—' }}</el-descriptions-item>
           <el-descriptions-item label="改判方向">
             {{ dictStore.getLabel('JUDGMENT_TYPE', approveTarget.originalJudgmentType) }}
             →
@@ -131,9 +131,9 @@
           <el-descriptions-item label="改判原因" :span="2">{{ approveTarget.rejudgmentReason }}</el-descriptions-item>
         </el-descriptions>
       </div>
-      <el-form ref="approveFormRef" :model="approveForm" :rules="approveRules" label-width="80px">
+      <el-form ref="approveFormRef" :model="approveForm" :rules="approveRules" label-width="90px">
         <el-form-item label="审批意见" prop="comment">
-          <el-input v-model="approveForm.comment" type="textarea" :rows="3" placeholder="请输入审批意见" />
+          <el-input v-model="approveForm.comment" type="textarea" :rows="4" placeholder="请输入审批意见" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -242,5 +242,14 @@ onMounted(loadData)
 }
 .search-card :deep(.el-card__body) {
   padding: 16px 16px 0;
+}
+.approve-summary {
+  margin-bottom: 16px;
+}
+.approve-dialog :deep(.el-descriptions__body) {
+  width: 100%;
+}
+.approve-dialog :deep(.el-textarea__inner) {
+  min-height: 96px;
 }
 </style>

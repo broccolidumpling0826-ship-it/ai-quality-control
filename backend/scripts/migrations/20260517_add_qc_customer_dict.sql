@@ -1,4 +1,9 @@
+-- 执行时请指定字符集，避免中文乱码：
+-- mysql ... --default-character-set=utf8mb4 ai_quality_control < 本文件
+
 USE ai_quality_control;
+
+SET NAMES utf8mb4;
 
 INSERT IGNORE INTO sys_dict (id, dict_code, dict_name, is_system, sort_no, status, create_date_time, update_date_time) VALUES
 ('d017', 'QC_CUSTOMER', '关联客户', 0, 17, 1, NOW(), NOW());

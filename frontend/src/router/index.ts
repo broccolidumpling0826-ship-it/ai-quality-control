@@ -97,6 +97,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '让步接收', icon: 'Check', breadcrumb: ['让步接收'] }
       },
       {
+        path: 'concession/apply',
+        name: 'concession-apply',
+        component: () => import('@/views/concession/form.vue'),
+        meta: { title: '发起让步申请', icon: 'Check', breadcrumb: ['让步接收', '发起让步申请'] }
+      },
+      {
         path: 'concession/detail',
         name: 'concession-detail',
         component: () => import('@/views/concession/detail.vue'),

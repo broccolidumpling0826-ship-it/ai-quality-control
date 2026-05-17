@@ -53,7 +53,12 @@ public class DictController {
     @ApiOperation(value = "根据字典编码获取启用字典项（下拉框用，value/label）")
     public ApiResult<List<DictItemVO>> getItems(
             @ApiParam(value = "字典编码", required = true)
-            @PathVariable String dictCode) {
+            @PathVariable String dictCode,
+            @ApiParam(value = "为 true 时先清除 Redis 缓存再从数据库加载")
+            @RequestParam(defaultValue = "false") boolean refresh) {
+        if (refresh) {
+            sysDictService.clearCache(dictCode);
+        }
         return ApiResult.success(sysDictService.getItems(dictCode));
     }
 
