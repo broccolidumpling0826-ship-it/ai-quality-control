@@ -155,11 +155,21 @@ public class JudgmentEngine {
                         .passed(true)
                         .build());
             } else {
-                // 超出正常范围，按四段优先级判断（D-015）
+                // 超出正常范围，按四段优先级判断（D-015 / FR-005）
                 BigDecimal deviation = calcDeviation(testValue, lowerLimit, upperLimit);
-                boolean hasConcessionRange = (concessionUpper != null || concessionLower != null);
-                boolean withinConcession = hasConcessionRange
-                        && isWithinRange(testValue, concessionLower, concessionUpper);
+                boolean lowerViolation = lowerLimit != null && testValue.compareTo(lowerLimit) < 0;
+                boolean upperViolation = upperLimit != null && testValue.compareTo(upperLimit) > 0;
+                // 仅在违规方向配置了让步限值时，才视为「已配置让步范围」
+                boolean hasConcessionOnViolatedSide = (lowerViolation && concessionLower != null)
+                        || (upperViolation && concessionUpper != null);
+                boolean withinConcession = false;
+                if (lowerViolation && concessionLower != null) {
+                    withinConcession = testValue.compareTo(concessionLower) >= 0
+                            && (concessionUpper == null || testValue.compareTo(concessionUpper) <= 0);
+                } else if (upperViolation && concessionUpper != null) {
+                    withinConcession = (concessionLower == null || testValue.compareTo(concessionLower) >= 0)
+                            && testValue.compareTo(concessionUpper) <= 0;
+                }
 
                 if (withinConcession) {
                     // ② 在让步范围内 → CAN_CONCESSION
@@ -174,8 +184,8 @@ public class JudgmentEngine {
                             .triggerRule(buildConcessionRule(lowerLimit, upperLimit, concessionLower, concessionUpper))
                             .passed(false)
                             .build());
-                } else if (!hasConcessionRange) {
-                    // ③ 超出合格限且未配置让步范围 → NEED_REINSPECTION
+                } else if (!hasConcessionOnViolatedSide) {
+                    // ③ 超出合格限且违规方向未配置让步范围 → NEED_REINSPECTION
                     hasReinspection = true;
                     evidences.add(JudgmentOutput.EvidenceItem.builder()
                             .standardId(matchedStandard.getId())

@@ -29,7 +29,8 @@ ACCOUNTS = {
 IND = {"Rm": "ind001", "A": "ind002", "ReL": "ind003", "thick": "ind004"}
 CUST_HUA = "CUST-001"
 SPEC = "厚度1.5mm×宽度1000mm"
-VARIETY = "冷轧板"
+# 使用带后缀的品种，避免与 init-test-data 已发布国标时间窗口重叠
+VARIETY = f"冷轧板-{SUFFIX}"
 GRADE = "Q235B"
 
 
@@ -201,11 +202,13 @@ class Runner:
             _, det = eng.call("GET", f"/api/v1/standards/{sid}")
             st = det.get("data", {}).get("status") if det.get("success") else None
         _, det_n = eng.call("GET", f"/api/v1/standards/{self.ctx.std_national_id}")
-        _, det_c = eng.call("GET", f"/api/v1/standards/{self.ctx.std_customer_id}")
-        if det_n.get("data", {}).get("status") == "PUBLISHED" and det_c.get("data", {}).get("status") == "PUBLISHED":
+        _, det_c = eng.call("GET", f"/api/v1/standards/{self.ctx.std_customer_id}") if self.ctx.std_customer_id else (0, {})
+        det_n_data = (det_n or {}).get("data") or {}
+        det_c_data = (det_c or {}).get("data") or {}
+        if det_n_data.get("status") == "PUBLISHED" and det_c_data.get("status") == "PUBLISHED":
             self.ok("TC-B003", "发布标准", "国标与客协均已 PUBLISHED", mod, "P0")
         else:
-            self.ng("TC-B003", "发布标准", f"国标={det_n.get('data',{}).get('status')} 客协={det_c.get('data',{}).get('status')}", mod, "P0")
+            self.ng("TC-B003", "发布标准", f"国标={det_n_data.get('status')} 客协={det_c_data.get('status')}", mod, "P0")
 
         overlap = self.std_body("NATIONAL", f"GB-OLAP-{SUFFIX}", nat_indicators[:1])
         overlap["effectiveDate"] = "2024-01-01"
@@ -312,7 +315,8 @@ class Runner:
             ("TC-B017", "f017", f"F{SUFFIX}017", f"Z{SUFFIX}017-01", {"Rm": 420, "ReL": 260, "A": 30, "thick": 0.08}, CUST_HUA, "QUALIFIED", "P0"),
             ("TC-B018", "f018", f"F{SUFFIX}018", f"Z{SUFFIX}018-01", {"Rm": 340, "ReL": 220}, None, "UNQUALIFIED", "P0"),
             ("TC-B019", "f019", f"F{SUFFIX}019", f"Z{SUFFIX}019-01", {"Rm": 362, "ReL": 250, "A": 30}, CUST_HUA, "CAN_CONCESSION", "P0"),
-            ("TC-B020", "f020", f"F{SUFFIX}020", f"Z{SUFFIX}020-01", {"Rm": 350}, None, "NEED_REINSPECTION", "P0"),
+            # 延伸率 A 在国标中未配置让步范围；实测低于合格下限 → NEED_REINSPECTION（对齐方案场景4）
+            ("TC-B020", "f020", f"F{SUFFIX}020", f"Z{SUFFIX}020-01", {"A": 20}, None, "NEED_REINSPECTION", "P0"),
         ]
         for cid, key, heat, coil, vals, cust, expected, pri in cases:
             info = self.add_inspection(key, heat, coil, vals, cust)

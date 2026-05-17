@@ -161,12 +161,12 @@ public class InspectionServiceImpl implements InspectionService {
             throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "作废原因不能为空");
         }
 
-        // Step 3: 校验权限（当前用户工号=testerNo 或 Sa-Token角色包含QUALITY_SUPERVISOR）
+        // Step 3: 校验权限（仅质检主管或系统管理员可作废，普通质检员不可操作 — TC-B013）
         String currentUserNo = getCurrentUserNo();
-        boolean isTester = record.getTesterNo().equals(currentUserNo);
         boolean isSupervisor = hasRole("QUALITY_SUPERVISOR");
-        if (!isTester && !isSupervisor) {
-            throw new ServiceException(ApiResult.CODE_FORBIDDEN, "无权作废该检验记录，仅检验人本人或质量主管可操作");
+        boolean isAdmin = hasRole("ADMIN");
+        if (!isSupervisor && !isAdmin) {
+            throw new ServiceException(ApiResult.CODE_FORBIDDEN, "无权作废该检验记录，仅质量主管可操作");
         }
 
         // Step 4: 软作废

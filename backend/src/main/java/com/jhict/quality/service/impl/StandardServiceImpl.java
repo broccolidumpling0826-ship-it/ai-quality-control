@@ -150,6 +150,22 @@ public class StandardServiceImpl implements StandardService {
             throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "标准下必须配置至少一个指标才能发布");
         }
 
+        // 时间窗口重叠校验：同体系已发布标准生效区间不得重叠（FR-003 / TC-B004）
+        List<QcQualityStandard> overlapping = qualityStandardMapper.findOverlappingPublished(
+                standard.getStandardType(),
+                standard.getVariety(),
+                standard.getGrade(),
+                standard.getCustomerId(),
+                standard.getEffectiveDate(),
+                standard.getExpiryDate(),
+                id
+        );
+        if (!overlapping.isEmpty()) {
+            QcQualityStandard conflict = overlapping.get(0);
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST,
+                    String.format("标准时间窗口与 %s 重叠，请调整生效/失效日期", conflict.getVersionNo()));
+        }
+
         // 发布标准
         standard.setStatus("PUBLISHED");
         qualityStandardMapper.updateById(standard);
