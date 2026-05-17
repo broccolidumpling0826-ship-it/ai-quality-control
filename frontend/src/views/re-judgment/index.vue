@@ -35,7 +35,6 @@
         border
         stripe
         style="width:100%"
-        :row-class-name="rowClassName"
       >
         <el-table-column label="判定变更" width="200">
           <template #default="{ row }">
@@ -62,7 +61,7 @@
         />
         <el-table-column label="逆向改判" width="100" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.isReverse" type="danger" size="small" style="font-weight:600">逆向改判</el-tag>
+            <el-tag v-if="row.isReverse === 1 || row.isReverse === true" type="danger" size="small" style="font-weight:600">逆向改判</el-tag>
             <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
@@ -177,10 +176,6 @@ const approveRules = {
   comment: [{ required: true, message: '请输入审批意见', trigger: 'blur' }]
 }
 
-function rowClassName({ row }: { row: any }) {
-  return row.isReverse ? 'reverse-row' : ''
-}
-
 async function loadData() {
   loading.value = true
   try {
@@ -247,11 +242,5 @@ onMounted(loadData)
 }
 .search-card :deep(.el-card__body) {
   padding: 16px 16px 0;
-}
-:deep(.reverse-row) {
-  background-color: #fff0f0 !important;
-}
-:deep(.reverse-row:hover td) {
-  background-color: #ffe4e4 !important;
 }
 </style>
