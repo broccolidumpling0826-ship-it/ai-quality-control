@@ -9,22 +9,28 @@ export interface ConcessionPageQuery {
   coilNo?: string
 }
 
-/** 客户确认：PUT multipart，part 名 file / cmd（与后端 ConcessionController 一致） */
-export const applyConcession = (data: unknown) => post('/concessions', data)
+export interface ConcessionApplyCmd {
+  judgmentId: string
+  concessionScope: string
+  riskDescription: string
+  effectiveDate?: string
+  expiryDate?: string
+}
+
+export const applyConcession = (data: ConcessionApplyCmd) => post<string>('/concessions', data)
 
 export const confirmConcession = (id: string, formData: FormData) => {
   const body = new FormData()
-  const file = formData.get('confirmFile') ?? formData.get('file')
-  if (file) {
+  const file = formData.get('file') ?? formData.get('confirmFile')
+  if (file instanceof Blob) {
     body.append('file', file)
   }
   const summary = formData.get('summary') ?? formData.get('confirmNote')
-  if (summary) {
-    body.append(
-      'cmd',
-      new Blob([JSON.stringify({ confirmNote: String(summary) })], { type: 'application/json' })
-    )
-  }
+  const note = summary != null ? String(summary).trim() : ''
+  body.append(
+    'cmd',
+    new Blob([JSON.stringify({ confirmNote: note || undefined })], { type: 'application/json' })
+  )
   return put(`/concessions/${id}/confirm`, body)
 }
 

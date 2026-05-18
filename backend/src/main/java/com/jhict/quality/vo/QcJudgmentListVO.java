@@ -38,6 +38,12 @@ public class QcJudgmentListVO {
     @ApiModelProperty(value = "牌号")
     private String productGrade;
 
+    @ApiModelProperty(value = "样品类型")
+    private String sampleType;
+
+    @ApiModelProperty(value = "客户ID")
+    private String customerId;
+
     @ApiModelProperty(value = "检验人工号")
     private String testerNo;
 

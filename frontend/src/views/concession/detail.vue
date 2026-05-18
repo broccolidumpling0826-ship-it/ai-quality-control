@@ -27,8 +27,8 @@
             <el-descriptions-item label="申请人">{{ detail.applyByName }}</el-descriptions-item>
             <el-descriptions-item label="申请时间">{{ detail.applyTime }}</el-descriptions-item>
             <el-descriptions-item label="总状态">
-              <el-tag :type="dictStore.getColorTag('CONCESSION_STATUS', detail.concessionStatus) as any">
-                {{ dictStore.getLabel('CONCESSION_STATUS', detail.concessionStatus) }}
+              <el-tag :type="totalStatusTagType as any">
+                {{ totalStatusLabel }}
               </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="风险描述" :span="2">{{ detail.riskDescription ?? detail.reason }}</el-descriptions-item>
@@ -175,18 +175,35 @@ const rejectRules = {
   rejectReason: [{ required: true, message: '请输入拒绝原因', trigger: 'blur' }]
 }
 
-// 步骤映射
-const STEP_MAP: Record<string, number> = {
-  INTERNAL_REVIEW: 0,
-  PENDING_CONFIRM: 1,
-  CONFIRMED: 2,
-  REJECTED_BY_CUSTOMER: 2,
-  APPROVED: 3
-}
-
 const currentStep = computed(() => {
   if (!detail.value) return 0
-  return STEP_MAP[detail.value.concessionStatus] ?? 0
+  const { confirmStatus, approvalStatus } = detail.value
+  if (approvalStatus === 'APPROVED') return 3
+  if (confirmStatus === 'CONFIRMED' || confirmStatus === 'REJECTED') return 2
+  if (confirmStatus === 'PENDING') return 1
+  return 0
+})
+
+const totalStatusLabel = computed(() => {
+  if (!detail.value) return '-'
+  const code = detail.value.concessionStatus ?? detail.value.approvalStatus
+  if (code) {
+    const label = dictStore.getLabel('CONCESSION_STATUS', code)
+    if (label && label !== code) return label
+  }
+  if (detail.value.confirmStatus === 'PENDING') {
+    return dictStore.getLabel('CONFIRM_STATUS', 'PENDING') || '待确认'
+  }
+  return dictStore.getLabel('CONFIRM_STATUS', detail.value.confirmStatus) || '-'
+})
+
+const totalStatusTagType = computed(() => {
+  if (!detail.value) return 'info'
+  const code = detail.value.concessionStatus ?? detail.value.approvalStatus
+  if (code) {
+    return dictStore.getColorTag('CONCESSION_STATUS', code)
+  }
+  return dictStore.getColorTag('CONFIRM_STATUS', detail.value.confirmStatus)
 })
 
 const customerStepTitle = computed(() => {
@@ -238,10 +255,10 @@ async function handleConfirm() {
   actionLoading.value = true
   try {
     const fd = new FormData()
-    if (uploadFile.value) {
-      fd.append('confirmFile', uploadFile.value)
+    fd.append('file', uploadFile.value)
+    if (confirmSummary.value.trim()) {
+      fd.append('summary', confirmSummary.value.trim())
     }
-    fd.append('summary', confirmSummary.value)
     await confirmConcession(detail.value.id, fd)
     ElMessage.success('客户确认已记录')
     loadDetail()

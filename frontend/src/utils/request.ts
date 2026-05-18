@@ -20,6 +20,10 @@ service.interceptors.request.use(
     if (token && config.headers) {
       config.headers['Authorization'] = `Bearer ${token}`
     }
+    // FormData 须由浏览器自动设置 multipart boundary，不能沿用默认 application/json
+    if (config.data instanceof FormData && config.headers) {
+      delete config.headers['Content-Type']
+    }
     return config
   },
   (error) => {

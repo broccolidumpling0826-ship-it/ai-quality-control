@@ -25,8 +25,21 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="客户" prop="customer">
-              <el-input v-model="baseForm.customer" placeholder="输入客户名称" />
+            <el-form-item label="客户" prop="customerId">
+              <el-select
+                v-model="baseForm.customerId"
+                placeholder="请选择客户"
+                filterable
+                clearable
+                style="width:100%"
+              >
+                <el-option
+                  v-for="item in customerOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -148,6 +161,16 @@
             {{ row.upperLimit ?? '-' }}
           </template>
         </el-table-column>
+        <el-table-column label="让步下限" width="90" align="center">
+          <template #default="{ row }">
+            {{ row.concessionLower ?? '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="让步上限" width="90" align="center">
+          <template #default="{ row }">
+            {{ row.concessionUpper ?? '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="实测值" width="130">
           <template #default="{ row }">
             <el-input
@@ -178,8 +201,64 @@
       <el-button type="primary" :loading="submitLoading" @click="handleSubmit">提交检验</el-button>
     </div>
 
+    <!-- 从标准选择指标 -->
+    <el-dialog
+      v-model="indicatorPickDialogVisible"
+      title="从标准选择指标"
+      width="760px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <p v-if="pickStandardLabel" style="margin:0 0 12px;font-size:13px;color:var(--el-text-color-secondary)">
+        匹配标准：{{ pickStandardLabel }}
+      </p>
+      <el-table
+        ref="indicatorPickTableRef"
+        v-loading="loadingIndicators"
+        :data="standardIndicatorCandidates"
+        border
+        max-height="400"
+        row-key="indicatorId"
+      >
+        <el-table-column type="selection" width="48" />
+        <el-table-column prop="indicatorName" label="指标名称" min-width="120" />
+        <el-table-column prop="indicatorCode" label="代码" width="80" />
+        <el-table-column label="类别" width="100">
+          <template #default="{ row }">
+            <el-tag v-if="row.category" :type="dictStore.getColorTag('INDICATOR_CATEGORY', row.category) as any" size="small">
+              {{ dictStore.getLabel('INDICATOR_CATEGORY', row.category) }}
+            </el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="标准下限" width="90" align="center">
+          <template #default="{ row }">{{ row.lowerLimit ?? '-' }}</template>
+        </el-table-column>
+        <el-table-column label="标准上限" width="90" align="center">
+          <template #default="{ row }">{{ row.upperLimit ?? '-' }}</template>
+        </el-table-column>
+        <el-table-column label="让步下限" width="88" align="center">
+          <template #default="{ row }">{{ row.concessionLower ?? '-' }}</template>
+        </el-table-column>
+        <el-table-column label="让步上限" width="88" align="center">
+          <template #default="{ row }">{{ row.concessionUpper ?? '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="unit" label="单位" width="60" align="center" />
+        <el-table-column label="必检" width="60" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.isRequired === 1" type="danger" size="small">必检</el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="indicatorPickDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmPickIndicators">添加所选</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 判定结论对话框 -->
-    <el-dialog v-model="resultDialogVisible" title="检验提交完成" width="480px" :close-on-click-modal="false">
+    <el-dialog v-model="resultDialogVisible" title="检验提交完成" width="520px" :close-on-click-modal="false">
       <div class="result-area">
         <div style="text-align:center;margin-bottom:16px">
           <el-tag
@@ -190,11 +269,11 @@
             {{ dictStore.getLabel('JUDGMENT_TYPE', judgmentResult?.judgmentType) || judgmentResult?.judgmentType }}
           </el-tag>
         </div>
-        <el-descriptions :column="2" border>
+        <el-descriptions :column="2" border label-width="96px" class="result-descriptions">
           <el-descriptions-item label="炉号">{{ judgmentResult?.heatNo }}</el-descriptions-item>
           <el-descriptions-item label="卷号">{{ judgmentResult?.coilNo }}</el-descriptions-item>
           <el-descriptions-item label="判定时间">{{ judgmentResult?.judgeTime }}</el-descriptions-item>
-          <el-descriptions-item label="检验人">{{ judgmentResult?.inspector }}</el-descriptions-item>
+          <el-descriptions-item label="检验人">{{ judgmentResult?.inspector || '-' }}</el-descriptions-item>
         </el-descriptions>
         <p v-if="judgmentResult?.remark" class="text-secondary" style="margin-top:12px">
           {{ judgmentResult?.remark }}
@@ -209,14 +288,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch, nextTick } from 'vue'
+import type { DictItem } from '@/types'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import type { FormInstance } from 'element-plus'
+import type { FormInstance, TableInstance } from 'element-plus'
 import { useDictStore } from '@/store/dict'
 import { useAuthStore } from '@/store/auth'
 import { addInspection, mapInspectionAddPayload } from '@/api/inspection'
-import { listIndicators, getSpecRanges, type SpecRangeOption } from '@/api/standard'
+import { getStandardById, getSpecRanges, type SpecRangeOption } from '@/api/standard'
 
 const router = useRouter()
 const dictStore = useDictStore()
@@ -226,11 +306,19 @@ const baseFormRef = ref<FormInstance>()
 const submitLoading = ref(false)
 const loadingIndicators = ref(false)
 
+/** 字典未同步时的演示客户兜底（与 init-dict-data.sql 一致） */
+const FALLBACK_CUSTOMERS: DictItem[] = [
+  { value: 'CUST-001', label: '华东汽车配件有限公司', colorTag: '', sortNo: 1 },
+  { value: 'CUST-002', label: '西南建材集团', colorTag: '', sortNo: 2 }
+]
+
+const customerOptions = ref<DictItem[]>([...FALLBACK_CUSTOMERS])
+
 const baseForm = reactive({
   heatNo: '',
   coilNo: '',
   batchNo: '',
-  customer: '',
+  customerId: '',
   productVariety: '',
   productGrade: '',
   specification: '',
@@ -253,12 +341,38 @@ interface IndicatorRow {
   category: string
   lowerLimit: number | null
   upperLimit: number | null
+  concessionLower: number | null
+  concessionUpper: number | null
   measuredValue: string
   unit: string
   noStandard: boolean
 }
 
 const indicatorRows = ref<IndicatorRow[]>([])
+
+interface StandardIndicatorCandidate {
+  indicatorId: string
+  indicatorName: string
+  indicatorCode: string
+  category: string
+  lowerLimit: number | null
+  upperLimit: number | null
+  concessionLower: number | null
+  concessionUpper: number | null
+  unit: string
+  isRequired: number
+}
+
+function parseLimitVal(val: unknown): number | null {
+  if (val === '' || val === null || val === undefined) return null
+  const n = Number(val)
+  return Number.isFinite(n) ? n : null
+}
+
+const indicatorPickDialogVisible = ref(false)
+const standardIndicatorCandidates = ref<StandardIndicatorCandidate[]>([])
+const pickStandardLabel = ref('')
+const indicatorPickTableRef = ref<TableInstance>()
 
 const resultDialogVisible = ref(false)
 const judgmentResult = ref<any>(null)
@@ -285,7 +399,7 @@ async function loadSpecRanges() {
     const opts = await getSpecRanges({
       variety: baseForm.productVariety,
       grade: baseForm.productGrade,
-      customerId: baseForm.customer || undefined,
+      customerId: baseForm.customerId || undefined,
     })
     specRangeOptions.value = opts ?? []
     // 清空已选规格（品种或牌号已变更）
@@ -301,31 +415,107 @@ async function loadSpecRanges() {
 
 function onProductChange() {
   indicatorRows.value = []
-  loadSpecRanges()
+}
+
+/** 品种/牌号/客户任一变化时自动刷新规格下拉 */
+watch(
+  () => [baseForm.productVariety, baseForm.productGrade, baseForm.customerId] as const,
+  () => {
+    loadSpecRanges()
+  }
+)
+
+function mapStandardIndicatorToRow(ind: StandardIndicatorCandidate): IndicatorRow {
+  return {
+    indicatorId: ind.indicatorId,
+    indicatorName: ind.indicatorName,
+    indicatorCode: ind.indicatorCode,
+    category: ind.category,
+    lowerLimit: ind.lowerLimit,
+    upperLimit: ind.upperLimit,
+    concessionLower: ind.concessionLower,
+    concessionUpper: ind.concessionUpper,
+    measuredValue: '',
+    unit: ind.unit,
+    noStandard: false
+  }
+}
+
+function confirmPickIndicators() {
+  const selected = indicatorPickTableRef.value?.getSelectionRows() as StandardIndicatorCandidate[] | undefined
+  if (!selected?.length) {
+    ElMessage.warning('请至少选择一个指标')
+    return
+  }
+  const existingIds = new Set(indicatorRows.value.map((r) => r.indicatorId).filter(Boolean))
+  const toAdd = selected.filter((ind) => !existingIds.has(ind.indicatorId))
+  if (!toAdd.length) {
+    ElMessage.warning('所选指标均已存在，请勿重复添加')
+    return
+  }
+  indicatorRows.value.push(...toAdd.map(mapStandardIndicatorToRow))
+  indicatorPickDialogVisible.value = false
+  ElMessage.success(`已添加 ${toAdd.length} 个指标`)
 }
 
 async function loadStandardIndicators() {
+  if (!baseForm.productVariety || !baseForm.productGrade) {
+    ElMessage.warning('请先选择品种和牌号')
+    return
+  }
+  if (!baseForm.specification) {
+    ElMessage.warning('请先选择规格')
+    return
+  }
+
+  const specOpt = specRangeOptions.value.find((o) => o.value === baseForm.specification)
+  if (!specOpt?.standardId) {
+    ElMessage.warning('未找到匹配的质量标准，请确认规格选择或先在标准库维护')
+    return
+  }
+
   loadingIndicators.value = true
   try {
-    const list = await listIndicators({
-      productVariety: baseForm.productVariety,
-      productGrade: baseForm.productGrade
-    }) as any[]
-    if (list && list.length > 0) {
-      indicatorRows.value = list.map((ind: any) => ({
-        indicatorId: ind.id,
-        indicatorName: ind.indicatorName,
-        indicatorCode: ind.indicatorCode,
-        category: ind.category,
-        lowerLimit: ind.lowerLimit ?? null,
-        upperLimit: ind.upperLimit ?? null,
-        measuredValue: '',
-        unit: ind.unit || '',
-        noStandard: false
+    const detail = await getStandardById(specOpt.standardId) as {
+      standardName?: string
+      standardCode?: string
+      indicators?: Array<Record<string, unknown>>
+    }
+    pickStandardLabel.value = [detail.standardName, detail.standardCode].filter(Boolean).join(' / ')
+
+    const existingIds = new Set(indicatorRows.value.map((r) => r.indicatorId).filter(Boolean))
+    const candidates: StandardIndicatorCandidate[] = (detail.indicators || [])
+      .filter((ind) => ind.indicatorId && !existingIds.has(String(ind.indicatorId)))
+      .map((ind) => ({
+        indicatorId: String(ind.indicatorId),
+        indicatorName: String(ind.indicatorName ?? ''),
+        indicatorCode: String(ind.indicatorCode ?? ''),
+        category: String(ind.category ?? ind.indicatorCategory ?? ''),
+        lowerLimit: parseLimitVal(ind.lowerLimit),
+        upperLimit: parseLimitVal(ind.upperLimit),
+        concessionLower: parseLimitVal(ind.concessionLower),
+        concessionUpper: parseLimitVal(ind.concessionUpper),
+        unit: String(ind.unit ?? ''),
+        isRequired: ind.isRequired != null ? Number(ind.isRequired) : 0
       }))
-      ElMessage.success(`已加载 ${list.length} 个指标`)
-    } else {
-      ElMessage.warning('未找到匹配的标准指标，请手动添加')
+
+    if (!candidates.length) {
+      ElMessage.warning(
+        detail.indicators?.length
+          ? '该标准下的指标已全部添加'
+          : '该标准未配置指标，请先在标准库维护'
+      )
+      return
+    }
+
+    standardIndicatorCandidates.value = candidates
+    indicatorPickDialogVisible.value = true
+    await nextTick()
+    indicatorPickTableRef.value?.clearSelection()
+    for (const row of candidates) {
+      if (row.isRequired === 1) {
+        indicatorPickTableRef.value?.toggleRowSelection(row, true)
+      }
     }
   } finally {
     loadingIndicators.value = false
@@ -340,6 +530,8 @@ function addManualRow() {
     category: '',
     lowerLimit: null,
     upperLimit: null,
+    concessionLower: null,
+    concessionUpper: null,
     measuredValue: '',
     unit: '',
     noStandard: true
@@ -367,6 +559,20 @@ function goToExplanation() {
   }
 }
 
+/** 关联客户下拉：强制从 DB 刷新，避免 Redis 缓存旧数据 */
+async function loadCustomerOptions() {
+  try {
+    const items = await dictStore.refreshItems('QC_CUSTOMER')
+    customerOptions.value = items.length ? items : [...FALLBACK_CUSTOMERS]
+  } catch {
+    customerOptions.value = [...FALLBACK_CUSTOMERS]
+  }
+}
+
+onMounted(() => {
+  loadCustomerOptions()
+})
+
 async function handleSubmit() {
   await baseFormRef.value?.validate()
   if (indicatorRows.value.length === 0) {
@@ -389,7 +595,8 @@ async function handleSubmit() {
       heatNo: baseForm.heatNo,
       coilNo: baseForm.coilNo,
       judgeTime: res?.judgmentTime,
-      judgmentId: res?.judgmentId
+      judgmentId: res?.judgmentId,
+      inspector: res?.inspector ?? authStore.userInfo?.username ?? authStore.userInfo?.userNo ?? '-'
     }
     resultDialogVisible.value = true
   } finally {
@@ -416,5 +623,12 @@ async function handleSubmit() {
 }
 :deep(.el-table tr.no-standard-row) {
   background-color: #fdf6ec !important;
+}
+.result-area :deep(.result-descriptions .el-descriptions__label) {
+  width: 96px;
+  min-width: 96px;
+}
+.result-area :deep(.result-descriptions .el-descriptions__content) {
+  min-width: 140px;
 }
 </style>

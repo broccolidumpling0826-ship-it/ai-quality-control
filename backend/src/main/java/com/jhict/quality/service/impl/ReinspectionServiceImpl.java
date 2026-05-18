@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jhict.quality.common.exception.ServiceException;
 import com.jhict.quality.dto.QcReinspectionAddCmd;
 import com.jhict.quality.dto.QcReinspectionPageQuery;
+import com.jhict.quality.dto.ReinspectionCandidateQuery;
 import com.jhict.quality.dto.ReinspectionCompleteCmd;
 import com.jhict.quality.enums.ReinspectionStatus;
 import com.jhict.quality.entity.QcInspectionRecord;
@@ -15,6 +16,7 @@ import com.jhict.quality.mapper.QcInspectionRecordMapper;
 import com.jhict.quality.mapper.QcJudgmentResultMapper;
 import com.jhict.quality.mapper.QcReinspectionRecordMapper;
 import com.jhict.quality.service.api.ReinspectionService;
+import com.jhict.quality.vo.InspectionRecordCandidateVO;
 import com.jhict.quality.vo.QcReinspectionListVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -82,6 +84,18 @@ public class ReinspectionServiceImpl implements ReinspectionService {
             throw new ServiceException("复检已完成，不可重复操作");
         }
 
+        String originalRecordId = resolveOriginalRecordId(record.getOriginalJudgmentId());
+        if (StringUtils.hasText(originalRecordId) && originalRecordId.equals(cmd.getNewRecordId())) {
+            throw new ServiceException("不能关联原检验记录，请选择复检后新生成的检验记录");
+        }
+        QcInspectionRecord newRecord = inspectionRecordMapper.selectById(cmd.getNewRecordId());
+        if (newRecord == null) {
+            throw new ServiceException("新检验记录不存在，id=" + cmd.getNewRecordId());
+        }
+        if (!"NORMAL".equals(newRecord.getStatus())) {
+            throw new ServiceException("只能关联正常状态的检验记录");
+        }
+
         record.setNewRecordId(cmd.getNewRecordId());
         record.setStatus(ReinspectionStatus.COMPLETED.getCode());
         reinspectionMapper.updateById(record);
@@ -132,6 +146,64 @@ public class ReinspectionServiceImpl implements ReinspectionService {
         return voPage;
     }
 
+    @Override
+    public IPage<InspectionRecordCandidateVO> listCandidateInspections(String reinspectionId, ReinspectionCandidateQuery query) {
+        if (query == null) {
+            query = new ReinspectionCandidateQuery();
+        }
+        QcReinspectionRecord reinspection = reinspectionMapper.selectById(reinspectionId);
+        if (reinspection == null) {
+            throw new ServiceException("复检记录不存在，id=" + reinspectionId);
+        }
+
+        String excludeRecordId = StringUtils.hasText(query.getExcludeRecordId())
+                ? query.getExcludeRecordId()
+                : resolveOriginalRecordId(reinspection.getOriginalJudgmentId());
+        int pageNum = query.getPageNum() != null && query.getPageNum() > 0 ? query.getPageNum() : 1;
+        int pageSize = query.getPageSize() != null && query.getPageSize() > 0 ? query.getPageSize() : 20;
+
+        LambdaQueryWrapper<QcInspectionRecord> wrapper = new LambdaQueryWrapper<QcInspectionRecord>()
+                .eq(QcInspectionRecord::getStatus, "NORMAL")
+                .ne(StringUtils.hasText(excludeRecordId), QcInspectionRecord::getId, excludeRecordId)
+                .eq(StringUtils.hasText(query.getHeatNo()), QcInspectionRecord::getHeatNo, query.getHeatNo())
+                .eq(StringUtils.hasText(query.getCoilNo()), QcInspectionRecord::getCoilNo, query.getCoilNo())
+                .eq(StringUtils.hasText(query.getBatchNo()), QcInspectionRecord::getBatchNo, query.getBatchNo())
+                .eq(StringUtils.hasText(query.getCustomerId()), QcInspectionRecord::getCustomerId, query.getCustomerId())
+                .orderByDesc(QcInspectionRecord::getTestTime);
+
+        IPage<QcInspectionRecord> entityPage = inspectionRecordMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+
+        List<InspectionRecordCandidateVO> voList = entityPage.getRecords().stream()
+                .map(this::toCandidateVO)
+                .collect(Collectors.toList());
+
+        Page<InspectionRecordCandidateVO> voPage = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
+        voPage.setRecords(voList);
+        return voPage;
+    }
+
+    private String resolveOriginalRecordId(String originalJudgmentId) {
+        if (!StringUtils.hasText(originalJudgmentId)) {
+            return null;
+        }
+        QcJudgmentResult judgment = judgmentResultMapper.selectById(originalJudgmentId);
+        return judgment != null ? judgment.getRecordId() : null;
+    }
+
+    private InspectionRecordCandidateVO toCandidateVO(QcInspectionRecord record) {
+        InspectionRecordCandidateVO vo = new InspectionRecordCandidateVO();
+        vo.setId(record.getId());
+        vo.setHeatNo(record.getHeatNo());
+        vo.setCoilNo(record.getCoilNo());
+        vo.setBatchNo(record.getBatchNo());
+        vo.setCustomerId(record.getCustomerId());
+        vo.setProductVariety(record.getProductVariety());
+        vo.setProductGrade(record.getProductGrade());
+        vo.setTestTime(record.getTestTime());
+        vo.setSampleType(record.getSampleType());
+        return vo;
+    }
+
     private QcReinspectionListVO toReinspectionListVO(
             QcReinspectionRecord r,
             Map<String, QcJudgmentResult> judgmentMap,
@@ -147,9 +219,13 @@ public class ReinspectionServiceImpl implements ReinspectionService {
         QcJudgmentResult judgment = judgmentMap.get(r.getOriginalJudgmentId());
         if (judgment != null) {
             vo.setOriginalJudgmentType(judgment.getJudgmentType());
+            vo.setOriginalRecordId(judgment.getRecordId());
             QcInspectionRecord record = recordMap.get(judgment.getRecordId());
             if (record != null) {
                 vo.setCoilNo(record.getCoilNo());
+                vo.setHeatNo(record.getHeatNo());
+                vo.setBatchNo(record.getBatchNo());
+                vo.setCustomerId(record.getCustomerId());
             }
         }
         return vo;

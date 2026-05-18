@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.QcReinspectionAddCmd;
 import com.jhict.quality.dto.QcReinspectionPageQuery;
+import com.jhict.quality.dto.ReinspectionCandidateQuery;
 import com.jhict.quality.dto.ReinspectionCompleteCmd;
 import com.jhict.quality.service.api.ReinspectionService;
+import com.jhict.quality.vo.InspectionRecordCandidateVO;
 import com.jhict.quality.vo.QcReinspectionListVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -44,5 +46,16 @@ public class ReinspectionController {
     @ApiOperation(value = "分页查询复检记录")
     public ApiResult<IPage<QcReinspectionListVO>> page(@ModelAttribute QcReinspectionPageQuery query) {
         return ApiResult.success(reinspectionService.page(query));
+    }
+
+    @PostMapping("/{id}/candidate-inspections/query")
+    @ApiOperation(value = "查询可关联的新检验记录（排除原记录，支持炉号/卷号/批次/客户精确匹配）")
+    public ApiResult<IPage<InspectionRecordCandidateVO>> listCandidateInspections(
+            @ApiParam(value = "复检记录ID", required = true) @PathVariable String id,
+            @RequestBody(required = false) ReinspectionCandidateQuery query) {
+        if (query == null) {
+            query = new ReinspectionCandidateQuery();
+        }
+        return ApiResult.success(reinspectionService.listCandidateInspections(id, query));
     }
 }

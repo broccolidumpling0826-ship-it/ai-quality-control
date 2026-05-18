@@ -62,6 +62,15 @@ public class StandardController {
         return ApiResult.success(result);
     }
 
+    @DeleteMapping("/{id}")
+    @ApiOperation(value = "删除质量标准")
+    @SaCheckRole("QUALITY_ENGINEER")
+    public ApiResult<Void> deleteStandard(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id) {
+        standardService.deleteStandard(id);
+        return ApiResult.success();
+    }
+
     @PostMapping("/page")
     @ApiOperation(value = "分页查询质量标准")
     public ApiResult<IPage<QcQualityStandardVO>> page(@RequestBody QcQualityStandardPageQuery query) {

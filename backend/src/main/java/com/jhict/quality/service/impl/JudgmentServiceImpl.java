@@ -62,6 +62,9 @@ public class JudgmentServiceImpl implements JudgmentService {
     private QcQualityStandardMapper qualityStandardMapper;
 
     @Resource
+    private QcStandardIndicatorMapper standardIndicatorMapper;
+
+    @Resource
     private QcInspectionRecordMapper inspectionRecordMapper;
 
     @Resource
@@ -289,7 +292,8 @@ public class JudgmentServiceImpl implements JudgmentService {
         List<QcJudgmentEvidence> evidenceList = judgmentEvidenceMapper.findByJudgmentId(result.getId());
         Map<String, QcIndicatorItem> indicatorMap = loadIndicatorMap(evidenceList);
         vo.setEvidences(convertToEvidenceVoList(evidenceList, indicatorMap));
-        vo.setIndicatorDetails(buildIndicatorDetails(evidenceList, indicatorMap));
+        Map<String, QcStandardIndicator> standardIndicatorMap = loadStandardIndicatorMap(evidenceList);
+        vo.setIndicatorDetails(buildIndicatorDetails(evidenceList, indicatorMap, standardIndicatorMap));
     }
 
     private List<QcJudgmentResultVO.MatchedStandardVO> convertToMatchedStandardVoList(List<QcQualityStandard> matchedList) {
@@ -363,13 +367,41 @@ public class JudgmentServiceImpl implements JudgmentService {
         }).collect(Collectors.toList());
     }
 
+    private Map<String, QcStandardIndicator> loadStandardIndicatorMap(List<QcJudgmentEvidence> evidenceList) {
+        Set<String> standardIds = evidenceList.stream()
+                .map(QcJudgmentEvidence::getStandardId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Map<String, QcStandardIndicator> map = new HashMap<>();
+        for (String standardId : standardIds) {
+            List<QcStandardIndicator> configs = standardIndicatorMapper.findByStandardId(standardId);
+            if (configs == null) {
+                continue;
+            }
+            for (QcStandardIndicator si : configs) {
+                map.put(standardIndicatorKey(standardId, si.getIndicatorId()), si);
+            }
+        }
+        return map;
+    }
+
+    private static String standardIndicatorKey(String standardId, String indicatorId) {
+        return standardId + ":" + indicatorId;
+    }
+
     private List<QcJudgmentResultVO.IndicatorDetailVO> buildIndicatorDetails(
-            List<QcJudgmentEvidence> evidenceList, Map<String, QcIndicatorItem> indicatorMap) {
-        return evidenceList.stream().map(e -> toIndicatorDetailVo(e, indicatorMap)).collect(Collectors.toList());
+            List<QcJudgmentEvidence> evidenceList,
+            Map<String, QcIndicatorItem> indicatorMap,
+            Map<String, QcStandardIndicator> standardIndicatorMap) {
+        return evidenceList.stream()
+                .map(e -> toIndicatorDetailVo(e, indicatorMap, standardIndicatorMap))
+                .collect(Collectors.toList());
     }
 
     private QcJudgmentResultVO.IndicatorDetailVO toIndicatorDetailVo(
-            QcJudgmentEvidence e, Map<String, QcIndicatorItem> indicatorMap) {
+            QcJudgmentEvidence e,
+            Map<String, QcIndicatorItem> indicatorMap,
+            Map<String, QcStandardIndicator> standardIndicatorMap) {
         QcJudgmentResultVO.IndicatorDetailVO detail = new QcJudgmentResultVO.IndicatorDetailVO();
         boolean uncoveredByStandard = !StringUtils.hasText(e.getStandardId());
         detail.setNoStandard(uncoveredByStandard);
@@ -382,13 +414,28 @@ public class JudgmentServiceImpl implements JudgmentService {
         if (indicator != null) {
             detail.setIndicatorName(indicator.getIndicatorName());
         }
-        detail.setIndicatorResult(resolveIndicatorResultCode(uncoveredByStandard, e.getIsPassed()));
+        if (StringUtils.hasText(e.getStandardId()) && StringUtils.hasText(e.getIndicatorId())) {
+            QcStandardIndicator si = standardIndicatorMap.get(
+                    standardIndicatorKey(e.getStandardId(), e.getIndicatorId()));
+            if (si != null) {
+                detail.setConcessionLower(si.getConcessionLower());
+                detail.setConcessionUpper(si.getConcessionUpper());
+            }
+        }
+        detail.setIndicatorResult(resolveIndicatorResultCode(uncoveredByStandard, e.getIsPassed(), e.getTriggerRule()));
         return detail;
     }
 
-    private String resolveIndicatorResultCode(boolean uncoveredByStandard, Integer passedFlag) {
+    /**
+     * 指标行结论：合格限内=PASS；让步范围内=CONCESSION；无标准=WARNING；否则=FAIL。
+     * isPassed=0 且触发规则含「让步范围内」时不能映射为 FAIL（引擎对让步项亦记 passed=false）。
+     */
+    private String resolveIndicatorResultCode(boolean uncoveredByStandard, Integer passedFlag, String triggerRule) {
         if (uncoveredByStandard) {
             return JudgmentExplainConstants.INDICATOR_RESULT_WARNING;
+        }
+        if (triggerRule != null && triggerRule.contains(JudgmentExplainConstants.TRIGGER_RULE_CONCESSION_MARKER)) {
+            return JudgmentExplainConstants.INDICATOR_RESULT_CONCESSION;
         }
         if (Integer.valueOf(JudgmentExplainConstants.PASSED_FLAG).equals(passedFlag)) {
             return JudgmentExplainConstants.INDICATOR_RESULT_PASS;
@@ -461,6 +508,8 @@ public class JudgmentServiceImpl implements JudgmentService {
             vo.setHeatNo(record.getHeatNo());
             vo.setProductVariety(record.getProductVariety());
             vo.setProductGrade(record.getProductGrade());
+            vo.setSampleType(record.getSampleType());
+            vo.setCustomerId(record.getCustomerId());
             vo.setTesterNo(record.getTesterNo());
             vo.setInspector(userNameMap.getOrDefault(record.getTesterNo(), record.getTesterNo()));
         }

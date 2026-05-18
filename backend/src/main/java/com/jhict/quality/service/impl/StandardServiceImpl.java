@@ -85,18 +85,42 @@ public class StandardServiceImpl implements StandardService {
         if (existing == null) {
             throw new ServiceException(ApiResult.CODE_NOT_FOUND, "质量标准不存在");
         }
-        if (!"DRAFT".equals(existing.getStatus())) {
-            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "仅草稿状态的标准可以修改");
+        String status = existing.getStatus();
+        if (!"DRAFT".equals(status) && !"PUBLISHED".equals(status)) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "仅草稿或已发布状态的标准可以修改");
         }
 
+        LocalDate expiryDate = cmd.getExpiryDate() != null ? cmd.getExpiryDate() : DEFAULT_EXPIRY_DATE;
         // 校验日期
-        if (!cmd.getEffectiveDate().isBefore(cmd.getExpiryDate())) {
+        if (!cmd.getEffectiveDate().isBefore(expiryDate)) {
             throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "生效日期必须早于失效日期");
         }
 
         // 客户协议标准校验
         if ("CUSTOMER".equals(cmd.getStandardType()) && !StringUtils.hasText(cmd.getCustomerId())) {
             throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "客户协议标准必须填写客户ID");
+        }
+
+        if (cmd.getIndicators() == null || cmd.getIndicators().isEmpty()) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "标准下必须配置至少一个指标");
+        }
+
+        // 已发布标准：保存时校验同体系时间窗口不重叠
+        if ("PUBLISHED".equals(status)) {
+            List<QcQualityStandard> overlapping = qualityStandardMapper.findOverlappingPublished(
+                    cmd.getStandardType(),
+                    cmd.getVariety(),
+                    cmd.getGrade(),
+                    cmd.getCustomerId(),
+                    cmd.getEffectiveDate(),
+                    expiryDate,
+                    cmd.getId()
+            );
+            if (!overlapping.isEmpty()) {
+                QcQualityStandard conflict = overlapping.get(0);
+                throw new ServiceException(ApiResult.CODE_BAD_REQUEST,
+                        String.format("标准时间窗口与 %s 重叠，请调整生效/失效日期", conflict.getVersionNo()));
+            }
         }
 
         applyCmdToEntity(existing, cmd);
@@ -110,6 +134,25 @@ public class StandardServiceImpl implements StandardService {
         saveStandardIndicators(cmd.getId(), cmd.getIndicators());
 
         log.info("更新质量标准，id={}", cmd.getId());
+    }
+
+    @Override
+    @AuditLog(operationType = "DELETE_STANDARD", targetEntity = "QcQualityStandard")
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteStandard(String id) {
+        QcQualityStandard existing = qualityStandardMapper.selectById(id);
+        if (existing == null) {
+            throw new ServiceException(ApiResult.CODE_NOT_FOUND, "质量标准不存在");
+        }
+
+        standardIndicatorMapper.delete(
+                new LambdaQueryWrapper<QcStandardIndicator>()
+                        .eq(QcStandardIndicator::getStandardId, id)
+        );
+        qualityStandardMapper.deleteById(id);
+
+        log.info("删除质量标准，id={}, type={}, variety={}, grade={}",
+                id, existing.getStandardType(), existing.getVariety(), existing.getGrade());
     }
 
     @Override
@@ -281,6 +324,8 @@ public class StandardServiceImpl implements StandardService {
             QcIndicatorItem item = indicatorMap.get(si.getIndicatorId());
             if (item != null) {
                 detail.setIndicatorName(item.getIndicatorName());
+                detail.setIndicatorCode(item.getIndicatorCode());
+                detail.setCategory(item.getIndicatorCategory());
                 detail.setUnit(item.getUnit());
             }
             return detail;

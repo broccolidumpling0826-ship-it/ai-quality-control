@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getAllDict } from '@/api/dict'
+import { getAllDict, getDictItems } from '@/api/dict'
 import type { DictItem, DictMap } from '@/types'
 
 export const useDictStore = defineStore('dict', () => {
@@ -28,6 +28,13 @@ export const useDictStore = defineStore('dict', () => {
   async function reload(): Promise<void> {
     loaded.value = false
     await loadAll()
+  }
+
+  /** 刷新单个字典（清除服务端缓存后拉取，用于修复乱码或字典项变更） */
+  async function refreshItems(dictCode: string): Promise<DictItem[]> {
+    const items = (await getDictItems(dictCode, true)) ?? []
+    dictMap.value = { ...dictMap.value, [dictCode]: items }
+    return items
   }
 
   /**
@@ -68,6 +75,7 @@ export const useDictStore = defineStore('dict', () => {
     loading,
     loadAll,
     reload,
+    refreshItems,
     getItems,
     getLabel,
     getColorTag

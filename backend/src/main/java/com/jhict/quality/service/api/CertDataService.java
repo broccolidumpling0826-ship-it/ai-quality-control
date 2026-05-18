@@ -10,9 +10,14 @@ public interface CertDataService {
      * 生成质保书数据
      *
      * @param cmd 生成命令
-     * @return 质保书数据ID
+     * @return 质保书数据详情（含指标快照）
      */
-    String generate(QcQualityCertGenerateCmd cmd);
+    QcQualityCertDataVO generate(QcQualityCertGenerateCmd cmd);
+
+    /**
+     * 按 ID 查询质保书数据详情
+     */
+    QcQualityCertDataVO getById(String id);
 
     /**
      * 分页查询质保书数据

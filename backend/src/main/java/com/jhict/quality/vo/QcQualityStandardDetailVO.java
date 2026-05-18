@@ -26,6 +26,12 @@ public class QcQualityStandardDetailVO extends QcQualityStandardVO {
         @ApiModelProperty(value = "指标名称")
         private String indicatorName;
 
+        @ApiModelProperty(value = "指标代码")
+        private String indicatorCode;
+
+        @ApiModelProperty(value = "指标类别")
+        private String category;
+
         @ApiModelProperty(value = "单位")
         private String unit;
 
