@@ -34,6 +34,8 @@ export interface CertDataPageQuery {
   pageSize: number
   coilNo?: string
   batchNo?: string
+  startTime?: string
+  endTime?: string
 }
 
 export interface CertGeneratePayload {

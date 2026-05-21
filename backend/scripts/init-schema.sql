@@ -393,7 +393,8 @@ CREATE TABLE IF NOT EXISTS `qc_quality_cert_data` (
   `generated_by`     VARCHAR(64)  NOT NULL COMMENT '生成操作人工号',
   PRIMARY KEY (`id`),
   KEY `idx_coil` (`coil_no`),
-  KEY `idx_batch` (`batch_no`)
+  KEY `idx_batch` (`batch_no`),
+  KEY `idx_generate_time` (`generate_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='质保书数据';
 
 -- ────────────────────────────────────────────────────────────

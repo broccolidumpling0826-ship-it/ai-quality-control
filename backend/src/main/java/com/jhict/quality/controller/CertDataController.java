@@ -42,7 +42,9 @@ public class CertDataController {
             @ApiParam(value = "页码") @RequestParam(defaultValue = "1") int pageNum,
             @ApiParam(value = "每页大小") @RequestParam(defaultValue = "10") int pageSize,
             @ApiParam(value = "卷号") @RequestParam(required = false) String coilNo,
-            @ApiParam(value = "批次号") @RequestParam(required = false) String batchNo) {
-        return ApiResult.success(certDataService.page(pageNum, pageSize, coilNo, batchNo));
+            @ApiParam(value = "批次号") @RequestParam(required = false) String batchNo,
+            @ApiParam(value = "生成时间起 YYYY-MM-DD") @RequestParam(required = false) String startTime,
+            @ApiParam(value = "生成时间止 YYYY-MM-DD") @RequestParam(required = false) String endTime) {
+        return ApiResult.success(certDataService.page(pageNum, pageSize, coilNo, batchNo, startTime, endTime));
     }
 }
