@@ -193,6 +193,7 @@ import {
   mapCertGeneratePayload,
   pageCertData,
   type CertDataDetail,
+  type CertDataPageQuery,
   type CertIndicatorSnapshot
 } from '@/api/cert-data'
 import type { PageResult } from '@/types'
@@ -270,8 +271,8 @@ function judgmentTagType(type?: string) {
   return (type && map[type]) || 'info'
 }
 
-function normalizeCertDetail(raw: CertDataDetail): CertDisplayRow {
-  const indicators = (raw.indicators || []).map((ind) => ({
+function normalizeCertDetail(raw: CertDataDetail, forList = false): CertDisplayRow {
+  const indicators = forList ? [] : (raw.indicators || []).map((ind) => ({
     ...ind,
     indicatorCode: ind.indicatorCode ?? '',
     testValue: ind.testValue
@@ -297,6 +298,7 @@ async function handleGenerate() {
     generateForm.coilNo = ''
     generateForm.batchNo = ''
     await loadData()
+    await ensureDetailDicts()
     currentDetail.value = normalizeCertDetail(vo)
     detailDialogVisible.value = true
   } finally {
@@ -317,8 +319,8 @@ async function loadData() {
       params.startTime = searchForm.timeRange[0]
       params.endTime = searchForm.timeRange[1]
     }
-    const res = await pageCertData(params as Parameters<typeof pageCertData>[0])
-    tableData.value = (res.records || []).map((row) => normalizeCertDetail(row))
+    const res = await pageCertData(params as CertDataPageQuery)
+    tableData.value = (res.records || []).map((row) => normalizeCertDetail(row, true))
     total.value = res.total || 0
   } finally {
     loading.value = false
@@ -336,13 +338,22 @@ function handleReset() {
   loadData()
 }
 
+async function ensureDetailDicts() {
+  await Promise.all([
+    dictStore.refreshItems('QC_CUSTOMER').catch(() => {}),
+    dictStore.refreshItems('JUDGMENT_TYPE').catch(() => {})
+  ])
+}
+
 async function viewDetail(row: CertDisplayRow) {
   if (!row.id) {
+    await ensureDetailDicts()
     currentDetail.value = normalizeCertDetail(row)
     detailDialogVisible.value = true
     return
   }
   try {
+    await ensureDetailDicts()
     const detail = await getCertDataById(row.id)
     currentDetail.value = normalizeCertDetail(detail)
     detailDialogVisible.value = true
@@ -351,13 +362,7 @@ async function viewDetail(row: CertDisplayRow) {
   }
 }
 
-onMounted(async () => {
-  await dictStore.loadAll()
-  try {
-    await dictStore.refreshItems('QC_CUSTOMER')
-  } catch {
-    // ignore
-  }
+onMounted(() => {
   loadData()
 })
 </script>

@@ -2,6 +2,7 @@ package com.jhict.quality.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,8 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -29,6 +28,10 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class CertDataServiceImpl implements CertDataService {
+
+    private static final String LIST_STATUS_CASE = "CASE WHEN snapshot_data IS NOT NULL "
+            + "AND TRIM(snapshot_data) <> '[]' AND CHAR_LENGTH(snapshot_data) > 2 "
+            + "THEN 'SUCCESS' ELSE 'FAILED' END AS list_status";
 
     @Resource
     private QcQualityCertDataMapper certDataMapper;
@@ -53,14 +56,12 @@ public class CertDataServiceImpl implements CertDataService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 质保书纳入的指标类别（D-017），默认成分/性能/尺寸；ADMIN 可通过 application.yml 调整 */
     @Value("${app.cert.included-categories:COMPOSITION,PERFORMANCE,DIMENSION}")
     private String includedCategoriesConfig;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QcQualityCertDataVO generate(QcQualityCertGenerateCmd cmd) {
-        // 1. 按 coilNo 或 batchNo 查 NORMAL 状态记录
         LambdaQueryWrapper<QcInspectionRecord> recordWrapper = new LambdaQueryWrapper<QcInspectionRecord>()
                 .eq(QcInspectionRecord::getStatus, "NORMAL");
         if ("COIL".equals(cmd.getQueryType())) {
@@ -79,55 +80,49 @@ public class CertDataServiceImpl implements CertDataService {
         if (records.isEmpty()) {
             throw new ServiceException("未找到对应的有效检验记录");
         }
-        records = pickLatestRecordsForCert(records, cmd.getQueryType());
 
-        // 2. 收集记录ID，查询最终判定和检验值
+        List<String> allRecordIds = records.stream().map(QcInspectionRecord::getId).collect(Collectors.toList());
+        Map<String, QcJudgmentResult> finalJudgmentByRecordId = loadFinalJudgmentsMap(allRecordIds);
+        records = pickLatestRecordsForCert(records, finalJudgmentByRecordId);
+
         List<String> recordIds = records.stream().map(QcInspectionRecord::getId).collect(Collectors.toList());
+        Map<String, QcJudgmentResult> finalJudgmentMap = loadFinalJudgmentsMap(recordIds);
+        Set<String> approvedJudgmentIds = loadApprovedConcessionJudgmentIds(
+                finalJudgmentMap.values().stream().map(QcJudgmentResult::getId).collect(Collectors.toSet()));
 
-        // 查最终判定结论（isFinal=1）
-        Map<String, QcJudgmentResult> finalJudgmentMap = judgmentResultMapper.selectList(
-                new LambdaQueryWrapper<QcJudgmentResult>()
-                        .in(QcJudgmentResult::getRecordId, recordIds)
-                        .eq(QcJudgmentResult::getIsFinal, 1)
-        ).stream().collect(Collectors.toMap(
-                QcJudgmentResult::getRecordId,
-                j -> j,
-                (a, b) -> compareJudgmentTime(a, b) >= 0 ? a : b));
+        Map<String, List<QcInspectionValue>> valuesByRecordId = loadValuesByRecordIds(recordIds);
+        Map<String, List<QcJudgmentResult>> judgmentsByRecordId = loadJudgmentsByRecordIds(recordIds);
+        Map<String, List<QcJudgmentEvidence>> evidencesByJudgmentId = loadEvidencesByJudgmentIds(
+                collectAllJudgmentIds(judgmentsByRecordId));
 
-        // 3. 组装 indicator 快照
+        Set<String> indicatorIds = valuesByRecordId.values().stream()
+                .flatMap(List::stream)
+                .map(QcInspectionValue::getIndicatorId)
+                .collect(Collectors.toSet());
+        Map<String, QcIndicatorItem> indicatorMap = loadIndicatorMap(indicatorIds);
+
+        Set<String> includedCategories = new HashSet<>(Arrays.asList(includedCategoriesConfig.split(",")));
         List<QcQualityCertDataVO.IndicatorSnapshot> snapshots = new ArrayList<>();
 
         for (QcInspectionRecord record : records) {
             QcJudgmentResult judgment = finalJudgmentMap.get(record.getId());
             String finalJudgmentType = judgment != null ? judgment.getJudgmentType() : null;
-            boolean concessionApproved = judgment != null && hasApprovedConcession(judgment.getId());
+            boolean concessionApproved = judgment != null && approvedJudgmentIds.contains(judgment.getId());
 
-            // 查检验值
-            List<QcInspectionValue> values = inspectionValueMapper.selectList(
-                    new LambdaQueryWrapper<QcInspectionValue>()
-                            .eq(QcInspectionValue::getRecordId, record.getId())
-            );
-
-            List<QcJudgmentEvidence> evidences = resolveEvidencesForCert(judgment, record.getId());
-
+            List<QcJudgmentEvidence> evidences = resolveEvidencesForCert(
+                    judgment, record.getId(), judgmentsByRecordId, evidencesByJudgmentId);
             Map<String, QcJudgmentEvidence> evidenceByIndicator = evidences.stream()
                     .collect(Collectors.toMap(QcJudgmentEvidence::getIndicatorId, e -> e, (a, b) -> a));
 
-            // D-017: 仅纳入配置的指标类别（默认 COMPOSITION/PERFORMANCE/DIMENSION）
-            Set<String> includedCategories = new HashSet<>(
-                    Arrays.asList(includedCategoriesConfig.split(",")));
-
+            List<QcInspectionValue> values = valuesByRecordId.getOrDefault(record.getId(), Collections.emptyList());
             for (QcInspectionValue value : values) {
-                QcIndicatorItem indicator = indicatorItemMapper.selectById(value.getIndicatorId());
-
-                // 过滤：不在纳入类别内的指标跳过
+                QcIndicatorItem indicator = indicatorMap.get(value.getIndicatorId());
                 if (indicator != null && StringUtils.hasText(indicator.getIndicatorCategory())
                         && !includedCategories.contains(indicator.getIndicatorCategory())) {
                     continue;
                 }
 
                 QcJudgmentEvidence evidence = evidenceByIndicator.get(value.getIndicatorId());
-
                 QcQualityCertDataVO.IndicatorSnapshot snap = new QcQualityCertDataVO.IndicatorSnapshot();
                 snap.setIndicatorName(indicator != null ? indicator.getIndicatorName() : value.getIndicatorId());
                 snap.setIndicatorCode(indicator != null ? indicator.getIndicatorCode() : null);
@@ -143,7 +138,6 @@ public class CertDataServiceImpl implements CertDataService {
             }
         }
 
-        // 4. 序列化 snapshot，保存
         String snapshotJson;
         try {
             snapshotJson = objectMapper.writeValueAsString(snapshots);
@@ -162,7 +156,7 @@ public class CertDataServiceImpl implements CertDataService {
         certDataMapper.insert(certData);
 
         log.info("质保书数据生成成功，id={}，generatedBy={}", certData.getId(), generatedBy);
-        return toVO(certData);
+        return toDetailVO(certData);
     }
 
     @Override
@@ -171,32 +165,133 @@ public class CertDataServiceImpl implements CertDataService {
         if (data == null) {
             throw new ServiceException("质保书数据不存在");
         }
-        return toVO(data);
+        return toDetailVO(data);
     }
 
     @Override
-    public IPage<QcQualityCertDataVO> page(int pageNum, int pageSize, String coilNo, String batchNo) {
-        LambdaQueryWrapper<QcQualityCertData> wrapper = new LambdaQueryWrapper<QcQualityCertData>()
-                .orderByDesc(QcQualityCertData::getGenerateTime);
+    public IPage<QcQualityCertDataVO> page(int pageNum, int pageSize, String coilNo, String batchNo,
+                                           String startTime, String endTime) {
+        QueryWrapper<QcQualityCertData> wrapper = new QueryWrapper<>();
+        wrapper.select(
+                "id",
+                "coil_no",
+                "batch_no",
+                "generate_time",
+                "generated_by",
+                LIST_STATUS_CASE
+        );
+        wrapper.orderByDesc("generate_time");
         if (StringUtils.hasText(coilNo)) {
-            wrapper.eq(QcQualityCertData::getCoilNo, coilNo);
+            wrapper.eq("coil_no", coilNo);
         }
         if (StringUtils.hasText(batchNo)) {
-            wrapper.eq(QcQualityCertData::getBatchNo, batchNo);
+            wrapper.eq("batch_no", batchNo);
         }
+        applyGenerateTimeRange(wrapper, startTime, endTime);
 
         IPage<QcQualityCertData> pageResult = certDataMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
-
         List<QcQualityCertDataVO> voList = pageResult.getRecords().stream()
-                .map(this::toVO)
+                .map(this::toListVO)
                 .collect(Collectors.toList());
+        batchEnrichListVo(voList);
 
         Page<QcQualityCertDataVO> voPage = new Page<>(pageResult.getCurrent(), pageResult.getSize(), pageResult.getTotal());
         voPage.setRecords(voList);
         return voPage;
     }
 
-    private QcQualityCertDataVO toVO(QcQualityCertData data) {
+    private void applyGenerateTimeRange(QueryWrapper<QcQualityCertData> wrapper,
+                                        String startTime, String endTime) {
+        if (StringUtils.hasText(startTime)) {
+            wrapper.ge("generate_time", LocalDate.parse(startTime).atStartOfDay());
+        }
+        if (StringUtils.hasText(endTime)) {
+            wrapper.le("generate_time", LocalDate.parse(endTime).atTime(23, 59, 59));
+        }
+    }
+
+    /** 列表 VO：不解析 snapshot、不同步改判，仅展示元数据 + 炉号 */
+    private QcQualityCertDataVO toListVO(QcQualityCertData data) {
+        QcQualityCertDataVO vo = new QcQualityCertDataVO();
+        vo.setId(data.getId());
+        vo.setCoilNo(data.getCoilNo());
+        vo.setBatchNo(data.getBatchNo());
+        vo.setGenerateTime(data.getGenerateTime());
+        vo.setGeneratedBy(data.getGeneratedBy());
+        vo.setStatus(StringUtils.hasText(data.getListStatus()) ? data.getListStatus() : "FAILED");
+        vo.setIndicators(null);
+        return vo;
+    }
+
+    /** 批量补全列表炉号（避免逐条查检验记录） */
+    private void batchEnrichListVo(List<QcQualityCertDataVO> voList) {
+        if (voList.isEmpty()) {
+            return;
+        }
+        Set<String> coilNos = voList.stream()
+                .map(QcQualityCertDataVO::getCoilNo)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Set<String> batchNos = voList.stream()
+                .map(QcQualityCertDataVO::getBatchNo)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (coilNos.isEmpty() && batchNos.isEmpty()) {
+            return;
+        }
+
+        LambdaQueryWrapper<QcInspectionRecord> wrapper = new LambdaQueryWrapper<QcInspectionRecord>()
+                .eq(QcInspectionRecord::getStatus, "NORMAL");
+        wrapper.and(w -> {
+            if (!coilNos.isEmpty()) {
+                w.in(QcInspectionRecord::getCoilNo, coilNos);
+            }
+            if (!batchNos.isEmpty()) {
+                if (!coilNos.isEmpty()) {
+                    w.or();
+                }
+                w.in(QcInspectionRecord::getBatchNo, batchNos);
+            }
+        });
+        List<QcInspectionRecord> records = inspectionRecordMapper.selectList(wrapper);
+        if (records.isEmpty()) {
+            return;
+        }
+
+        List<String> recordIds = records.stream().map(QcInspectionRecord::getId).collect(Collectors.toList());
+        Map<String, QcJudgmentResult> finalJudgmentByRecordId = loadFinalJudgmentsMap(recordIds);
+
+        Map<String, QcInspectionRecord> bestByCoil = new HashMap<>();
+        Map<String, QcInspectionRecord> bestByBatch = new HashMap<>();
+        Map<String, List<QcInspectionRecord>> byCoil = records.stream()
+                .filter(r -> StringUtils.hasText(r.getCoilNo()))
+                .collect(Collectors.groupingBy(QcInspectionRecord::getCoilNo));
+        Map<String, List<QcInspectionRecord>> byBatch = records.stream()
+                .filter(r -> StringUtils.hasText(r.getBatchNo()))
+                .collect(Collectors.groupingBy(QcInspectionRecord::getBatchNo));
+
+        for (Map.Entry<String, List<QcInspectionRecord>> e : byCoil.entrySet()) {
+            bestByCoil.put(e.getKey(), resolveBestRecordByFinalJudgment(e.getValue(), finalJudgmentByRecordId));
+        }
+        for (Map.Entry<String, List<QcInspectionRecord>> e : byBatch.entrySet()) {
+            bestByBatch.put(e.getKey(), resolveBestRecordByFinalJudgment(e.getValue(), finalJudgmentByRecordId));
+        }
+
+        for (QcQualityCertDataVO vo : voList) {
+            QcInspectionRecord record = null;
+            if (StringUtils.hasText(vo.getCoilNo())) {
+                record = bestByCoil.get(vo.getCoilNo());
+            }
+            if (record == null && StringUtils.hasText(vo.getBatchNo())) {
+                record = bestByBatch.get(vo.getBatchNo());
+            }
+            if (record != null) {
+                vo.setHeatNo(record.getHeatNo());
+            }
+        }
+    }
+
+    private QcQualityCertDataVO toDetailVO(QcQualityCertData data) {
         QcQualityCertDataVO vo = new QcQualityCertDataVO();
         vo.setId(data.getId());
         vo.setCoilNo(data.getCoilNo());
@@ -221,26 +316,23 @@ public class CertDataServiceImpl implements CertDataService {
         return vo;
     }
 
-    /** 从关联检验记录补全炉号/品种/牌号/客户，并设置展示状态 */
     private void enrichVoFromInspection(QcQualityCertDataVO vo, QcQualityCertData data) {
         QcInspectionRecord record = resolvePrimaryInspectionRecordForCert(data.getCoilNo(), data.getBatchNo());
         if (record == null) {
             vo.setStatus(vo.getIndicators() != null && !vo.getIndicators().isEmpty() ? "SUCCESS" : "FAILED");
             return;
         }
-        if (record != null) {
-            vo.setHeatNo(record.getHeatNo());
-            vo.setProductVariety(record.getProductVariety());
-            vo.setProductGrade(record.getProductGrade());
-            vo.setCustomerId(record.getCustomerId());
-            if (!StringUtils.hasText(vo.getCoilNo())) {
-                vo.setCoilNo(record.getCoilNo());
-            }
-            if (!StringUtils.hasText(vo.getBatchNo())) {
-                vo.setBatchNo(record.getBatchNo());
-            }
-            applyCurrentFinalJudgmentToCert(vo, record);
+        vo.setHeatNo(record.getHeatNo());
+        vo.setProductVariety(record.getProductVariety());
+        vo.setProductGrade(record.getProductGrade());
+        vo.setCustomerId(record.getCustomerId());
+        if (!StringUtils.hasText(vo.getCoilNo())) {
+            vo.setCoilNo(record.getCoilNo());
         }
+        if (!StringUtils.hasText(vo.getBatchNo())) {
+            vo.setBatchNo(record.getBatchNo());
+        }
+        applyCurrentFinalJudgmentToCert(vo, record);
 
         List<QcQualityCertDataVO.IndicatorSnapshot> indicators = vo.getIndicators();
         if (indicators != null && !indicators.isEmpty()) {
@@ -257,10 +349,8 @@ public class CertDataServiceImpl implements CertDataService {
         }
     }
 
-    /**
-     * 按卷号分组，每组取「最终判定时间最新」的检验记录（改判后判定时间更新，优先于复检新建记录）。
-     */
-    private List<QcInspectionRecord> pickLatestRecordsForCert(List<QcInspectionRecord> records, String queryType) {
+    private List<QcInspectionRecord> pickLatestRecordsForCert(List<QcInspectionRecord> records,
+                                                              Map<String, QcJudgmentResult> finalJudgmentByRecordId) {
         if (records.isEmpty()) {
             return records;
         }
@@ -271,14 +361,11 @@ public class CertDataServiceImpl implements CertDataService {
                         Collectors.toList()));
         List<QcInspectionRecord> picked = new ArrayList<>();
         for (List<QcInspectionRecord> group : byCoil.values()) {
-            picked.add(resolveBestRecordByFinalJudgment(group));
+            picked.add(resolveBestRecordByFinalJudgment(group, finalJudgmentByRecordId));
         }
         return picked;
     }
 
-    /**
-     * 质保书详情/补全：同一卷号多条检验记录时，取最终判定时间最新的一条（覆盖改判场景）。
-     */
     private QcInspectionRecord resolvePrimaryInspectionRecordForCert(String coilNo, String batchNo) {
         if (!StringUtils.hasText(coilNo) && !StringUtils.hasText(batchNo)) {
             return null;
@@ -297,14 +384,17 @@ public class CertDataServiceImpl implements CertDataService {
         if (records.size() == 1) {
             return records.get(0);
         }
-        return resolveBestRecordByFinalJudgment(records);
+        Map<String, QcJudgmentResult> judgmentMap = loadFinalJudgmentsMap(
+                records.stream().map(QcInspectionRecord::getId).collect(Collectors.toList()));
+        return resolveBestRecordByFinalJudgment(records, judgmentMap);
     }
 
-    private QcInspectionRecord resolveBestRecordByFinalJudgment(List<QcInspectionRecord> records) {
+    private QcInspectionRecord resolveBestRecordByFinalJudgment(List<QcInspectionRecord> records,
+                                                                Map<String, QcJudgmentResult> finalJudgmentByRecordId) {
         QcInspectionRecord bestRecord = null;
         LocalDateTime bestJudgmentTime = null;
         for (QcInspectionRecord record : records) {
-            QcJudgmentResult finalJudgment = findFinalJudgment(record.getId());
+            QcJudgmentResult finalJudgment = finalJudgmentByRecordId.get(record.getId());
             if (finalJudgment == null || finalJudgment.getJudgmentTime() == null) {
                 continue;
             }
@@ -321,13 +411,104 @@ public class CertDataServiceImpl implements CertDataService {
                 .orElse(records.get(0));
     }
 
-    private QcJudgmentResult findFinalJudgment(String recordId) {
-        return judgmentResultMapper.selectOne(
+    private Map<String, QcJudgmentResult> loadFinalJudgmentsMap(Collection<String> recordIds) {
+        if (recordIds == null || recordIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<QcJudgmentResult> list = judgmentResultMapper.selectList(
                 new LambdaQueryWrapper<QcJudgmentResult>()
-                        .eq(QcJudgmentResult::getRecordId, recordId)
-                        .eq(QcJudgmentResult::getIsFinal, 1)
-                        .orderByDesc(QcJudgmentResult::getJudgmentTime)
-                        .last("LIMIT 1"));
+                        .in(QcJudgmentResult::getRecordId, recordIds)
+                        .eq(QcJudgmentResult::getIsFinal, 1));
+        return list.stream().collect(Collectors.toMap(
+                QcJudgmentResult::getRecordId,
+                j -> j,
+                (a, b) -> compareJudgmentTime(a, b) >= 0 ? a : b));
+    }
+
+    private Map<String, List<QcInspectionValue>> loadValuesByRecordIds(Collection<String> recordIds) {
+        if (recordIds == null || recordIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<QcInspectionValue> values = inspectionValueMapper.selectList(
+                new LambdaQueryWrapper<QcInspectionValue>()
+                        .in(QcInspectionValue::getRecordId, recordIds));
+        return values.stream().collect(Collectors.groupingBy(QcInspectionValue::getRecordId));
+    }
+
+    private Map<String, List<QcJudgmentResult>> loadJudgmentsByRecordIds(Collection<String> recordIds) {
+        if (recordIds == null || recordIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<QcJudgmentResult> list = judgmentResultMapper.selectList(
+                new LambdaQueryWrapper<QcJudgmentResult>()
+                        .in(QcJudgmentResult::getRecordId, recordIds)
+                        .orderByDesc(QcJudgmentResult::getJudgmentTime));
+        return list.stream().collect(Collectors.groupingBy(QcJudgmentResult::getRecordId));
+    }
+
+    private Set<String> collectAllJudgmentIds(Map<String, List<QcJudgmentResult>> judgmentsByRecordId) {
+        return judgmentsByRecordId.values().stream()
+                .flatMap(List::stream)
+                .map(QcJudgmentResult::getId)
+                .collect(Collectors.toSet());
+    }
+
+    private Map<String, List<QcJudgmentEvidence>> loadEvidencesByJudgmentIds(Collection<String> judgmentIds) {
+        if (judgmentIds == null || judgmentIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<QcJudgmentEvidence> list = judgmentEvidenceMapper.selectList(
+                new LambdaQueryWrapper<QcJudgmentEvidence>()
+                        .in(QcJudgmentEvidence::getJudgmentId, judgmentIds));
+        return list.stream().collect(Collectors.groupingBy(QcJudgmentEvidence::getJudgmentId));
+    }
+
+    private Map<String, QcIndicatorItem> loadIndicatorMap(Collection<String> indicatorIds) {
+        if (indicatorIds == null || indicatorIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return indicatorItemMapper.selectBatchIds(indicatorIds).stream()
+                .collect(Collectors.toMap(QcIndicatorItem::getId, i -> i, (a, b) -> a));
+    }
+
+    private Set<String> loadApprovedConcessionJudgmentIds(Collection<String> judgmentIds) {
+        if (judgmentIds == null || judgmentIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        List<QcConcessionAcceptance> list = concessionMapper.selectList(
+                new LambdaQueryWrapper<QcConcessionAcceptance>()
+                        .in(QcConcessionAcceptance::getJudgmentId, judgmentIds)
+                        .eq(QcConcessionAcceptance::getApprovalStatus, "APPROVED")
+                        .and(w -> w.isNull(QcConcessionAcceptance::getExpiryDate)
+                                .or()
+                                .ge(QcConcessionAcceptance::getExpiryDate, LocalDate.now())));
+        return list.stream()
+                .map(QcConcessionAcceptance::getJudgmentId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+    }
+
+    private List<QcJudgmentEvidence> resolveEvidencesForCert(
+            QcJudgmentResult judgment,
+            String recordId,
+            Map<String, List<QcJudgmentResult>> judgmentsByRecordId,
+            Map<String, List<QcJudgmentEvidence>> evidencesByJudgmentId) {
+        if (judgment != null) {
+            List<QcJudgmentEvidence> current = evidencesByJudgmentId.getOrDefault(
+                    judgment.getId(), Collections.emptyList());
+            if (!current.isEmpty()) {
+                return current;
+            }
+        }
+        List<QcJudgmentResult> history = judgmentsByRecordId.getOrDefault(recordId, Collections.emptyList());
+        for (QcJudgmentResult j : history) {
+            List<QcJudgmentEvidence> fallback = evidencesByJudgmentId.getOrDefault(
+                    j.getId(), Collections.emptyList());
+            if (!fallback.isEmpty()) {
+                return fallback;
+            }
+        }
+        return Collections.emptyList();
     }
 
     private int compareJudgmentTime(QcJudgmentResult a, QcJudgmentResult b) {
@@ -343,49 +524,13 @@ public class CertDataServiceImpl implements CertDataService {
         return a.getJudgmentTime().compareTo(b.getJudgmentTime());
     }
 
-    /** 解析判定依据：优先当前最终判定；改判后新判定无依据时回退到同记录历史判定 */
-    private List<QcJudgmentEvidence> resolveEvidencesForCert(QcJudgmentResult judgment, String recordId) {
-        if (judgment != null) {
-            List<QcJudgmentEvidence> current = judgmentEvidenceMapper.selectList(
-                    new LambdaQueryWrapper<QcJudgmentEvidence>()
-                            .eq(QcJudgmentEvidence::getJudgmentId, judgment.getId()));
-            if (!current.isEmpty()) {
-                return current;
-            }
-        }
-        List<QcJudgmentResult> history = judgmentResultMapper.selectList(
-                new LambdaQueryWrapper<QcJudgmentResult>()
-                        .eq(QcJudgmentResult::getRecordId, recordId)
-                        .orderByDesc(QcJudgmentResult::getJudgmentTime));
-        for (QcJudgmentResult j : history) {
-            List<QcJudgmentEvidence> fallback = judgmentEvidenceMapper.selectList(
-                    new LambdaQueryWrapper<QcJudgmentEvidence>()
-                            .eq(QcJudgmentEvidence::getJudgmentId, j.getId()));
-            if (!fallback.isEmpty()) {
-                return fallback;
-            }
-        }
-        return Collections.emptyList();
-    }
-
-    /** 是否存在已批准且未过期的让步接收 */
     private boolean hasApprovedConcession(String judgmentId) {
         if (!StringUtils.hasText(judgmentId)) {
             return false;
         }
-        Long count = concessionMapper.selectCount(
-                new LambdaQueryWrapper<QcConcessionAcceptance>()
-                        .eq(QcConcessionAcceptance::getJudgmentId, judgmentId)
-                        .eq(QcConcessionAcceptance::getApprovalStatus, "APPROVED")
-                        .and(w -> w.isNull(QcConcessionAcceptance::getExpiryDate)
-                                .or()
-                                .ge(QcConcessionAcceptance::getExpiryDate, LocalDate.now())));
-        return count != null && count > 0;
+        return loadApprovedConcessionJudgmentIds(Collections.singletonList(judgmentId)).contains(judgmentId);
     }
 
-    /**
-     * 质保书指标结论：改判合格→PASS；让步已批准或未通过但在让步范围内→CONCESSION；否则 PASS/FAIL。
-     */
     private String resolveCertIndicatorResult(
             QcJudgmentEvidence evidence, String finalJudgmentType, boolean concessionApproved) {
         if ("QUALIFIED".equals(finalJudgmentType)) {
@@ -412,9 +557,9 @@ public class CertDataServiceImpl implements CertDataService {
         return JudgmentExplainConstants.INDICATOR_RESULT_FAIL.equals(indicatorResult) ? 0 : 1;
     }
 
-    /** 详情展示时同步当前最终判定与指标结论（改判/让步后无需重新生成） */
     private void applyCurrentFinalJudgmentToCert(QcQualityCertDataVO vo, QcInspectionRecord record) {
-        QcJudgmentResult finalJudgment = findFinalJudgment(record.getId());
+        Map<String, QcJudgmentResult> judgmentMap = loadFinalJudgmentsMap(Collections.singletonList(record.getId()));
+        QcJudgmentResult finalJudgment = judgmentMap.get(record.getId());
         if (finalJudgment == null) {
             return;
         }
@@ -424,28 +569,49 @@ public class CertDataServiceImpl implements CertDataService {
             return;
         }
         boolean concessionApproved = hasApprovedConcession(finalJudgment.getId());
-        List<QcJudgmentEvidence> evidences = resolveEvidencesForCert(finalJudgment, record.getId());
+        Map<String, List<QcJudgmentResult>> judgmentsByRecordId = loadJudgmentsByRecordIds(
+                Collections.singletonList(record.getId()));
+        Map<String, List<QcJudgmentEvidence>> evidencesByJudgmentId = loadEvidencesByJudgmentIds(
+                collectAllJudgmentIds(judgmentsByRecordId));
+        List<QcJudgmentEvidence> evidences = resolveEvidencesForCert(
+                finalJudgment, record.getId(), judgmentsByRecordId, evidencesByJudgmentId);
         Map<String, QcJudgmentEvidence> evidenceByIndicatorId = evidences.stream()
                 .collect(Collectors.toMap(QcJudgmentEvidence::getIndicatorId, e -> e, (a, b) -> a));
 
+        Map<String, QcIndicatorItem> indicatorByCode = loadIndicatorsByCodes(
+                vo.getIndicators().stream()
+                        .map(QcQualityCertDataVO.IndicatorSnapshot::getIndicatorCode)
+                        .filter(StringUtils::hasText)
+                        .collect(Collectors.toSet()));
+
         for (QcQualityCertDataVO.IndicatorSnapshot snap : vo.getIndicators()) {
             snap.setFinalJudgmentType(finalType);
-            QcJudgmentEvidence evidence = findEvidenceForSnapshot(snap, evidenceByIndicatorId);
+            QcJudgmentEvidence evidence = findEvidenceForSnapshot(snap, evidenceByIndicatorId, indicatorByCode);
             String indicatorResult = resolveCertIndicatorResult(evidence, finalType, concessionApproved);
             snap.setIndicatorResult(indicatorResult);
             snap.setIsPassed(toCertIsPassed(indicatorResult));
         }
     }
 
+    private Map<String, QcIndicatorItem> loadIndicatorsByCodes(Set<String> codes) {
+        if (codes == null || codes.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<QcIndicatorItem> items = indicatorItemMapper.selectList(
+                new LambdaQueryWrapper<QcIndicatorItem>()
+                        .in(QcIndicatorItem::getIndicatorCode, codes));
+        return items.stream()
+                .collect(Collectors.toMap(QcIndicatorItem::getIndicatorCode, i -> i, (a, b) -> a));
+    }
+
     private QcJudgmentEvidence findEvidenceForSnapshot(
-            QcQualityCertDataVO.IndicatorSnapshot snap, Map<String, QcJudgmentEvidence> evidenceByIndicatorId) {
+            QcQualityCertDataVO.IndicatorSnapshot snap,
+            Map<String, QcJudgmentEvidence> evidenceByIndicatorId,
+            Map<String, QcIndicatorItem> indicatorByCode) {
         if (!StringUtils.hasText(snap.getIndicatorCode())) {
             return null;
         }
-        QcIndicatorItem item = indicatorItemMapper.selectOne(
-                new LambdaQueryWrapper<QcIndicatorItem>()
-                        .eq(QcIndicatorItem::getIndicatorCode, snap.getIndicatorCode())
-                        .last("LIMIT 1"));
+        QcIndicatorItem item = indicatorByCode.get(snap.getIndicatorCode());
         if (item == null) {
             return null;
         }

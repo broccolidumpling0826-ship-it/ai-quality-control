@@ -28,5 +28,6 @@ public interface CertDataService {
      * @param batchNo  批次号过滤
      * @return 分页结果
      */
-    IPage<QcQualityCertDataVO> page(int pageNum, int pageSize, String coilNo, String batchNo);
+    IPage<QcQualityCertDataVO> page(int pageNum, int pageSize, String coilNo, String batchNo,
+                                    String startTime, String endTime);
 }

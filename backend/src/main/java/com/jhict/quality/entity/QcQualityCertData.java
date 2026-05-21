@@ -31,4 +31,9 @@ public class QcQualityCertData extends CoreEntity {
 
     @ApiModelProperty(value = "生成人工号")
     private String generatedBy;
+
+    /** 分页列表查询时由 SQL 计算，不落库 */
+    @TableField(value = "list_status", exist = false)
+    @ApiModelProperty(value = "列表状态 SUCCESS/FAILED")
+    private String listStatus;
 }
