@@ -141,6 +141,7 @@
             <el-button link type="primary" @click="handleViewDetail(row)">查看详情</el-button>
             <el-button
               v-if="row.status !== 'VOID'"
+              v-permission="'inspection:void'"
               link
               type="danger"
               @click="handleVoid(row)"

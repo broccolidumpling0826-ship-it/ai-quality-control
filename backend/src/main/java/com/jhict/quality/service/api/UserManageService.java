@@ -29,4 +29,9 @@ public interface UserManageService {
      * 启用/禁用用户
      */
     void updateUserStatus(String id, Integer status);
+
+    /**
+     * 分配用户角色（多选）
+     */
+    void assignUserRoles(String id, java.util.List<String> roleCodes);
 }

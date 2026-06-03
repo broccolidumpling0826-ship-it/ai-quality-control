@@ -12,12 +12,16 @@ import com.jhict.quality.dto.SysUserPageQuery;
 import com.jhict.quality.dto.SysUserUpdateCmd;
 import com.jhict.quality.entity.SysUser;
 import com.jhict.quality.mapper.SysUserMapper;
+import com.jhict.quality.service.api.RbacQueryService;
 import com.jhict.quality.service.api.UserManageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.util.Collections;
+import java.util.List;
 
 @Service
 public class UserManageServiceImpl implements UserManageService {
@@ -27,6 +31,9 @@ public class UserManageServiceImpl implements UserManageService {
 
     @Resource
     private SysUserMapper sysUserMapper;
+
+    @Resource
+    private RbacQueryService rbacQueryService;
 
     @Override
     public IPage<SysUser> pageUsers(SysUserPageQuery query) {
@@ -43,6 +50,9 @@ public class UserManageServiceImpl implements UserManageService {
         assertUserNoUnique(cmd.getUserNo(), null);
         SysUser user = buildNewUser(cmd);
         sysUserMapper.insert(user);
+        if (StringUtils.hasText(cmd.getRole())) {
+            rbacQueryService.syncUserRoles(user.getId(), Collections.singletonList(cmd.getRole()), cmd.getRole());
+        }
         return user.getId();
     }
 
@@ -54,6 +64,18 @@ public class UserManageServiceImpl implements UserManageService {
                 .eq(SysUser::getId, id);
         applyUserProfileUpdate(wrapper, cmd);
         sysUserMapper.update(null, wrapper);
+        if (cmd.getRole() != null) {
+            rbacQueryService.syncUserRoles(id, Collections.singletonList(cmd.getRole()), cmd.getRole());
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignUserRoles(String id, List<String> roleCodes) {
+        SysUser user = requireExistingUser(id);
+        String primary = CollectionUtils.isEmpty(roleCodes) ? user.getRole()
+                : roleCodes.get(0);
+        rbacQueryService.syncUserRoles(id, roleCodes, primary);
     }
 
     @Override

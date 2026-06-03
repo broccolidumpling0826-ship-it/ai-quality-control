@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -31,4 +33,10 @@ public class LoginVO {
 
     @ApiModelProperty(value = "部门")
     private String department;
+
+    @ApiModelProperty(value = "角色列表")
+    private List<String> roles;
+
+    @ApiModelProperty(value = "权限列表")
+    private List<String> permissions;
 }

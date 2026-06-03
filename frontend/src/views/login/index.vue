@@ -235,6 +235,7 @@ async function handleLogin() {
   loading.value = true
   try {
     await authStore.login(loginForm)
+    await authStore.loadSession()
 
     if (rememberMe.value) {
       localStorage.setItem('qc_remember_username', loginForm.username)
@@ -248,7 +249,7 @@ async function handleLogin() {
       duration: 1500
     })
 
-    const redirect = (route.query.redirect as string) || '/dashboard'
+    const redirect = (route.query.redirect as string) || '/'
     setTimeout(() => router.push(redirect), 600)
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '登录失败，请检查工号和密码'

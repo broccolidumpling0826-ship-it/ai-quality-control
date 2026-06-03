@@ -98,6 +98,7 @@
             <el-button link type="primary" @click="viewDetail(row)">查看详情</el-button>
             <el-button
               v-if="row.approvalStatus === 'PENDING'"
+              v-permission="'rejudgment:approve'"
               link
               type="warning"
               @click="handleApprove(row)"

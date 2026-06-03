@@ -119,6 +119,7 @@
         >记录客户拒绝</el-button>
         <el-button
           v-if="canInternalApprove"
+          v-permission="['concession:approve:first', 'concession:approve:final']"
           type="warning"
           :loading="actionLoading"
           @click="handleInternalApprove"

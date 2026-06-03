@@ -33,6 +33,8 @@ export interface UserInfo {
   username: string
   role: string
   department: string
+  roles?: string[]
+  permissions?: string[]
 }
 
 export interface LoginForm {
@@ -188,6 +190,42 @@ export interface AuditLog {
   operateTime: string
 }
 
+// ─── 菜单 & RBAC ───────────────────────────────────────────
+
+export interface MenuTreeNode {
+  id: string
+  parentId?: string
+  menuType: 'DIR' | 'MENU' | 'HIDDEN' | 'LINK' | 'IFRAME'
+  menuName: string
+  path?: string
+  component?: string
+  routeName?: string
+  icon?: string
+  permCode?: string
+  visible?: number
+  sortOrder?: number
+  metaJson?: string
+  children?: MenuTreeNode[]
+}
+
+export interface RoleInfo {
+  id: string
+  roleCode: string
+  roleName: string
+  description?: string
+  sortOrder?: number
+  status?: number
+}
+
+export interface PermissionInfo {
+  id: string
+  permCode: string
+  permName: string
+  permType?: string
+  description?: string
+  status?: number
+}
+
 // ─── 路由 meta 扩展 ───────────────────────────────────────
 
 declare module 'vue-router' {
@@ -196,5 +234,6 @@ declare module 'vue-router' {
     icon?: string
     requiresAuth?: boolean
     breadcrumb?: string[]
+    permCode?: string
   }
 }

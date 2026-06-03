@@ -19,178 +19,12 @@
         </button>
       </div>
 
-      <!-- 导航区域 -->
+      <!-- 导航区域（动态菜单） -->
       <div class="nav-scroll">
-        <!-- §4.1 质量工作台 -->
-        <router-link to="/dashboard" custom v-slot="{ isActive, navigate }">
-          <div
-            class="nav-item"
-            :class="{ active: isActive || isPathActive('/dashboard') }"
-            @click="navigate"
-            :title="isCollapsed ? '质量工作台' : ''"
-          >
-            <span class="nav-icon">⬡</span>
-            <span v-if="!isCollapsed" class="nav-label">质量工作台</span>
-            <span v-if="!isCollapsed && dashboardBadge" class="nav-badge red">{{ dashboardBadge }}</span>
-          </div>
-        </router-link>
-
-        <!-- §4.2 标准库 -->
-        <div v-if="!isCollapsed" class="nav-section-label">标准库</div>
-        <div v-else class="nav-section-divider"></div>
-
-        <router-link to="/standard-lib" custom v-slot="{ isActive, navigate }">
-          <div
-            class="nav-item"
-            :class="{ active: isActive && route.path === '/standard-lib' }"
-            @click="navigate"
-            :title="isCollapsed ? '标准维护' : ''"
-          >
-            <span class="nav-icon">◉</span>
-            <span v-if="!isCollapsed" class="nav-label">标准维护</span>
-          </div>
-        </router-link>
-
-        <router-link to="/standard-lib/indicators" custom v-slot="{ isActive, navigate }">
-          <div
-            class="nav-item nav-item-sub"
-            :class="{ active: isActive || isPathActive('/standard-lib/indicators') }"
-            @click="navigate"
-            :title="isCollapsed ? '指标项目' : ''"
-          >
-            <span class="nav-icon">◧</span>
-            <span v-if="!isCollapsed" class="nav-label">指标项目</span>
-          </div>
-        </router-link>
-
-        <router-link to="/standard-lib/gaps" custom v-slot="{ isActive, navigate }">
-          <div
-            class="nav-item nav-item-sub"
-            :class="{ active: isActive || isPathActive('/standard-lib/gaps') }"
-            @click="navigate"
-            :title="isCollapsed ? '覆盖缺口' : ''"
-          >
-            <span class="nav-icon" style="color: var(--gold, #FFB400);">⚠</span>
-            <span v-if="!isCollapsed" class="nav-label" style="color: var(--gold, #FFB400);">覆盖缺口</span>
-          </div>
-        </router-link>
-
-        <!-- §4.3–4.4 检验与判定 -->
-        <div v-if="!isCollapsed" class="nav-section-label">检验与判定</div>
-        <div v-else class="nav-section-divider"></div>
-
-        <router-link to="/inspection" custom v-slot="{ isActive, navigate }">
-          <div
-            class="nav-item"
-            :class="{ active: isActive || isPathActive('/inspection') }"
-            @click="navigate"
-            :title="isCollapsed ? '检验录入' : ''"
-          >
-            <span class="nav-icon">✎</span>
-            <span v-if="!isCollapsed" class="nav-label">检验录入</span>
-          </div>
-        </router-link>
-
-        <router-link to="/judgment" custom v-slot="{ isActive, navigate }">
-          <div
-            class="nav-item"
-            :class="{ active: isActive || isPathActive('/judgment') }"
-            @click="navigate"
-            :title="isCollapsed ? '判定解释' : ''"
-          >
-            <span class="nav-icon">◈</span>
-            <span v-if="!isCollapsed" class="nav-label">判定解释</span>
-          </div>
-        </router-link>
-
-        <!-- §4.5–4.7 质量流程 -->
-        <div v-if="!isCollapsed" class="nav-section-label">质量流程</div>
-        <div v-else class="nav-section-divider"></div>
-
-        <router-link
-          v-for="item in processNavItems"
-          :key="item.path"
-          :to="item.path"
-          custom
-          v-slot="{ isActive, navigate }"
-        >
-          <div
-            class="nav-item"
-            :class="{ active: isActive || isPathActive(item.path) }"
-            @click="navigate"
-            :title="isCollapsed ? item.label : ''"
-          >
-            <span class="nav-icon">{{ item.icon }}</span>
-            <span v-if="!isCollapsed" class="nav-label">{{ item.label }}</span>
-            <span
-              v-if="!isCollapsed && item.badge"
-              class="nav-badge"
-              :class="item.badgeType"
-            >{{ item.badge }}</span>
-          </div>
-        </router-link>
-
-        <!-- §4.8–4.9 数据汇总 -->
-        <div v-if="!isCollapsed" class="nav-section-label">数据汇总</div>
-        <div v-else class="nav-section-divider"></div>
-
-        <router-link
-          v-for="item in dataNavItems"
-          :key="item.path"
-          :to="item.path"
-          custom
-          v-slot="{ isActive, navigate }"
-        >
-          <div
-            class="nav-item"
-            :class="{ active: isActive || isPathActive(item.path) }"
-            @click="navigate"
-            :title="isCollapsed ? item.label : ''"
-          >
-            <span class="nav-icon">{{ item.icon }}</span>
-            <span v-if="!isCollapsed" class="nav-label">{{ item.label }}</span>
-          </div>
-        </router-link>
-
-        <!-- §4.10 系统管理 -->
-        <div v-if="!isCollapsed" class="nav-section-label">系统管理</div>
-        <div v-else class="nav-section-divider"></div>
-
-        <router-link to="/audit" custom v-slot="{ isActive, navigate }">
-          <div
-            class="nav-item"
-            :class="{ active: isActive || isPathActive('/audit') }"
-            @click="navigate"
-            :title="isCollapsed ? '权限审计' : ''"
-          >
-            <span class="nav-icon">⊕</span>
-            <span v-if="!isCollapsed" class="nav-label">权限审计</span>
-          </div>
-        </router-link>
-
-        <!-- §4.11–4.12 管理员（ADMIN only） -->
-        <template v-if="authStore.userInfo?.role === 'ADMIN'">
-          <div v-if="!isCollapsed" class="nav-section-label">管理员</div>
-          <div v-else class="nav-section-divider"></div>
-
-          <router-link
-            v-for="item in adminNavItems"
-            :key="item.path"
-            :to="item.path"
-            custom
-            v-slot="{ isActive, navigate }"
-          >
-            <div
-              class="nav-item"
-              :class="{ active: isActive || isPathActive(item.path) }"
-              @click="navigate"
-              :title="isCollapsed ? item.label : ''"
-            >
-              <span class="nav-icon">{{ item.icon }}</span>
-              <span v-if="!isCollapsed" class="nav-label">{{ item.label }}</span>
-            </div>
-          </router-link>
-        </template>
+        <SidebarMenuItem
+          :menus="menuStore.sidebarMenus"
+          :collapsed="isCollapsed"
+        />
       </div>
 
       <!-- 底部用户信息 -->
@@ -304,52 +138,19 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useAuthStore } from '@/store/auth'
+import { useMenuStore } from '@/store/menu'
+import SidebarMenuItem from '@/components/SidebarMenuItem.vue'
 import type { SystemMessage } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-
-// ─── 侧边栏导航配置 ────────────────────────────────────────
-interface NavItem {
-  path: string
-  label: string
-  icon: string
-  badge?: string | number
-  badgeType?: 'orange' | 'blue' | 'red'
-}
-
-// §4.1 工作台徽章（待判+不合格+复检+让步数量）
-const dashboardBadge = ref<number | null>(null)
-
-// §4.5–4.7 质量流程
-const processNavItems: NavItem[] = [
-  { path: '/reinspection',  label: '复检管理',   icon: '⟳', badge: 4,   badgeType: 'orange' },
-  { path: '/re-judgment',   label: '改判管理',   icon: '↻', badge: 3,   badgeType: 'orange' },
-  { path: '/concession',    label: '让步接收',   icon: '◎', badge: 2,   badgeType: 'blue' },
-]
-
-// §4.8 质保书数据（先）→ §4.9 质量统计（后）
-const dataNavItems: NavItem[] = [
-  { path: '/cert-data',     label: '质保书数据', icon: '⊞' },
-  { path: '/statistics',    label: '质量统计',   icon: '▦' },
-]
-
-// §4.11–4.12 管理员（ADMIN only）
-const adminNavItems: NavItem[] = [
-  { path: '/admin/users',   label: '账号管理',   icon: '⊛' },
-  { path: '/admin/dict',    label: '数据字典',   icon: '≡' },
-]
+const menuStore = useMenuStore()
 
 // ─── 侧边栏折叠 ────────────────────────────────────────────
 const isCollapsed = ref(false)
 function toggleCollapse() {
   isCollapsed.value = !isCollapsed.value
-}
-
-// ─── 路径激活判断 ──────────────────────────────────────────
-function isPathActive(path: string): boolean {
-  return route.path === path || route.path.startsWith(path + '/')
 }
 
 // ─── 当前页面标题 ──────────────────────────────────────────
@@ -411,8 +212,14 @@ async function handleCommand(command: string) {
   }
 }
 
-function handleRefresh() {
-  window.location.reload()
+async function handleRefresh() {
+  const menuStore = useMenuStore()
+  try {
+    await menuStore.fetchAndRegisterRoutes()
+    await router.replace(route.fullPath)
+  } catch {
+    window.location.reload()
+  }
 }
 
 // ─── 生命周期 ──────────────────────────────────────────────
@@ -566,7 +373,7 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 4px 0;
+  padding: 8px 0 12px;
   position: relative;
   z-index: 1;
 }

@@ -209,10 +209,11 @@
             class="aqc-input"
           />
         </el-form-item>
-        <el-form-item label="角色" prop="role">
+        <el-form-item label="角色" prop="roles">
           <el-select
-            v-model="formData.role"
-            placeholder="请选择角色"
+            v-model="formData.roles"
+            multiple
+            placeholder="请选择角色（可多选）"
             class="aqc-select"
             style="width: 100%"
           >
@@ -254,6 +255,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { useTableFilter } from '@/composables/use-table-filter'
 import { useDictStore } from '@/store/dict'
 import { userManageApi, type UserPageQuery, type UserCreateCmd } from '@/api/user-manage'
+import { assignUserRoles } from '@/api/role'
 
 const dictStore = useDictStore()
 
@@ -344,23 +346,23 @@ const submitting = ref(false)
 const formRef = ref<FormInstance>()
 const editId = ref<string>('')
 
-const formData = reactive<UserCreateCmd>({
+const formData = reactive({
   userNo: '',
   username: '',
-  role: '',
+  roles: [] as string[],
   department: '',
 })
 
 const formRules: FormRules = {
   userNo: [{ required: true, message: '请输入工号', trigger: 'blur' }],
   username: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  role: [{ required: true, message: '请选择角色', trigger: 'change' }],
+  roles: [{ required: true, type: 'array', min: 1, message: '请选择至少一个角色', trigger: 'change' }],
 }
 
 function resetFormFields() {
   formData.userNo = ''
   formData.username = ''
-  formData.role = ''
+  formData.roles = []
   formData.department = ''
 }
 
@@ -378,7 +380,7 @@ async function openEditDialog(row: any) {
   editId.value = row.id
   formData.userNo = row.userNo
   formData.username = row.username
-  formData.role = row.role
+  formData.roles = row.role ? [row.role] : []
   formData.department = row.department ?? ''
   dialogVisible.value = true
   await nextTick()
@@ -390,15 +392,26 @@ async function handleSubmit() {
   await formRef.value.validate()
   submitting.value = true
   try {
+    const primaryRole = formData.roles[0] || ''
     if (isEdit.value) {
       await userManageApi.update(editId.value, {
         username: formData.username,
-        role: formData.role,
+        role: primaryRole,
         department: formData.department,
       })
+      await assignUserRoles(editId.value, formData.roles)
       ElMessage.success('账号信息已更新')
     } else {
-      await userManageApi.create({ ...formData })
+      const payload: UserCreateCmd = {
+        userNo: formData.userNo,
+        username: formData.username,
+        role: primaryRole,
+        department: formData.department,
+      }
+      const newId = await userManageApi.create(payload)
+      if (newId && formData.roles.length) {
+        await assignUserRoles(newId, formData.roles)
+      }
       ElMessage.success(`账号创建成功，初始密码为：Abc@1234`)
     }
     dialogVisible.value = false
