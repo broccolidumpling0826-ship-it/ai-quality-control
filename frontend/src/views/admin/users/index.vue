@@ -9,7 +9,7 @@
           <div class="page-subtitle">ACCOUNT MANAGEMENT</div>
         </div>
       </div>
-      <el-button class="btn-primary-cyan" @click="openCreateDialog">
+      <el-button type="primary" @click="openCreateDialog">
         <span class="btn-icon">＋</span> 新增账号
       </el-button>
     </div>
@@ -46,7 +46,7 @@
             class="aqc-select"
           >
             <el-option
-              v-for="r in ROLE_OPTIONS"
+              v-for="r in roleOptions"
               :key="r.value"
               :label="r.label"
               :value="r.value"
@@ -67,6 +67,9 @@
         </div>
       </div>
       <div class="search-actions">
+        <el-button type="primary" @click="openCreateDialog">
+          <span class="btn-icon">＋</span> 新增账号
+        </el-button>
         <el-button class="btn-cyan-outline" @click="handleSearch">
           <span class="btn-icon">⌕</span> 查询
         </el-button>
@@ -206,15 +209,16 @@
             class="aqc-input"
           />
         </el-form-item>
-        <el-form-item label="角色" prop="role">
+        <el-form-item label="角色" prop="roles">
           <el-select
-            v-model="formData.role"
-            placeholder="请选择角色"
+            v-model="formData.roles"
+            multiple
+            placeholder="请选择角色（可多选）"
             class="aqc-select"
             style="width: 100%"
           >
             <el-option
-              v-for="r in ROLE_OPTIONS"
+              v-for="r in roleOptions"
               :key="r.value"
               :label="r.label"
               :value="r.value"
@@ -228,11 +232,14 @@
             class="aqc-input"
           />
         </el-form-item>
+        <p v-if="!isEdit" class="form-tip">
+          创建后初始密码为 <strong>Abc@1234</strong>，请通知用户首次登录后修改。
+        </p>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
           <el-button class="btn-ghost" @click="dialogVisible = false">取消</el-button>
-          <el-button class="btn-primary-cyan" :loading="submitting" @click="handleSubmit">
+          <el-button type="primary" :loading="submitting" @click="handleSubmit">
             {{ isEdit ? '保存' : '创建' }}
           </el-button>
         </div>
@@ -242,23 +249,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useTableFilter } from '@/composables/use-table-filter'
+import { useDictStore } from '@/store/dict'
 import { userManageApi, type UserPageQuery, type UserCreateCmd } from '@/api/user-manage'
+import { assignUserRoles } from '@/api/role'
 
-// ─── 角色常量 ───────────────────────────────────────────────
-const ROLE_OPTIONS = [
-  { value: 'QUALITY_ENGINEER',  label: '质量工程师' },
-  { value: 'QUALITY_SUPERVISOR', label: '质检主管' },
-  { value: 'QUALITY_MANAGER',   label: '质量经理' },
-  { value: 'SALES_MANAGER',     label: '销售经理' },
-  { value: 'ADMIN',             label: '管理员' },
-]
+const dictStore = useDictStore()
+
+const roleOptions = computed(() =>
+  dictStore.getItems('USER_ROLE').map((item) => ({
+    value: item.value,
+    label: item.label,
+  }))
+)
 
 function getRoleLabel(role: string): string {
-  return ROLE_OPTIONS.find((r) => r.value === role)?.label ?? role
+  return dictStore.getLabel('USER_ROLE', role) || role
 }
 
 // ─── 查询参数 ───────────────────────────────────────────────
@@ -337,37 +346,45 @@ const submitting = ref(false)
 const formRef = ref<FormInstance>()
 const editId = ref<string>('')
 
-const formData = reactive<UserCreateCmd>({
+const formData = reactive({
   userNo: '',
   username: '',
-  role: '',
+  roles: [] as string[],
   department: '',
 })
 
 const formRules: FormRules = {
   userNo: [{ required: true, message: '请输入工号', trigger: 'blur' }],
   username: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  role: [{ required: true, message: '请选择角色', trigger: 'change' }],
+  roles: [{ required: true, type: 'array', min: 1, message: '请选择至少一个角色', trigger: 'change' }],
 }
 
-function openCreateDialog() {
-  isEdit.value = false
-  editId.value = ''
+function resetFormFields() {
   formData.userNo = ''
   formData.username = ''
-  formData.role = ''
+  formData.roles = []
   formData.department = ''
-  dialogVisible.value = true
 }
 
-function openEditDialog(row: any) {
+async function openCreateDialog() {
+  isEdit.value = false
+  editId.value = ''
+  resetFormFields()
+  dialogVisible.value = true
+  await nextTick()
+  formRef.value?.clearValidate()
+}
+
+async function openEditDialog(row: any) {
   isEdit.value = true
   editId.value = row.id
   formData.userNo = row.userNo
   formData.username = row.username
-  formData.role = row.role
+  formData.roles = row.role ? [row.role] : []
   formData.department = row.department ?? ''
   dialogVisible.value = true
+  await nextTick()
+  formRef.value?.clearValidate()
 }
 
 async function handleSubmit() {
@@ -375,15 +392,26 @@ async function handleSubmit() {
   await formRef.value.validate()
   submitting.value = true
   try {
+    const primaryRole = formData.roles[0] || ''
     if (isEdit.value) {
       await userManageApi.update(editId.value, {
         username: formData.username,
-        role: formData.role,
+        role: primaryRole,
         department: formData.department,
       })
+      await assignUserRoles(editId.value, formData.roles)
       ElMessage.success('账号信息已更新')
     } else {
-      await userManageApi.create({ ...formData })
+      const payload: UserCreateCmd = {
+        userNo: formData.userNo,
+        username: formData.username,
+        role: primaryRole,
+        department: formData.department,
+      }
+      const newId = await userManageApi.create(payload)
+      if (newId && formData.roles.length) {
+        await assignUserRoles(newId, formData.roles)
+      }
       ElMessage.success(`账号创建成功，初始密码为：Abc@1234`)
     }
     dialogVisible.value = false
@@ -418,7 +446,8 @@ async function handleToggleStatus(row: any) {
 }
 
 // ─── 初始化 ─────────────────────────────────────────────────
-onMounted(() => {
+onMounted(async () => {
+  await dictStore.refreshItems('USER_ROLE').catch(() => {})
   loadData()
 })
 </script>
@@ -777,5 +806,17 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.form-tip {
+  margin: 0 0 0 80px;
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.form-tip strong {
+  color: #00D4FF;
+  font-weight: 600;
 }
 </style>

@@ -124,14 +124,12 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="110" align="center" fixed="right">
+        <el-table-column label="操作" width="120" align="center" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="row.isResolved === 0"
-              type="primary"
               size="small"
-              text
-              class="action-btn"
+              class="op-btn op-btn-resolve"
               @click="handleResolve(row)"
             >
               标记已解决
@@ -332,10 +330,38 @@ onMounted(loadData)
   letter-spacing: 0.05em;
 }
 
-.action-btn {
+/* 操作列：描边按钮，避免实心高亮导致文字看不清 */
+.op-btn {
+  border-radius: 3px;
   font-size: 12px;
-  color: var(--cyan, #00D4FF) !important;
-  padding: 0 !important;
+  padding: 4px 10px;
+  height: 26px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+:deep(.op-btn.el-button) {
+  font-weight: 500;
+}
+
+.op-btn-resolve {
+  background: rgba(22, 201, 116, 0.08);
+  border-color: rgba(22, 201, 116, 0.35);
+  color: #16C974;
+}
+
+:deep(.op-btn-resolve.el-button) {
+  background: rgba(22, 201, 116, 0.08) !important;
+  border-color: rgba(22, 201, 116, 0.35) !important;
+  color: #16C974 !important;
+}
+
+.op-btn-resolve:hover,
+:deep(.op-btn-resolve.el-button:hover) {
+  background: rgba(22, 201, 116, 0.15) !important;
+  border-color: #16C974 !important;
+  color: #16C974 !important;
 }
 
 .resolved-label {

@@ -1,6 +1,7 @@
 package com.jhict.quality.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -65,6 +66,7 @@ public class DictController {
     @GetMapping("/items/{dictCode}/manage")
     @ApiOperation(value = "管理端查询字典项全量（含 id/status，ADMIN）")
     @SaCheckRole("ADMIN")
+    @SaCheckPermission("admin:dict:manage")
     public ApiResult<List<SysDictItem>> getItemsForManage(
             @ApiParam(value = "字典编码", required = true) @PathVariable String dictCode) {
         List<SysDictItem> items = sysDictItemMapper.selectList(
@@ -78,6 +80,7 @@ public class DictController {
     @PostMapping("/page")
     @ApiOperation(value = "分页查询字典分类列表（ADMIN）")
     @SaCheckRole("ADMIN")
+    @SaCheckPermission("admin:dict:manage")
     public ApiResult<IPage<SysDict>> page(@RequestBody SysDictPageQuery query) {
         int pageNum = query.getPageNum() != null && query.getPageNum() > 0 ? query.getPageNum() : 1;
         int pageSize = query.getPageSize() != null && query.getPageSize() > 0 ? query.getPageSize() : 20;
@@ -100,6 +103,7 @@ public class DictController {
     @PostMapping
     @ApiOperation(value = "新增字典分类（ADMIN）")
     @SaCheckRole("ADMIN")
+    @SaCheckPermission("admin:dict:manage")
     public ApiResult<String> createDict(@RequestBody Map<String, Object> body) {
         SysDict dict = new SysDict();
         dict.setDictCode((String) body.get("dictCode"));
@@ -118,6 +122,7 @@ public class DictController {
     @PutMapping("/{id}")
     @ApiOperation(value = "更新字典分类（ADMIN）")
     @SaCheckRole("ADMIN")
+    @SaCheckPermission("admin:dict:manage")
     public ApiResult<Void> updateDict(
             @ApiParam(value = "字典分类ID", required = true) @PathVariable String id,
             @RequestBody Map<String, Object> body) {
@@ -137,6 +142,7 @@ public class DictController {
     @DeleteMapping("/{id}")
     @ApiOperation(value = "停用字典分类（set status=0；系统内置不可停用，ADMIN）")
     @SaCheckRole("ADMIN")
+    @SaCheckPermission("admin:dict:manage")
     public ApiResult<Void> disableDict(
             @ApiParam(value = "字典分类ID", required = true) @PathVariable String id) {
 
@@ -160,6 +166,7 @@ public class DictController {
     @PostMapping("/items")
     @ApiOperation(value = "新增字典项（ADMIN）")
     @SaCheckRole("ADMIN")
+    @SaCheckPermission("admin:dict:manage")
     public ApiResult<String> createDictItem(@RequestBody Map<String, Object> body) {
         SysDictItem item = new SysDictItem();
         item.setDictCode((String) body.get("dictCode"));
@@ -181,6 +188,7 @@ public class DictController {
     @PutMapping("/items/{id}")
     @ApiOperation(value = "更新字典项（系统内置项不可修改 itemValue，ADMIN）")
     @SaCheckRole("ADMIN")
+    @SaCheckPermission("admin:dict:manage")
     public ApiResult<Void> updateDictItem(
             @ApiParam(value = "字典项ID", required = true) @PathVariable String id,
             @RequestBody Map<String, Object> body) {

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { login as apiLogin, logout as apiLogout } from '@/api/auth'
+import { login as apiLogin, logout as apiLogout, getUserInfo } from '@/api/auth'
+import { useMenuStore } from '@/store/menu'
 import type { UserInfo, LoginForm } from '@/types'
 
 const TOKEN_KEY = 'qc_token'
@@ -10,7 +11,6 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string>('')
   const userInfo = ref<UserInfo | null>(null)
 
-  /** 从 localStorage 恢复会话状态 */
   function init() {
     const savedToken = localStorage.getItem(TOKEN_KEY)
     const savedUser = localStorage.getItem(USER_INFO_KEY)
@@ -26,9 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /** 登录：调用接口，持久化 token 和用户信息 */
   async function login(form: LoginForm): Promise<void> {
-    // 后端字段名为 userNo，前端表单用 username，此处做映射
     const data = await apiLogin({ userNo: form.username, password: form.password }) as UserInfo
     token.value = data.token
     userInfo.value = data
@@ -36,26 +34,34 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem(USER_INFO_KEY, JSON.stringify(data))
   }
 
-  /** 登出：调用接口，清理本地状态 */
+  /** 登录后或刷新时：拉取用户信息 + 注册动态路由 */
+  async function loadSession(): Promise<void> {
+    if (!token.value) return
+    const info = await getUserInfo()
+    userInfo.value = info as UserInfo
+    localStorage.setItem(USER_INFO_KEY, JSON.stringify(info))
+    const menuStore = useMenuStore()
+    await menuStore.fetchAndRegisterRoutes()
+  }
+
   async function logout(): Promise<void> {
     try {
       await apiLogout()
     } catch {
-      // 即使接口失败也要清理本地状态
+      // ignore
     } finally {
       clearSession()
     }
   }
 
-  /** 清除本地会话 */
   function clearSession() {
     token.value = ''
     userInfo.value = null
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_INFO_KEY)
+    useMenuStore().reset()
   }
 
-  /** 更新用户信息 */
   function setUserInfo(info: UserInfo) {
     userInfo.value = info
     localStorage.setItem(USER_INFO_KEY, JSON.stringify(info))
@@ -66,6 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
     userInfo,
     init,
     login,
+    loadSession,
     logout,
     clearSession,
     setUserInfo

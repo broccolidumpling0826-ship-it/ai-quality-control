@@ -5,34 +5,49 @@ import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
-// AQC 工业精密控制室深色主题（必须在 element-plus css 之后引入以确保覆盖）
 import './styles/global.css'
 
 import App from './App.vue'
 import router from './router'
 import { useDictStore } from './store/dict'
 import { useAuthStore } from './store/auth'
+import { permissionDirective } from './directives/permission'
 
-const app = createApp(App)
+async function bootstrap() {
+  const app = createApp(App)
 
-// 注册 Element Plus 图标
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-  app.component(key, component)
+  for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component)
+  }
+
+  const pinia = createPinia()
+  app.use(pinia)
+
+  const authStore = useAuthStore()
+  authStore.init()
+
+  // 必须在 app.use(router) 和 mount 之前注册动态路由，否则刷新会命中 404 通配路由
+  if (authStore.token) {
+    try {
+      await authStore.loadSession()
+    } catch (err) {
+      console.warn('[Auth] 会话恢复失败:', err)
+      authStore.clearSession()
+    }
+  }
+
+  app.use(router)
+  app.use(ElementPlus, { locale: zhCn, size: 'default' })
+  app.directive('permission', permissionDirective)
+
+  await router.isReady()
+
+  const dictStore = useDictStore()
+  dictStore.loadAll().catch((err) => {
+    console.warn('[Dict] 字典加载失败:', err)
+  })
+
+  app.mount('#app')
 }
 
-const pinia = createPinia()
-app.use(pinia)
-app.use(router)
-app.use(ElementPlus, { locale: zhCn, size: 'default' })
-
-// 初始化 auth 状态（从 localStorage 恢复 token）
-const authStore = useAuthStore()
-authStore.init()
-
-// 应用启动时预加载所有字典数据
-const dictStore = useDictStore()
-dictStore.loadAll().catch((err) => {
-  console.warn('[Dict] 字典加载失败:', err)
-})
-
-app.mount('#app')
+bootstrap()

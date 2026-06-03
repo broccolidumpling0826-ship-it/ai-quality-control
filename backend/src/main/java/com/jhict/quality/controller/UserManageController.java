@@ -8,6 +8,7 @@ import com.jhict.quality.dto.SysUserCreateCmd;
 import com.jhict.quality.dto.SysUserPageQuery;
 import com.jhict.quality.dto.SysUserStatusCmd;
 import com.jhict.quality.dto.SysUserUpdateCmd;
+import com.jhict.quality.dto.UserAssignRolesCmd;
 import com.jhict.quality.entity.SysUser;
 import com.jhict.quality.service.api.UserManageService;
 import io.swagger.annotations.Api;
@@ -59,6 +60,16 @@ public class UserManageController {
             @ApiParam(value = "用户ID", required = true) @PathVariable String id,
             @Validated @RequestBody SysUserStatusCmd cmd) {
         userManageService.updateUserStatus(id, cmd.getStatus());
+        return ApiResult.success();
+    }
+
+    @PutMapping("/{id}/roles")
+    @ApiOperation(value = "分配用户角色（多选）")
+    @SaCheckRole("ADMIN")
+    public ApiResult<Void> assignRoles(
+            @ApiParam(value = "用户ID", required = true) @PathVariable String id,
+            @RequestBody UserAssignRolesCmd cmd) {
+        userManageService.assignUserRoles(id, cmd.getRoleCodes());
         return ApiResult.success();
     }
 }

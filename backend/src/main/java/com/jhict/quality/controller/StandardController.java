@@ -1,5 +1,6 @@
 package com.jhict.quality.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
@@ -39,6 +40,7 @@ public class StandardController {
     @PostMapping
     @ApiOperation(value = "新增质量标准")
     @SaCheckRole("QUALITY_ENGINEER")
+    @SaCheckPermission("standard:manage")
     public ApiResult<String> addStandard(@Validated @RequestBody QcQualityStandardAddCmd cmd) {
         String id = standardService.addStandard(cmd);
         return ApiResult.success("新增成功", id);

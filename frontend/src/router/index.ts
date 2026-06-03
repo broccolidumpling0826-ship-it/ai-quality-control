@@ -1,11 +1,12 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
+import { useMenuStore } from '@/store/menu'
+import { hasPermission as checkPerm } from '@/directives/permission'
+import { ElMessage } from 'element-plus'
+import type { MenuTreeNode } from '@/types'
+import { setRouter } from '@/router/instance'
 
 const routes: RouteRecordRaw[] = [
-  {
-    path: '/',
-    redirect: '/dashboard'
-  },
   {
     path: '/login',
     name: 'Login',
@@ -17,133 +18,13 @@ const routes: RouteRecordRaw[] = [
     name: 'Main',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
-    children: [
-      {
-        path: 'dashboard',
-        name: 'dashboard',
-        component: () => import('@/views/dashboard/index.vue'),
-        meta: { title: '质量工作台', icon: 'DataBoard', breadcrumb: ['质量工作台'] }
-      },
-      {
-        path: 'standard-lib',
-        name: 'standard-lib',
-        component: () => import('@/views/standard-lib/index.vue'),
-        meta: { title: '标准库', icon: 'Document', breadcrumb: ['标准库'] }
-      },
-      {
-        path: 'standard-lib/indicators',
-        name: 'standard-lib-indicators',
-        component: () => import('@/views/indicator/index.vue'),
-        meta: { title: '指标项目', icon: 'TrendCharts', breadcrumb: ['标准库', '指标项目'] }
-      },
-      {
-        path: 'standard-lib/gaps',
-        name: 'standard-lib-gaps',
-        component: () => import('@/views/standard-lib/gaps.vue'),
-        meta: { title: '覆盖缺口', icon: 'Warning', breadcrumb: ['标准库', '覆盖缺口'] }
-      },
-      {
-        path: 'inspection',
-        name: 'inspection',
-        component: () => import('@/views/inspection/index.vue'),
-        meta: { title: '检验录入', icon: 'EditPen', breadcrumb: ['检验录入'] }
-      },
-      {
-        path: 'inspection/form',
-        name: 'inspection-form',
-        component: () => import('@/views/inspection/form.vue'),
-        meta: { title: '新建检验', icon: 'EditPen', breadcrumb: ['检验录入', '新建检验'] }
-      },
-      {
-        path: 'judgment',
-        name: 'judgment',
-        component: () => import('@/views/judgment/index.vue'),
-        meta: { title: '判定解释', icon: 'Stamp', breadcrumb: ['判定解释'] }
-      },
-      {
-        path: 'judgment/explanation',
-        name: 'judgment-explanation',
-        component: () => import('@/views/judgment/explanation.vue'),
-        meta: { title: '判定详情', icon: 'Stamp', breadcrumb: ['判定解释', '判定详情'] }
-      },
-      {
-        path: 'reinspection',
-        name: 'reinspection',
-        component: () => import('@/views/reinspection/index.vue'),
-        meta: { title: '复检管理', icon: 'RefreshRight', breadcrumb: ['复检管理'] }
-      },
-      {
-        path: 're-judgment',
-        name: 're-judgment',
-        component: () => import('@/views/re-judgment/index.vue'),
-        meta: { title: '改判申请', icon: 'Edit', breadcrumb: ['改判申请'] }
-      },
-      {
-        path: 're-judgment/form',
-        name: 're-judgment-form',
-        component: () => import('@/views/re-judgment/form.vue'),
-        meta: { title: '发起改判', icon: 'Edit', breadcrumb: ['改判申请', '发起改判'] }
-      },
-      {
-        path: 're-judgment/detail',
-        name: 're-judgment-detail',
-        component: () => import('@/views/re-judgment/detail.vue'),
-        meta: { title: '改判详情', icon: 'Edit', breadcrumb: ['改判申请', '改判详情'] }
-      },
-      {
-        path: 'concession',
-        name: 'concession',
-        component: () => import('@/views/concession/index.vue'),
-        meta: { title: '让步接收', icon: 'Check', breadcrumb: ['让步接收'] }
-      },
-      {
-        path: 'concession/apply',
-        name: 'concession-apply',
-        component: () => import('@/views/concession/form.vue'),
-        meta: { title: '发起让步申请', icon: 'Check', breadcrumb: ['让步接收', '发起让步申请'] }
-      },
-      {
-        path: 'concession/detail',
-        name: 'concession-detail',
-        component: () => import('@/views/concession/detail.vue'),
-        meta: { title: '让步详情', icon: 'Check', breadcrumb: ['让步接收', '让步详情'] }
-      },
-      {
-        path: 'cert-data',
-        name: 'cert-data',
-        component: () => import('@/views/cert-data/index.vue'),
-        meta: { title: '质保书数据', icon: 'Tickets', breadcrumb: ['质保书数据'] }
-      },
-      {
-        path: 'statistics',
-        name: 'statistics',
-        component: () => import('@/views/statistics/index.vue'),
-        meta: { title: '质量统计', icon: 'PieChart', breadcrumb: ['质量统计'] }
-      },
-      {
-        path: 'audit',
-        name: 'audit',
-        component: () => import('@/views/audit/index.vue'),
-        meta: { title: '权限审计', icon: 'Lock', breadcrumb: ['权限审计'] }
-      },
-      {
-        path: 'admin/users',
-        name: 'admin-users',
-        component: () => import('@/views/admin/users/index.vue'),
-        meta: { title: '账号管理', icon: 'User', breadcrumb: ['管理员', '账号管理'], requiresAdmin: true }
-      },
-      {
-        path: 'admin/dict',
-        name: 'admin-dict',
-        component: () => import('@/views/admin/dict/index.vue'),
-        meta: { title: '数据字典', icon: 'List', breadcrumb: ['管理员', '数据字典'], requiresAdmin: true }
-      }
-    ]
+    children: []
   },
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    redirect: '/dashboard'
+    component: () => import('@/views/error/not-found.vue'),
+    meta: { title: '页面不存在', requiresAuth: true }
   }
 ]
 
@@ -153,27 +34,89 @@ const router = createRouter({
   scrollBehavior: () => ({ left: 0, top: 0 })
 })
 
-// 全局前置守卫：无 token 强制跳转登录
-router.beforeEach((to, _from, next) => {
+setRouter(router)
+
+function findFirstMenuPath(menus: MenuTreeNode[]): string | null {
+  for (const item of menus) {
+    if (item.menuType === 'MENU' && item.path) {
+      return item.path.startsWith('/') ? item.path : `/${item.path}`
+    }
+    if (item.children?.length) {
+      const found = findFirstMenuPath(item.children)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+/** 目标路径是否已有 Main 下的动态子路由 */
+function hasMainChildRoute(path: string): boolean {
+  const resolved = router.resolve(path)
+  return resolved.matched.some((r) => r.name === 'Main') && resolved.name !== 'NotFound'
+}
+
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
+  const menuStore = useMenuStore()
   const requiresAuth = to.meta.requiresAuth !== false
 
   if (requiresAuth && !authStore.token) {
     next({ path: '/login', query: { redirect: to.fullPath } })
     return
   }
+
   if (to.path === '/login' && authStore.token) {
-    next('/dashboard')
+    const home = findFirstMenuPath(menuStore.sidebarMenus)
+    next(home ? { path: home, replace: true } : { name: 'NotFound', replace: true })
     return
   }
-  if (to.meta.requiresAdmin && authStore.userInfo?.role !== 'ADMIN') {
-    next('/dashboard')
+
+  if (requiresAuth && authStore.token && !menuStore.routesLoaded) {
+    try {
+      await authStore.loadSession()
+      next({ ...to, replace: true })
+    } catch {
+      authStore.clearSession()
+      next({ path: '/login', query: { redirect: to.fullPath } })
+    }
     return
   }
+
+  // 刷新页面：动态路由已注册但首次解析误命中 NotFound 通配路由
+  if (
+    requiresAuth &&
+    authStore.token &&
+    menuStore.routesLoaded &&
+    to.name === 'NotFound' &&
+    to.path !== '/login'
+  ) {
+    if (hasMainChildRoute(to.fullPath)) {
+      next({ path: to.fullPath, replace: true })
+      return
+    }
+  }
+
+  if (to.path === '/' && menuStore.routesLoaded) {
+    const home = findFirstMenuPath(menuStore.sidebarMenus)
+    next(home ? { path: home, replace: true } : { name: 'NotFound', replace: true })
+    return
+  }
+
+  const permCode = to.meta.permCode as string | undefined
+  if (permCode && !checkPerm(permCode)) {
+    ElMessage.warning('权限不足，无法访问该页面')
+    const fallback = findFirstMenuPath(menuStore.sidebarMenus)
+    if (fallback && to.path !== fallback) {
+      next({ path: fallback, replace: true })
+    } else {
+      next({ name: 'NotFound', replace: true })
+    }
+    return
+  }
+
   next()
 })
 
-// 修改页面标题
 router.afterEach((to) => {
   const title = to.meta.title as string | undefined
   document.title = title ? `${title} - 质量管理系统` : '质量管理系统'
