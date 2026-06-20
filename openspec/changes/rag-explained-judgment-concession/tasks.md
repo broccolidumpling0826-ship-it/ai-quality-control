@@ -1,149 +1,120 @@
-## 1. Schema, Dictionaries, And Seeds
+## 1. P0 Schema And Seed Foundation
 
-- [ ] 1.1 Add migration for `qc_standard_document` with document metadata, source file path, parse/index status, and applicability fields
-- [ ] 1.2 Add migration for `qc_standard_clause` with clause text, citation metadata, standard linkage, applicability hints, and ES document key
-- [ ] 1.3 Add migration for `standard_conflict` with conflict type, involved standards, indicator, limits, status,裁决 fields, and judgment linkage
-- [ ] 1.4 Add migration for `qc_ai_assessment` with assessment type, business object, input snapshot, references, model metadata, raw output, confidence, cache flag, adoption status, and human opinion
-- [ ] 1.5 Add migration for confidence configuration with rule/RAG/LLM weights, thresholds, enabled flag, operator, and update time
-- [ ] 1.6 Add migration for `alternative_stock` demo-compatible replacement resource data
-- [ ] 1.7 Add migration or seed structure for evaluation cases and AI cache entries
-- [ ] 1.8 Add `STANDARD_CONFLICT` to judgment dictionaries and backend enum mappings
-- [ ] 1.9 Update menu/RBAC seed data for standard RAG retrieval, standard conflict detection, AI assessment records, confidence configuration, and hidden detail routes
-- [ ] 1.10 Add idempotent demo seed scripts for 20 documents, 100 inspection records, 5 conflict samples, complaint/case documents, alternative stock, and 30 evaluation cases
+- [ ] 1.1 Add additive migrations for standard documents, standard clauses, standard conflicts, AI assessments/cache, confidence config, alternative stock, and evaluation cases
+- [ ] 1.2 Add `STANDARD_CONFLICT` to backend enum, dictionary seed, frontend label mappings, and status filters
+- [ ] 1.3 Add P0 menu/RBAC seed entries for standard RAG retrieval, standard conflict detection, certificate Q&A, and hidden conflict裁决/detail routes
+- [ ] 1.4 Add deterministic P0 demo seed data for one qualified, one unqualified, one concession, and one standard-conflict scenario
+- [ ] 1.5 Add prepared P0 standard/agreement clause files and matching structured rules for the four required demo scenarios
+- [ ] 1.6 Add P0 AI cache seed entries for required demo explanation, concession assessment, and certificate Q&A outputs
 
-## 2. Backend Gateway Infrastructure
+## 2. P0 AI And Vector Gateways
 
-- [ ] 2.1 Add model gateway interfaces for chat generation, embeddings, timeout handling, and provider-neutral request/response models
-- [ ] 2.2 Add DeepSeek-compatible model gateway implementation with environment-backed configuration
-- [ ] 2.3 Add vector-store gateway interfaces for clause indexing, search, delete/reindex, and provider-neutral retrieval results
-- [ ] 2.4 Add Elasticsearch 8.15.0 vector-store gateway implementation with environment-backed configuration
-- [ ] 2.5 Add gateway health checks that do not expose secrets
-- [ ] 2.6 Add gateway failure logging with trace id, operation, provider, business id, and safe error category
-- [ ] 2.7 Add AI degradation service that selects cache, rule template, raw ES retrieval, or unavailable response
-- [ ] 2.8 Add unit tests for gateway fallback selection and secret-safe logging behavior
+- [ ] 2.1 Add `ModelGateway` interfaces and provider-neutral request/response models
+- [ ] 2.2 Add DeepSeek-compatible model gateway implementation with environment-backed configuration and timeout handling
+- [ ] 2.3 Add `VectorStoreGateway` interfaces for clause indexing and search
+- [ ] 2.4 Add Elasticsearch 8.15.0 vector gateway implementation with environment-backed configuration
+- [ ] 2.5 Add layered degradation service supporting cache, rule template, raw ES retrieval, and unavailable responses
+- [ ] 2.6 Add gateway health/failure logging without exposing API keys, passwords, or prompt secrets
 
-## 3. Standard Document And RAG Services
+## 3. P0 Standard RAG Retrieval
 
-- [ ] 3.1 Add entities, mappers, DTOs, VOs, and service interfaces for standard documents
-- [ ] 3.2 Add entities, mappers, DTOs, VOs, and service interfaces for standard clauses
-- [ ] 3.3 Add API endpoints to register/list/detail/delete standard documents and view parse/index status
-- [ ] 3.4 Add clause splitting/import flow for prepared Markdown/text/PDF-derived content used by the demo
-- [ ] 3.5 Add indexing service that writes clause metadata to MySQL and searchable/vector payloads to the vector gateway
-- [ ] 3.6 Add reindex and failed-index retry operations for standard documents
-- [ ] 3.7 Add structured-rule versus clause consistency check service and warning output
-- [ ] 3.8 Add RAG query API returning generated answer, cited clauses, scores, confidence status, and no-evidence refusal
-- [ ] 3.9 Add raw-clause retrieval response path when model generation is unavailable but ES search succeeds
-- [ ] 3.10 Add prompt-injection guardrails to RAG prompt construction and refusal behavior
-- [ ] 3.11 Add tests for no-evidence refusal, low-score warning, citation metadata, and raw retrieval fallback
+- [ ] 3.1 Add standard document and clause entities, mappers, DTOs, VOs, services, and APIs needed for P0 prepared documents
+- [ ] 3.2 Add prepared clause import/index flow for demo Markdown/text-derived standard and agreement clauses
+- [ ] 3.3 Add RAG query API returning cited answer, source clauses, retrieval scores, confidence band, and cache/degradation marker
+- [ ] 3.4 Add no-evidence refusal behavior for missing or low-quality retrieval
+- [ ] 3.5 Add raw-clause response when ES search succeeds but model generation is unavailable
+- [ ] 3.6 Add prompt-injection safety checks that keep answers grounded in retrieved clauses
+- [ ] 3.7 Verify P0 RAG scenarios for normal query, low-score query, no-evidence refusal, and prompt injection
 
-## 4. Standard Conflict And Judgment Engine
+## 4. P0 Deterministic Judgment And Conflict
 
-- [ ] 4.1 Extend judgment enum, dictionary conversion, frontend labels, and API VOs for `STANDARD_CONFLICT`
-- [ ] 4.2 Add mapper queries to retrieve all applicable standards per priority for a product, customer, indicator, and inspection date
-- [ ] 4.3 Implement priority-resolvable conflict detection and conflict record creation without blocking normal judgment
-- [ ] 4.4 Implement same-priority conflict detection that returns `STANDARD_CONFLICT`
-- [ ] 4.5 Persist conflict details with involved standards, compared limits, conflict level, selected priority when resolvable, and related judgment id
-- [ ] 4.6 Update judgment save flow to snapshot conflict judgment and keep existing deterministic evidence behavior
-- [ ] 4.7 Add conflict裁决 service with permission checks,裁决 standard, rationale, operator, and audit logging
-- [ ] 4.8 Add rejudge-after裁决 flow that marks the conflict judgment historical/non-final and creates a new final judgment
-- [ ] 4.9 Update dashboard/statistics/list filters to count and display standard conflicts separately from reinspection
-- [ ] 4.10 Add backend tests for priority-resolvable conflict, same-priority conflict, unauthorized裁决, and rejudge-after裁决
+- [ ] 4.1 Add candidate standard query/service that returns candidate, selected, suppressed, and conflict standards instead of only `LIMIT 1`
+- [ ] 4.2 Define comparable indicator/unit/spec matching utilities for conflict checks
+- [ ] 4.3 Implement priority-resolvable conflict recording for cross-priority limit differences
+- [ ] 4.4 Implement same-priority blocking conflict detection for overlapping effective date/spec ranges, incompatible numeric limits, unit mismatch, and口径 mismatch
+- [ ] 4.5 Return and persist `STANDARD_CONFLICT` for unresolved same-priority conflict cases
+- [ ] 4.6 Prevent `STANDARD_CONFLICT` from appearing as a manual rejudgment target
+- [ ] 4.7 Reject direct manual rejudgment that attempts to bypass unresolved `STANDARD_CONFLICT`
+- [ ] 4.8 Add conflict裁决 API with permission checks,裁决 rationale, audit logging, and rejudge-after裁决
+- [ ] 4.9 Verify P0 conflict demo: conflict detection, blocked certificate,裁决, rejudge, final judgment
 
-## 5. AI Assessment And Confidence
+## 5. P0 Judgment Explanation
 
-- [ ] 5.1 Add AI assessment entity, mapper, DTOs, VOs, service, and list/detail APIs
-- [ ] 5.2 Enforce immutability of AI raw output while allowing adoption status and human opinion updates
-- [ ] 5.3 Add confidence config entity, mapper, service, and API with active/default config retrieval
-- [ ] 5.4 Validate confidence weights sum to 1 and thresholds satisfy high > medium > low
-- [ ] 5.5 Restrict confidence config updates to authorized roles and write audit logs
-- [ ] 5.6 Implement confidence calculation using rule score, RAG score, LLM score, active weights, and factor details
-- [ ] 5.7 Apply confidence labels consistently across explanation, concession, advice, and certificate features
-- [ ] 5.8 Add backend tests for confidence validation, calculation, permissions, and audit logging
+- [ ] 5.1 Extend judgment explanation response with candidate standards, citations, confidence band/factors, conflict warnings, and degradation source
+- [ ] 5.2 Implement rule-template explanation from structured judgment evidence
+- [ ] 5.3 Implement cited AI explanation using selected standard, judgment evidence, conflict data, and retrieved clauses
+- [ ] 5.4 Mark missing citations explicitly and cap confidence at medium when structured rule exists but source paragraph is missing
+- [ ] 5.5 Force low confidence for unresolved `STANDARD_CONFLICT`, standard gap, and source/structured contradiction
+- [ ] 5.6 Persist explanation output, input snapshot, citations, confidence factors, model/cache metadata, and raw output in AI assessment records
+- [ ] 5.7 Verify P0 explanation for qualified, unqualified, concession, and conflict records
 
-## 6. AI Judgment Explanation
+## 6. P0 Concession Risk Assessment
 
-- [ ] 6.1 Extend judgment explanation VO/API to include source citations, confidence label/factors, AI text, degradation source, and conflict warnings
-- [ ] 6.2 Implement structured rule explanation template from existing judgment evidence
-- [ ] 6.3 Implement cited AI explanation generation using judgment evidence, matched standards, retrieved clauses, conflicts, and confidence context
-- [ ] 6.4 Persist generated or cached judgment explanations as AI assessment records
-- [ ] 6.5 Mark missing citations explicitly without inventing clauses
-- [ ] 6.6 Display structured-document inconsistency warnings in explanation output
-- [ ] 6.7 Add low-confidence manual review guidance to explanation output
-- [ ] 6.8 Add tests for qualified, concession, missing-citation, low-confidence, and conflict explanation cases
+- [ ] 6.1 Add concession risk API linked to `CAN_CONCESSION` judgments
+- [ ] 6.2 Resolve customer usage from agreement, seeded customer profile/default, or required manual input
+- [ ] 6.3 Query seeded alternative stock and complaint/case clauses for risk evidence
+- [ ] 6.4 Implement deterministic risk baseline rules producing `riskLevel`, `mustReview`, `missingInfo`, `suggestedConditions`, `blockingReasons`, and `evidenceRefs`
+- [ ] 6.5 Use AI only to organize evidence and wording after baseline rules have been applied
+- [ ] 6.6 Refuse definitive concession advice for low confidence, missing usage, no standard coverage, missing concession clause, or unresolved conflict
+- [ ] 6.7 Persist concession risk assessment and adoption/ignore status without allowing AI raw output edits
+- [ ] 6.8 Verify P0 concession demo with normal risk output, missing-info path, and low-confidence refusal
 
-## 7. Concession Risk Assessment
+## 7. P0 Quality Certificate Q&A
 
-- [ ] 7.1 Add concession risk request/response DTOs and APIs linked to `CAN_CONCESSION` judgments
-- [ ] 7.2 Implement customer usage resolution from customer agreement, customer profile/default seed data, or manual input
-- [ ] 7.3 Add alternative stock query service using the seeded `alternative_stock` data
-- [ ] 7.4 Retrieve historical complaint/case clauses for concession context through RAG
-- [ ] 7.5 Generate concession risk assessment with risk level, dimension reasoning, cited sources, suggested conditions, and confidence
-- [ ] 7.6 Enforce low-confidence refusal for concession recommendations and require manual quality review
-- [ ] 7.7 Persist concession risk outputs as immutable AI assessment records
-- [ ] 7.8 Add adoption/ignore handling for concession assessment with audit trail
-- [ ] 7.9 Add backend tests for complete assessment, missing usage, missing alternative stock, complaint citation, and low-confidence refusal
+- [ ] 7.1 Add certificate Q&A API by coil number and batch number
+- [ ] 7.2 Ground Q&A answers in certificate snapshot, inspection record, final judgment, judgment evidence, concession state, conflict state, and cited standard clauses
+- [ ] 7.3 Answer “why can this coil be certified” for releasable records with judgment and citation evidence
+- [ ] 7.4 Answer indicator-basis questions with inspection value, structured limit, deviation, trigger rule, and cited clause
+- [ ] 7.5 Refuse or mark non-final answers for `STANDARD_CONFLICT`, pending reinspection, pending concession approval/confirmation, missing required indicators, and missing certificate snapshot
+- [ ] 7.6 Support cache-backed certificate Q&A for P0 demo while exposing cache marker and citations
+- [ ] 7.7 Verify P0 certificate Q&A for qualified, concession-pending, conflict, and missing-source cases
 
-## 8. Reinspection And Rejudgment Advice
+## 8. P0 Frontend Demo Slice
 
-- [ ] 8.1 Add AI reinspection advice API linked to judgment details
-- [ ] 8.2 Generate reinspection advice from abnormal indicators, sample type, deviation, history, and confidence
-- [ ] 8.3 Add accept/ignore advice actions without auto-creating reinspection records
-- [ ] 8.4 Prefill existing reinspection application with accepted suggestion reason and responsible context
-- [ ] 8.5 Add AI rejudgment advice API linked to judgment details or new evidence context
-- [ ] 8.6 Generate rejudgment advice with target judgment, reason, evidence summary, affected scope, citations, and confidence
-- [ ] 8.7 Prefill existing rejudgment application with accepted suggestion data
-- [ ] 8.8 Withhold definitive advice when confidence is low
-- [ ] 8.9 Persist advice outputs and adoption/ignore status as AI assessment records
-- [ ] 8.10 Add tests for advice generation, low-confidence withholding, accept prefill, and ignore audit
+- [ ] 8.1 Add standard RAG retrieval page with query, answer, citations, score/confidence display, refusal, and raw retrieval fallback
+- [ ] 8.2 Enhance judgment explanation page with candidate standards, citations, AI/rule explanation, confidence factors, conflict warnings, and degradation labels
+- [ ] 8.3 Add standard conflict list/detail/裁决 UI for the P0 conflict scenario
+- [ ] 8.4 Enhance concession page/detail with structured AI risk card, evidence refs, required usage input, missing-info warnings, and adoption actions
+- [ ] 8.5 Add certificate Q&A UI with coil/batch selector, question input, answer, citations, non-final warnings, and cache marker
+- [ ] 8.6 Update dashboard/workbench with P0 AI risk warning, low-confidence review, and standard conflict pending裁决 counters
+- [ ] 8.7 Verify dynamic menu route/component paths for P0 pages
 
-## 9. Quality Certificate AI And PDF
+## 9. P0 Demo And Evaluation Acceptance
 
-- [ ] 9.1 Extend certificate generation DTO/VO to include explanation text, citation summary, confidence, and preview/final marker
-- [ ] 9.2 Block formal certificate generation for final `STANDARD_CONFLICT` judgments
-- [ ] 9.3 Add non-final preview generation path for unresolved conflict records with clear warning text
-- [ ] 9.4 Generate certificate explanation from AI assessment or fallback rule template
-- [ ] 9.5 Persist certificate AI explanation and citations in certificate snapshot data
-- [ ] 9.6 Add PDF generation service with key indicators, product metadata, judgment result, explanation, citations, generation time, and operator
-- [ ] 9.7 Add PDF download API and audit logging
-- [ ] 9.8 Add tests for qualified PDF, low-confidence fallback, conflict block, conflict preview, and audit logging
+- [ ] 9.1 Write fixed demo script for qualified scenario with input values, matched standard, expected judgment, citations, explanation, certificate Q&A, and degradation output
+- [ ] 9.2 Write fixed demo script for unqualified scenario with input values, matched standard, expected judgment, citations, explanation, and certificate refusal
+- [ ] 9.3 Write fixed demo script for concession scenario with input values, matched standard, expected judgment, risk assessment, pending/formal certificate Q&A behavior, and degradation output
+- [ ] 9.4 Write fixed demo script for standard conflict scenario with conflicting standards, expected `STANDARD_CONFLICT`, blocked certificate,裁决, and rejudge result
+- [ ] 9.5 Add 30 evaluation cases with expected judgment, expected citation ids or absence, expected refusal behavior, expected confidence band, allowed numeric tolerance, and response time target
+- [ ] 9.6 Add evaluation runner/report for business rule pass rate, AI conclusion accuracy, citation hit rate, refusal accuracy, confidence band accuracy, average response time, and manual-review hit rate
+- [ ] 9.7 Verify P0 demo seeds can be rerun safely or document reset procedure
 
-## 10. Frontend Pages And UX
+## 10. P1 Audit, Config, And Broader Workflow
 
-- [ ] 10.1 Add standard RAG retrieval page with query input, answer area, source clause list, scores, low-confidence warning, and raw retrieval fallback display
-- [ ] 10.2 Add standard document/clauses status UI entry points under standard library where needed for demo operation
-- [ ] 10.3 Enhance judgment explanation page with AI explanation, citations, confidence factors, conflict warnings, and degradation labels
-- [ ] 10.4 Add standard conflict list/detail/裁决 pages with involved standards, indicator comparisons, status,裁决 form, and rejudge result link
-- [ ] 10.5 Enhance concession pages with AI risk assessment card, required usage input, citations, confidence, and adoption actions
-- [ ] 10.6 Enhance reinspection flow to accept AI suggestion prefill while requiring user submit
-- [ ] 10.7 Enhance rejudgment flow to accept AI suggestion prefill while requiring user submit
-- [ ] 10.8 Enhance certificate page with AI explanation, citation summary, PDF download, conflict block, and non-final preview marker
-- [ ] 10.9 Add AI assessment record list/detail page for audit-oriented review
-- [ ] 10.10 Add confidence configuration page with validation feedback and permission-aware controls
-- [ ] 10.11 Update dashboard to show AI risk warnings, low-confidence pending review, and standard conflict pending裁决
-- [ ] 10.12 Verify dynamic menu component paths, route names, icons, and permissions for all new pages
+- [ ] 10.1 Add AI assessment list/detail page for audit review
+- [ ] 10.2 Add confidence configuration page with weight/threshold validation, role checks, and audit logs
+- [ ] 10.3 Add full AI reinspection advice API and UI prefill flow without auto-creating reinspection records
+- [ ] 10.4 Add full AI rejudgment advice API and UI prefill flow without auto-creating rejudgment records
+- [ ] 10.5 Add certificate data snapshot enhancements and simple PDF export for releasable judgments
+- [ ] 10.6 Add formal certificate gates for `UNQUALIFIED`, `NEED_REINSPECTION`, `CAN_CONCESSION` pending approval, `STANDARD_CONFLICT`, standard gap, and missing required indicators
+- [ ] 10.7 Add PDF generation/download audit logging
+- [ ] 10.8 Broaden dashboard/statistics to include conflict rate, low-confidence count, AI adoption rate, and evaluation summary
 
-## 11. Demo And Evaluation Data
+## 11. P2 Optional Expansion
 
-- [ ] 11.1 Create 20 prepared standard/agreement documents and clause files covering national, enterprise, and customer agreement sources
-- [ ] 11.2 Create structured standard rules matching the prepared documents and preserving structured data as truth
-- [ ] 11.3 Create 100 inspection records covering qualified, unqualified, need reinspection, concession, no-standard, low-confidence, and conflict cases
-- [ ] 11.4 Create 5 conflict standard samples covering cross-priority and same-priority conflicts
-- [ ] 11.5 Create simulated complaint/case JSON or text documents and indexable clauses
-- [ ] 11.6 Create alternative stock seed data for concession assessment scenarios
-- [ ] 11.7 Create at least 30 evaluation cases with 10 normal, 10 boundary/abnormal, 5 low-confidence/refusal, and 5 prompt-injection/safety cases
-- [ ] 11.8 Create pre-generated AI cache entries for the required final demo scenarios
-- [ ] 11.9 Document the main demo chain and separate standard conflict demo scenario
-- [ ] 11.10 Verify demo seeds can be rerun without duplicate records or document the reset procedure
+- [ ] 11.1 Add advanced PDF/table extraction experiments for standards without using extraction as judgment truth
+- [ ] 11.2 Add real customer complaint table integration path while preserving document/RAG simulation
+- [ ] 11.3 Add real inventory or MES/WMS adapter behind alternative resource service
+- [ ] 11.4 Add production-style certificate layout features such as template selection, signature area, and QR verification if required later
+- [ ] 11.5 Add broader analytics for AI hit rate, manual review hit rate, and conflict remediation trends
 
 ## 12. Verification
 
-- [ ] 12.1 Run OpenSpec validation for the change
-- [ ] 12.2 Run backend tests for new and affected services
-- [ ] 12.3 Run frontend build
-- [ ] 12.4 Manually verify standard RAG query with cited answer and no-evidence refusal
-- [ ] 12.5 Manually verify inspection entry to rule judgment to cited AI explanation
-- [ ] 12.6 Manually verify concession risk assessment with low-confidence refusal path
-- [ ] 12.7 Manually verify standard conflict detection,裁决, rejudge, and certificate block
-- [ ] 12.8 Manually verify certificate snapshot and PDF download
-- [ ] 12.9 Manually verify AI gateway degradation using cache, rule template, raw retrieval, and unavailable states
-- [ ] 12.10 Record any unavailable external-service checks and required environment variables for implementation handoff
+- [ ] 12.1 Run `openspec validate rag-explained-judgment-concession --strict`
+- [ ] 12.2 Run backend tests for P0 services and affected judgment/certificate/concession flows
+- [ ] 12.3 Run frontend build after P0 UI pages are implemented
+- [ ] 12.4 Manually verify P0 main chain: inspection entry → standard matching → judgment → cited explanation → concession risk → certificate Q&A
+- [ ] 12.5 Manually verify conflict chain: conflict detection → `STANDARD_CONFLICT` → certificate block →裁决 → rejudge
+- [ ] 12.6 Manually verify AI degradation: cache, rule template, raw ES retrieval, and unavailable state
+- [ ] 12.7 Run evaluation report and confirm all expected fields are reported
+- [ ] 12.8 Document unavailable external-service checks and required environment variables for handoff

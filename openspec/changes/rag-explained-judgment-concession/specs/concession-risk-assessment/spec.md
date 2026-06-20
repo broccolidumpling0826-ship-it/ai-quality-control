@@ -11,6 +11,32 @@ The system SHALL assess concession risk using customer usage, deviation degree, 
 - **WHEN** customer usage cannot be obtained from agreement or customer profile
 - **THEN** the system SHALL require manual usage input before generating a normal concession risk assessment
 
+### Requirement: Concession risk output is structured
+The system SHALL output structured risk fields before natural-language explanation.
+
+#### Scenario: Risk assessment completed
+- **WHEN** concession risk assessment completes
+- **THEN** the response SHALL include `riskLevel`, `mustReview`, `missingInfo`, `suggestedConditions`, `blockingReasons`, `evidenceRefs`, confidence label, and narrative explanation
+
+### Requirement: Concession risk baseline rules are deterministic
+The system SHALL apply deterministic baseline rules before AI wording is generated.
+
+#### Scenario: Blocking conflict
+- **WHEN** the judgment or matched standard basis has unresolved `STANDARD_CONFLICT`
+- **THEN** the concession assessment SHALL return `riskLevel=BLOCKED`, `mustReview=true`, and include a blocking reason
+
+#### Scenario: High-risk usage with mechanical deviation
+- **WHEN** customer usage is safety-critical or high-forming and the abnormal indicator is strength or elongation
+- **THEN** the concession assessment SHALL classify risk as at least HIGH
+
+#### Scenario: Similar complaint found
+- **WHEN** a historical complaint/case above the similarity threshold is found for the same customer, usage, indicator, or defect mode
+- **THEN** the concession assessment SHALL raise risk by at least one level and cite the complaint/case
+
+#### Scenario: Replacement stock available
+- **WHEN** compatible qualified alternative stock is available within the configured delivery window
+- **THEN** the concession assessment SHALL include replacement as a suggested condition or alternative and SHALL NOT rely only on concession approval
+
 ### Requirement: Historical complaints and cases are retrievable evidence
 The system SHALL include simulated complaint/case documents in RAG retrieval for concession risk assessment.
 

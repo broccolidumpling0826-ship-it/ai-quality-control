@@ -14,9 +14,11 @@ This change upgrades the system from “判定结果可见” to “判定依据
 - Add persisted AI assessment records for judgment explanation, concession risk, reinspection advice, rejudgment advice, and certificate explanation outputs.
 - Add concession risk assessment using customer usage, deviation, historical complaints/cases, alternative stock, standard clauses, and confidence gating.
 - Add AI-assisted reinspection and rejudgment suggestions that can prefill workflows, but never auto-create or auto-approve business records.
-- Add quality certificate PDF export with key indicators, judgment result, AI explanation, and cited sources; unresolved `STANDARD_CONFLICT` can only generate a non-final preview.
+- Add quality certificate Q&A by coil/batch, grounded in certificate snapshots, inspection records, judgment evidence, and standard clauses.
+- Add quality certificate output controls with data snapshot and optional PDF export; unresolved or non-release states can only generate internal preview where allowed.
 - Add confidence weight configuration with audit logging and permission controls.
 - Add repeatable demo/evaluation seed data for 20 documents, 100 inspection records, 5 conflict samples, and 30 evaluation cases.
+- Split delivery into P0/P1/P2 so the final competition MVP is stable before broad platform expansion.
 
 ## Capabilities
 
@@ -28,18 +30,19 @@ This change upgrades the system from “判定结果可见” to “判定依据
 - `standard-conflict-detection`: Multi-standard conflict detection, `STANDARD_CONFLICT`, conflict records, human裁决, and re-judgment after裁决.
 - `concession-risk-assessment`: Persisted AI concession risk assessment based on usage, deviation, complaints/cases, alternative stock, and confidence gating.
 - `reinspection-rejudgment-advice`: AI suggestions for reinspection and rejudgment that prefill existing workflows while keeping human control.
+- `quality-cert-qa`: Coil/batch certificate Q&A grounded in certificate snapshots, inspection records, judgment evidence, and standard clauses.
 - `quality-cert-ai-pdf`: Quality certificate data snapshot, AI explanation, cited sources, PDF export, and conflict-state restrictions.
 - `ai-confidence-config`: Configurable confidence weights/thresholds with validation, permissions, and audit logging.
 - `demo-evaluation-dataset`: Repeatable demo and evaluation data for standards, agreements, inspections, conflicts, AI cache, and adversarial cases.
 
 ### Modified Capabilities
 
-- None.
+- `dynamic-menu`: Menu/RBAC seed and dynamic route coverage must include the new P0/P1 AI quality pages and permissions.
 
 ## Impact
 
-- Backend: new services for AI gateway, vector gateway, document indexing, RAG retrieval, AI assessments, standard conflicts, confidence config, and PDF export; updates to judgment, concession, reinspection, rejudgment, certificate, dashboard, audit, and menu/RBAC flows.
-- Frontend: new pages for standard RAG retrieval, standard conflict detection, AI assessment records, and confidence configuration; enhancements to judgment explanation, concession, reinspection, rejudgment, certificate, dashboard, and admin pages.
+- Backend: new services for AI gateway, vector gateway, document indexing, RAG retrieval, certificate Q&A, AI assessments, standard conflicts, confidence config, and controlled certificate output; updates to judgment, concession, reinspection, rejudgment, certificate, dashboard, audit, and menu/RBAC flows.
+- Frontend: P0 pages/enhancements for standard RAG retrieval, judgment explanation, concession risk, certificate Q&A, conflict handling, and demo scripts; P1 pages for AI assessment records, confidence configuration, PDF output, and broader workflow polish.
 - Database: new tables for standard documents/clauses, standard conflicts, AI assessments/cache, confidence config, alternative stock, and evaluation cases; new migrations and seed scripts.
 - Dependencies/systems: DeepSeek-compatible model API via gateway; Elasticsearch 8.15.0 via vector-store gateway; PDF generation support; environment-based configuration for external services.
 - Data: repeatable demo/evaluation initialization for competition scenarios and AI fallback cache.

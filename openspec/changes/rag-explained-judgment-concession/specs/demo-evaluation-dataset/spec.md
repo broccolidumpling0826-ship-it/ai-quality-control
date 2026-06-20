@@ -32,6 +32,27 @@ The dataset SHALL include at least 30 evaluation cases distributed across normal
 - **WHEN** evaluation cases are queried
 - **THEN** the system SHALL provide at least 10 normal cases, 10 boundary or abnormal cases, 5 low-confidence/refusal cases, and 5 prompt-injection or safety cases
 
+### Requirement: Evaluation cases include expected outcomes
+Each evaluation case SHALL include machine-checkable expected outputs.
+
+#### Scenario: Evaluation case inspected
+- **WHEN** an evaluation case is loaded
+- **THEN** it SHALL include expected judgment, expected citation identifiers or citation absence, expected refusal behavior, expected confidence band, allowed numeric tolerance, and response time target
+
+### Requirement: Evaluation report is generated
+The system SHALL produce an evaluation report from the evaluation set.
+
+#### Scenario: Evaluation report run
+- **WHEN** the evaluation runner is executed
+- **THEN** it SHALL report business rule pass rate, AI conclusion accuracy, citation hit rate, refusal accuracy, confidence band accuracy, average response time, and manual-review hit rate
+
+### Requirement: Fixed demo scripts are documented
+The dataset SHALL include fixed scripts for required live demo scenarios.
+
+#### Scenario: Demo script inspected
+- **WHEN** a required demo script is opened
+- **THEN** it SHALL include input values, matched standards, expected judgment, cited clauses, AI output summary, degradation output, certificate or Q&A result, and operator steps
+
 ### Requirement: Demo AI cache supports offline presentation
 The dataset SHALL include pre-generated AI cache entries for key demonstration records.
 

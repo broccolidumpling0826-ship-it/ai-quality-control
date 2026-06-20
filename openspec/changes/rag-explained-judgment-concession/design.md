@@ -35,6 +35,26 @@ Key constraints:
 - Do not integrate real WMS/MES/APS/ERP/customer complaint systems in this version.
 - Do not build production-grade certificate layout features such as electronic seals, QR verification, or formal customer delivery templates.
 
+### Delivery Slices
+
+P0 is the final competition MVP and MUST be implemented first:
+
+- Standard RAG retrieval with citations and no-evidence refusal.
+- Inspection entry to deterministic judgment using structured standards.
+- AI/rule judgment explanation with citations, conflict warnings, confidence label, and fallback behavior.
+- Concession risk assessment with structured risk fields and low-confidence manual-review gate.
+- Quality certificate Q&A by coil/batch using certificate snapshot, inspection record, judgment evidence, and standard clauses.
+- Standard conflict detection for P0 demo cases, including `STANDARD_CONFLICT` block and human裁决 path.
+- Repeatable demo data and fixed scripts for qualified, unqualified, concession, and conflict scenarios.
+
+P1 extends the platform after the MVP is stable:
+
+- AI assessment list/detail pages, confidence configuration page, PDF export, dashboard statistics polish, and broader workflow integration.
+
+P2 is explicitly optional for this change:
+
+- Advanced PDF/table parsing, external inventory/complaint system integration, production-grade certificate layout, and full analytics dashboards.
+
 ## Decisions
 
 ### 1. Keep Structured Rules As Judgment Truth
@@ -123,6 +143,19 @@ Alternatives considered:
 - Block all conflicts. Rejected because normal customer-agreement differences would stop routine production.
 - Reuse `NEED_REINSPECTION`. Rejected because it misroutes the problem to lab retesting and corrupts reinspection statistics.
 
+Conflict math:
+
+- A candidate standard is any published standard whose type/customer scope, variety, grade, specification range, and effective date window match the inspection record.
+- The selected standard is the highest-priority candidate used for deterministic judgment after conflict resolution.
+- A suppressed standard is a lower-priority candidate that also matches but is not selected because a higher-priority candidate exists.
+- A conflict standard is a candidate whose rule for the same indicator is incompatible with another applicable candidate under the rules below.
+- Numeric limit conflict exists when the same indicator and comparable unit have non-equal lower or upper limits across matching candidates.
+- Containment differences across priority levels are priority-resolvable conflicts, not blockers. Example: customer lower limit 420 MPa and national lower limit 400 MPa is marked but customer wins.
+- Same-priority numeric differences are blocking conflicts when effective windows and specification ranges overlap.
+- Unit mismatch or indicator口径 mismatch is a blocking conflict unless a configured conversion/alias rule makes the two indicators comparable.
+- Specification range conflict exists when two same-priority candidates overlap in product spec range and define incompatible limits for the overlapped range.
+- Customer agreement wider than enterprise/national standard is a risk conflict: it is priority-resolvable if the agreement is valid, but MUST be surfaced as higher-risk because it relaxes internal or national control.
+
 ### 6. Add `STANDARD_CONFLICT` As A Judgment Result
 
 Add `STANDARD_CONFLICT` to judgment enums/dictionaries/front-end mappings/statistics handling.
@@ -180,19 +213,30 @@ Rationale:
 
 ### 9. Confidence Is Configured But Rule-Weighted
 
-Confidence score is calculated as:
+Confidence MUST be explainable by a rules table before any weighted score is displayed. The weighted score remains an internal ordering aid, not proof of correctness.
 
-```text
-ruleScore * ruleWeight + ragScore * ragWeight + llmScore * llmWeight
-```
+Default component scores:
 
-Default weights:
+| Component | High | Medium | Low |
+| --- | --- | --- | --- |
+| ruleScore | All required structured standards and indicators matched; no unresolved blocking conflict; value not in edge band | Structured rules matched but value is on configured edge band, concession range, or priority-resolvable conflict exists | Missing structured rule, standard gap, same-priority conflict, or invalid input |
+| ragScore | Required source clauses found for selected standard and key abnormal indicators with score above high threshold | Some clauses found but not all key indicators or scores are between medium/high thresholds | No usable source clause, mismatched version, or retrieved clause contradicts structured rule |
+| llmScore | Output only uses supplied facts/citations and passes contradiction checks | Output is template-like/degraded or minor citation coverage gaps exist | Output contains unsupported claim, missing citation for a claim, or model unavailable without cache/template |
+
+Forced confidence bands override the weighted score:
+
+- Any unresolved `STANDARD_CONFLICT` forces low confidence.
+- Any no-standard-covering condition forces low confidence for AI explanation and blocks concession advice.
+- Structured rule complete but missing source paragraph caps confidence at medium.
+- RAG citation mismatch with structured limit caps confidence at low for generated wording, while judgment still follows structured data.
+
+Default weights remain:
 
 - rule: 0.60
 - RAG: 0.30
 - LLM: 0.10
 
-Provide a backend configuration page/API to edit weights and thresholds. Validate:
+Provide a backend configuration page/API to edit weights and thresholds, but only after rule-table banding is applied. Validate:
 
 - weights sum to 1
 - highThreshold > mediumThreshold > lowThreshold
@@ -206,17 +250,65 @@ Rationale:
 
 ### 10. Quality Certificate PDF Has Controlled Scope
 
+Quality certificate Q&A is P0. PDF output is P1 controlled output.
+
+Certificate Q&A answers questions such as:
+
+- “这批卷为什么能出证？”
+- “某指标依据是什么？”
+- “让步后质保书应该如何说明？”
+- “这个卷号当前能否生成正式质保书？”
+
+Answers MUST be grounded in certificate snapshot, inspection record, judgment evidence, concession approval state, conflict state, and cited standard clauses.
+
 PDF output includes key indicators, judgment result, AI explanation, cited sources, generation metadata, and a simple printable layout.
 
 Restrictions:
 
+- `QUALIFIED` can generate formal certificate data and PDF when required key indicators exist.
+- `UNQUALIFIED` cannot generate formal certificate; internal data view only.
+- `NEED_REINSPECTION` cannot generate formal certificate until reinspection completes and final judgment is no longer pending.
+- `CAN_CONCESSION` cannot generate formal certificate until concession approval and customer confirmation rules are satisfied.
 - `STANDARD_CONFLICT` cannot generate a formal certificate.
+- Standard gap or missing required indicator blocks formal certificate and may produce only an internal incomplete-data view.
+- Low-confidence explanation does not block a formal certificate when structured judgment is releasable, but AI wording is omitted or marked as non-authoritative.
 - Conflict states may only generate a clearly marked non-final preview.
 - Low-confidence AI certificate explanation falls back to the base data template.
 
 Rationale:
 
-- Meets competition needs without overbuilding formal document delivery.
+- Meets competition Q&A needs first without overbuilding formal document delivery.
+
+### 11. Let Rules Drive Concession Risk Before AI Wording
+
+Concession assessment MUST output structured fields before natural-language text:
+
+- `riskLevel`: LOW, MEDIUM, HIGH, or BLOCKED
+- `mustReview`: boolean
+- `missingInfo`: list
+- `suggestedConditions`: list
+- `blockingReasons`: list
+- `evidenceRefs`: list of standard/case references
+
+Baseline rules:
+
+- Safety-critical or high-forming usage plus strength/elongation deviation is at least HIGH risk.
+- Deviation within configured concession band and no complaint history can be LOW or MEDIUM depending on usage.
+- Similar historical complaint above similarity threshold raises risk at least one level.
+- Available same-spec qualified replacement stock makes concession less necessary and SHOULD add a condition to use replacement instead of concession.
+- Missing customer usage, unresolved conflict, missing concession clause, or no standard coverage sets `mustReview=true`.
+- Unresolved conflict or no standard coverage sets `riskLevel=BLOCKED`.
+
+AI is used to organize evidence and wording, not to override blocking rules.
+
+### 12. Protect STANDARD_CONFLICT From Normal Rejudgment
+
+`STANDARD_CONFLICT` is not a normal rejudgment target.
+
+- Users MUST NOT be able to select `STANDARD_CONFLICT` as a manual rejudgment target.
+- Users MUST NOT bypass conflict裁决 by rejudging a `STANDARD_CONFLICT` directly to `QUALIFIED` or `CAN_CONCESSION`.
+- `STANDARD_CONFLICT` can only be created by the judgment/conflict engine.
+- It can only be cleared by conflict裁决 followed by a system-triggered rejudge.
 
 ## Risks / Trade-offs
 
