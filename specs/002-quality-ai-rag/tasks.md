@@ -83,32 +83,32 @@ description: "Task list for 质量判定解释、让步与标准 RAG 系统（�
 
 ### 数据层
 
-- [ ] T031 [P] [US2] 创建 QcStandardDocument entity + Mapper — `backend/src/main/java/com/jhict/quality/entity/QcStandardDocument.java`
-- [ ] T032 [P] [US2] 创建 QcStandardDocumentChunk entity + Mapper（FULLTEXT 查询方法） — `backend/src/main/java/com/jhict/quality/entity/QcStandardDocumentChunk.java`
-- [ ] T033 [P] [US2] 创建 QcStandardConflict entity + Mapper — `backend/src/main/java/com/jhict/quality/entity/QcStandardConflict.java`
+- [X] T031 [P] [US2] 创建 QcStandardDocument entity + Mapper — `backend/src/main/java/com/jhict/quality/entity/QcStandardDocument.java`
+- [X] T032 [P] [US2] 创建 QcStandardDocumentChunk entity + Mapper（FULLTEXT 查询方法） — `backend/src/main/java/com/jhict/quality/entity/QcStandardDocumentChunk.java`
+- [X] T033 [P] [US2] 创建 QcStandardConflict entity + Mapper — `backend/src/main/java/com/jhict/quality/entity/QcStandardConflict.java`
 
 ### RAG 后端
 
-- [ ] T034 [US2] 实现 DocumentIngestService（Tika 解析 PDF/TXT/MD + 分段入库） — `backend/src/main/java/com/jhict/quality/ai/rag/DocumentIngestService.java`
-- [ ] T035 [US2] 实现 RagRetriever（FULLTEXT 召回 + BM25 重排） — `backend/src/main/java/com/jhict/quality/ai/rag/RagRetriever.java`
-- [ ] T036 [US2] 实现 RagService（检索→LlmClient→强制 citations / 无命中拒答） — `backend/src/main/java/com/jhict/quality/ai/rag/RagService.java`
-- [ ] T037 [US2] 实现 StandardConflictDetector（多标准同指标限值比对） — `backend/src/main/java/com/jhict/quality/ai/conflict/StandardConflictDetector.java`
-- [ ] T038 [US2] 在 JudgmentEngine 或 JudgmentService 集成冲突旁路写入 — `backend/src/main/java/com/jhict/quality/service/impl/JudgmentServiceImpl.java`
-- [ ] T039 [US2] 实现 StandardConflictService + StandardConflictServiceImpl — `backend/src/main/java/com/jhict/quality/service/impl/StandardConflictServiceImpl.java`
-- [ ] T040 [US2] 实现 RagController（POST /api/v1/rag/query、POST /api/v1/rag/ingest） — `backend/src/main/java/com/jhict/quality/controller/RagController.java`
-- [ ] T041 [US2] 实现 StandardConflictController（page/get/resolve） — `backend/src/main/java/com/jhict/quality/controller/StandardConflictController.java`
+- [X] T034 [US2] 实现 DocumentIngestService（Tika 解析 PDF/TXT/MD + 分段入库） — `backend/src/main/java/com/jhict/quality/ai/rag/DocumentIngestService.java`
+- [X] T035 [US2] 实现 RagRetriever（FULLTEXT 召回 + BM25 重排） — `backend/src/main/java/com/jhict/quality/ai/rag/RagRetriever.java`
+- [X] T036 [US2] 实现 RagService（检索→LlmClient→强制 citations / 无命中拒答） — `backend/src/main/java/com/jhict/quality/ai/rag/RagService.java`
+- [X] T037 [US2] 实现 StandardConflictDetector（多标准同指标限值比对） — `backend/src/main/java/com/jhict/quality/ai/conflict/StandardConflictDetector.java`
+- [X] T038 [US2] 在 JudgmentEngine 或 JudgmentService 集成冲突旁路写入 — `backend/src/main/java/com/jhict/quality/service/impl/JudgmentServiceImpl.java`
+- [X] T039 [US2] 实现 StandardConflictService + StandardConflictServiceImpl — `backend/src/main/java/com/jhict/quality/service/impl/StandardConflictServiceImpl.java`
+- [X] T040 [US2] 实现 RagController（POST /api/v1/rag/query、POST /api/v1/rag/ingest） — `backend/src/main/java/com/jhict/quality/controller/RagController.java`
+- [X] T041 [US2] 实现 StandardConflictController（page/get/resolve） — `backend/src/main/java/com/jhict/quality/controller/StandardConflictController.java`
 
 ### RAG 前端
 
-- [ ] T042 [P] [US2] 创建 frontend/src/api/rag.ts — `frontend/src/api/rag.ts`
-- [ ] T043 [P] [US2] 创建 frontend/src/api/standard-conflict.ts — `frontend/src/api/standard-conflict.ts`
-- [ ] T044 [US2] 实现标准 RAG 检索页（问答 + 引用高亮侧栏） — `frontend/src/views/standard-rag/index.vue`
-- [ ] T045 [US2] 实现标准冲突检测页（对比 + 裁定） — `frontend/src/views/standard-lib/conflicts.vue`
+- [X] T042 [P] [US2] 创建 frontend/src/api/rag.ts — `frontend/src/api/rag.ts`
+- [X] T043 [P] [US2] 创建 frontend/src/api/standard-conflict.ts — `frontend/src/api/standard-conflict.ts`
+- [X] T044 [US2] 实现标准 RAG 检索页（问答 + 引用高亮侧栏） — `frontend/src/views/standard-rag/index.vue`
+- [X] T045 [US2] 实现标准冲突检测页（对比 + 裁定） — `frontend/src/views/standard-lib/conflicts.vue`
 
 ### 种子数据
 
-- [ ] T046 [US2] 入库 20 份标准/协议文档并生成 chunk — `backend/scripts/V2__ai_demo_data.sql`
-- [ ] T047 [US2] 预置 5 条标准冲突样例（demo_flag=1） — `backend/scripts/V2__ai_demo_data.sql`
+- [X] T046 [US2] 入库 20 份标准/协议文档并生成 chunk — `backend/scripts/V2__ai_demo_data.sql`
+- [X] T047 [US2] 预置 5 条标准冲突样例（demo_flag=1） — `backend/scripts/V2__ai_demo_data.sql`
 
 **Checkpoint**: RAG 问答可溯源；冲突 5 条可检出；超范围问题拒答
 

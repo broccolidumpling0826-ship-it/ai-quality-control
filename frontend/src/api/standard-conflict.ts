@@ -1,4 +1,4 @@
-import { get, put } from '@/utils/request'
+import { get, post } from '@/utils/request'
 import type { PageResult } from '@/types'
 import type { Citation } from '@/api/rag'
 
@@ -43,10 +43,10 @@ export interface StandardConflictResolveCmd {
 }
 
 export const pageStandardConflicts = (params: StandardConflictPageQuery) =>
-  get<PageResult<StandardConflictItem>>('/standard-conflicts/page', params as Record<string, unknown>)
+  get<PageResult<StandardConflictItem>>('/standard-conflicts', params as Record<string, unknown>)
 
 export const getStandardConflict = (id: string) =>
   get<StandardConflictDetail>(`/standard-conflicts/${id}`)
 
 export const resolveStandardConflict = (id: string, data: StandardConflictResolveCmd) =>
-  put(`/standard-conflicts/${id}/resolve`, data)
+  post(`/standard-conflicts/${id}/resolve`, data)

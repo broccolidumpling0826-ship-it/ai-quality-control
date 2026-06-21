@@ -88,27 +88,34 @@
               <span>文档入库</span>
             </div>
           </template>
-          <el-upload
-            drag
-            :auto-upload="false"
-            :limit="1"
-            accept=".pdf,.txt,.md"
-            :on-change="handleFileChange"
-            :on-remove="handleFileRemove"
-            :file-list="uploadFileList"
-          >
-            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-            <div class="el-upload__text">拖拽 PDF/TXT/MD 到此处，或 <em>点击上传</em></div>
-          </el-upload>
-          <el-button
-            type="success"
-            style="margin-top:12px"
-            :loading="ingestLoading"
-            :disabled="!uploadFile"
-            @click="handleIngest"
-          >
-            解析入库
-          </el-button>
+          <el-form :model="ingestForm" label-width="80px" size="small">
+            <el-form-item label="标准 ID">
+              <el-input v-model="ingestForm.standardId" placeholder="如 STD-001" clearable />
+            </el-form-item>
+            <el-form-item label="文件路径">
+              <el-input v-model="ingestForm.filePath" placeholder="服务端文件路径，如 seed-documents/gb-t-700.md" clearable />
+            </el-form-item>
+            <el-form-item label="显示名称">
+              <el-input v-model="ingestForm.fileName" placeholder="留空则取路径文件名" clearable />
+            </el-form-item>
+            <el-form-item>
+              <el-button
+                type="success"
+                :loading="ingestLoading"
+                :disabled="!ingestForm.standardId || !ingestForm.filePath"
+                @click="handleIngest"
+              >
+                解析入库
+              </el-button>
+            </el-form-item>
+          </el-form>
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+            title="支持 PDF / TXT / MD，文件需预先上传至服务器指定目录"
+            style="margin-top:4px"
+          />
         </el-card>
       </el-col>
 
@@ -156,12 +163,11 @@
 <script setup lang="ts">
 import { ref, reactive, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { UploadFile } from 'element-plus'
 import {
-  ChatDotRound, Document, Upload, UploadFilled, Loading
+  ChatDotRound, Document, Upload, Loading
 } from '@element-plus/icons-vue'
 import { useDictStore } from '@/store/dict'
-import { queryRag, ingestRagDocument, type Citation, type RagQueryResult } from '@/api/rag'
+import { queryRag, ingestDocument, type Citation, type RagQueryResult } from '@/api/rag'
 
 const dictStore = useDictStore()
 
@@ -184,8 +190,7 @@ const chatAreaRef = ref<HTMLElement>()
 const activeCitations = ref<Citation[]>([])
 const selectedCitation = ref<Citation | null>(null)
 
-const uploadFile = ref<File | null>(null)
-const uploadFileList = ref<UploadFile[]>([])
+const ingestForm = reactive({ standardId: '', filePath: '', fileName: '' })
 const ingestLoading = ref(false)
 
 function truncate(text: string, len: number) {
@@ -223,7 +228,7 @@ async function handleQuery() {
     })
     const content = res.found
       ? (res.answer || '未找到有效回答')
-      : (res.message || '未找到相关信息，无法给出结论')
+      : '未找到相关信息，无法给出结论'
     messages.value.push({
       role: 'assistant',
       content,
@@ -243,24 +248,18 @@ async function handleQuery() {
   }
 }
 
-function handleFileChange(file: UploadFile) {
-  uploadFile.value = file.raw || null
-}
-
-function handleFileRemove() {
-  uploadFile.value = null
-}
-
 async function handleIngest() {
-  if (!uploadFile.value) return
+  if (!ingestForm.standardId || !ingestForm.filePath) return
   ingestLoading.value = true
   try {
-    const fd = new FormData()
-    fd.append('file', uploadFile.value)
-    const res = await ingestRagDocument(fd)
+    const res = await ingestDocument({
+      standardId: ingestForm.standardId,
+      filePath: ingestForm.filePath,
+      fileName: ingestForm.fileName || undefined
+    })
     ElMessage.success(`文档入库成功，共 ${res.chunkCount ?? 0} 个段落`)
-    uploadFile.value = null
-    uploadFileList.value = []
+    ingestForm.filePath = ''
+    ingestForm.fileName = ''
   } finally {
     ingestLoading.value = false
   }
@@ -399,11 +398,6 @@ async function handleIngest() {
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 6px;
-}
-
-.ingest-card :deep(.el-upload-dragger) {
-  background: var(--bg-card);
-  border-color: var(--border);
 }
 
 .citation-panel {

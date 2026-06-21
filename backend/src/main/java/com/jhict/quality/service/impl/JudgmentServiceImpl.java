@@ -13,6 +13,7 @@ import com.jhict.quality.dto.QcJudgmentPageQuery;
 import com.jhict.quality.engine.model.JudgmentOutput;
 import com.jhict.quality.entity.*;
 import com.jhict.quality.mapper.*;
+import com.jhict.quality.ai.conflict.StandardConflictDetector;
 import com.jhict.quality.service.api.JudgmentService;
 import com.jhict.quality.service.api.NotificationService;
 import com.jhict.quality.entity.SysUser;
@@ -72,6 +73,9 @@ public class JudgmentServiceImpl implements JudgmentService {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private StandardConflictDetector standardConflictDetector;
 
     /** 懒注入，避免循环依赖 */
     @Lazy
@@ -156,9 +160,37 @@ public class JudgmentServiceImpl implements JudgmentService {
             }
         }
 
+        // Step 4: 冲突旁路写入（多标准命中时检测同指标限值冲突）
+        runConflictDetection(recordId, output.getMatchedStandardIds());
+
         log.info("保存判定结论成功，judgmentId={}, recordId={}, type={}",
                 judgmentId, recordId, output.getJudgmentType());
         return judgmentResult;
+    }
+
+    /**
+     * 多标准同指标限值冲突旁路检测：
+     * - 仅当命中 ≥2 个标准时触发
+     * - 新冲突写入 qc_standard_conflict（PENDING），已存在的跳过
+     * - 失败不阻断主判定事务（catch 后 warn 日志）
+     */
+    private void runConflictDetection(String recordId, List<String> matchedStandardIds) {
+        if (matchedStandardIds == null || matchedStandardIds.size() < 2) {
+            return;
+        }
+        try {
+            QcInspectionRecord record = inspectionRecordMapper.selectById(recordId);
+            if (record == null) {
+                log.warn("冲突检测跳过：未找到检验记录 recordId={}", recordId);
+                return;
+            }
+            List<QcStandardConflict> conflicts = standardConflictDetector.detectAndPersist(record, matchedStandardIds);
+            if (!conflicts.isEmpty()) {
+                log.info("冲突旁路写入完成，recordId={}，检出冲突数={}", recordId, conflicts.size());
+            }
+        } catch (Exception e) {
+            log.warn("冲突旁路检测异常，不影响判定主流程，recordId={}，error={}", recordId, e.getMessage());
+        }
     }
 
     @Override
