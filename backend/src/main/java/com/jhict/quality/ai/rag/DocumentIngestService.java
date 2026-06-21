@@ -15,6 +15,8 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -51,7 +53,12 @@ public class DocumentIngestService {
         String fileType = detectFileType(resolvedName);
         String text;
         try {
-            text = tika.parseToString(file);
+            if ("MD".equals(fileType) || "TXT".equals(fileType)) {
+                // 纯文本/Markdown 直接按 UTF-8 读取，避免 Tika 自动编码检测误判中文
+                text = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            } else {
+                text = tika.parseToString(file);
+            }
         } catch (Exception e) {
             throw new ServiceException("文档解析失败：" + e.getMessage());
         }
