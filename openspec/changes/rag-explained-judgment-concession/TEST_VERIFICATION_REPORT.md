@@ -18,7 +18,7 @@
 
 | 层级 | 初测结果 | 终轮复测结果 | 说明 |
 | --- | --- | --- | --- |
-| 单元测试 | 15/15 通过 | **22/22 通过** | 新增 `JudgmentExplainConstantsTest`、`ProductSpecMatchUtilsTest` |
+| 单元测试 | 15/15 通过 | **24/24 通过** | 新增 `ExcelTableSourceDocumentTextExtractorTest`、`ImageVisionSourceDocumentTextExtractorTest` 等 |
 | 评估 fixture 校验 | 30/30 结构合法 | **30/30 结构合法** | `run-evaluation.mjs` validation.passed=true |
 | 模块 API 验证 | 21/25 通过 | **21/25 通过** | 修复后 CR-01/CF-03/PDF/RAG-01 恢复；4 项仍为 FAIL（见 §1.1） |
 | evaluation-cases 实跑 | 7/30 严格匹配 | **7/30**（未重跑） | 初测产物见 `evaluation-actual-results.json`；inspection 类用例脚本未实现 |
@@ -263,13 +263,48 @@ node ../openspec/changes/rag-explained-judgment-concession/evaluation/run-live-e
 | --- | --- |
 | StandardRagServiceImplTest | B-RAG 拒绝/注入/降级 |
 | StandardClauseChunkerTest | B-RAG 切块 |
+| ExcelTableSourceDocumentTextExtractorTest | 多格式 Excel 行提取 |
+| ImageVisionSourceDocumentTextExtractorTest | Vision OCR extractor（Mock ModelGateway） |
 | StandardCompareUtilsTest | C-冲突比对 |
 | StandardServiceImplCandidateTest | C-候选标准 |
 | MenuServiceImplTest | K-菜单 |
 | JudgmentExplainConstantsTest | E-让步 triggerRule 识别 |
 | ProductSpecMatchUtilsTest | E-让步 / 替代库存规格匹配 |
 
-**合计**：22 个测试，0 失败（2026-06-21 终轮 `mvn test` BUILD SUCCESS）。
+**合计**：24 个测试，0 失败（2026-06-22 多格式源文件迭代 `mvn test` BUILD SUCCESS）。
+
+---
+
+## 8. 多格式标准源文件（§14，2026-06-22）
+
+| 检查项 | 结果 | 说明 |
+| --- | --- | --- |
+| OpenSpec validate --strict | **通过** | `standard-source-file-management` / `standard-rag-retrieval` 已扩展 |
+| 上传白名单 pdf/xlsx/xls/png/jpg/jpeg | **已实现** | `StandardSourceFileStorageService.validateSourceFile` |
+| Vision OCR 配置 | **已实现** | `app.ai.model.vision` → `deepseek-ai/DeepSeek-OCR` |
+| Excel 行提取单测 | **通过** | `ExcelTableSourceDocumentTextExtractorTest` |
+| Vision extractor 单测 | **通过** | Mock `ModelGateway.extractImageText` |
+| 前端多格式 accept/文案 | **已实现** | `standard-lib/index.vue` |
+| 演示资产 | **已生成** | `mock-standard-table-q345b.xlsx`、`mock-standard-scan-q235b.png` |
+| Excel 上传→发布→ES E2E | **通过** | 2026-06-22 API 抽验：`2068753666513022978` 上传 xlsx → `INDEXED`（1 chunk）→ ES `documentId=2068753762772299777` → RAG 回答 ReL 345 MPa |
+| 图片 OCR 上传→发布→ES E2E | **待手工** | 依赖 Vision API 与外网；见 `DEMO_OPERATION_MANUAL.md` §10.5 |
+
+**重启提示**：本地 `mvn spring-boot:run` 进程需重启后，多格式上传与 Vision OCR 配置才会生效。
+
+## 9. 一标准多源文件（OpenSpec §15）
+
+| 检查项 | 结果 | 说明 |
+| --- | --- | --- |
+| OpenSpec validate --strict | **通过** | `standard-source-file-management` 已从 one-file 改为 multi-file |
+| 配置 `max-files-per-standard=10` | **通过** | `application.yml` / `application-dev.yml` |
+| 后端多文件 API | **通过** | `GET/POST /source-files`、`DELETE/GET /source-files/{documentId}`、`POST .../reindex`、`POST .../reindex-all`；legacy `/source-file` 兼容 |
+| 发布批量 ingest | **通过** | `publishStandard` 返回 `sourceDocuments` / `sourceIngests` |
+| 前端源文件表格 | **通过** | `standard-lib/index.vue` 支持新增/下载/删除/单文件与全部重索引 |
+| RAG 引用源文件名 | **通过** | ES 索引字段 `sourceFileName`；`StandardRagSourceVO` 与 RAG 页面展示 |
+| `mvn test` / `npm run build` | **通过** | 2026-06-22 本地自动化 |
+| E2E PDF+Excel 并存 | **通过** | 2026-06-22：`2068760136860192769` 上传 PDF(7 chunks)+xlsx(1 chunk) → 发布 `sourceIngests=2` → ES 两个 `documentId` → RAG 双源文件名命中 |
+
+实现以 OpenSpec 为准，见 [`MULTI_SOURCE_FILES_PROPOSAL.md`](MULTI_SOURCE_FILES_PROPOSAL.md)。
 
 ---
 

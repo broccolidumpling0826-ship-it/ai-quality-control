@@ -13,7 +13,6 @@ public class OfficeSourceDocumentTextExtractor implements SourceDocumentTextExtr
     @Override
     public boolean supports(String fileType) {
         return "doc".equals(fileType) || "docx".equals(fileType)
-                || "xls".equals(fileType) || "xlsx".equals(fileType)
                 || "ppt".equals(fileType) || "pptx".equals(fileType);
     }
 

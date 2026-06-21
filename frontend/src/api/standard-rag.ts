@@ -21,6 +21,7 @@ export interface RagSource {
   clauseNo?: string
   pageNo?: number
   paragraphText?: string
+  sourceFileName?: string
   score?: number
   referenceOnly?: boolean
 }

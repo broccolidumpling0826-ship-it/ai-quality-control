@@ -145,25 +145,67 @@ Rationale:
 - Lightweight NLP sentence segmentation can improve fallback splitting without introducing a new model dependency.
 - RAG chunks remain evidence for retrieval and explanation; structured standard tables remain the judgment truth.
 
-### 3B. Standard Maintenance PDF Upload And Publish-Triggered Ingestion
+### 3B. Standard Maintenance Multi-Format Source Upload And Publish-Triggered Ingestion
 
-Standard maintenance integrates structured standards with one linked source document:
+Standard maintenance integrates structured standards with **one or more** linked source documents:
 
 1. User saves structured standard metadata and indicators in the standard library page.
-2. User uploads one PDF per standard; the file is stored under `backend/resources/standard-documents/{standardId}/`.
-3. Backend upserts `qc_standard_document` with `standard_id`, source file metadata, and `parse_status/index_status`.
-4. Draft upload/replace stores the file only and resets parse/index status to pending.
-5. Publish triggers `ingestAndIndexDocument` for the linked PDF using PDFBox + rule-based chunking + embedding + ES.
-6. Published replace purges prior clause rows and ES vectors, stores the new PDF, and re-indexes immediately.
-7. Delete standard removes stored PDF, document metadata, clause rows, and ES vectors.
+2. User may upload multiple source files per standard (`pdf`, `xlsx`, `xls`, `png`, `jpg`, `jpeg`); each file is stored under `backend/resources/standard-documents/{standardId}/` with a `documentId`-scoped path.
+3. Backend creates one `qc_standard_document` row per uploaded file with `standard_id`, source file metadata, and independent `parse_status/index_status`.
+4. Draft upload stores files only; no ES write until publish.
+5. Publish triggers ingestion for **each linked file that has an uploaded source path**, using the format-specific extractor + rule-based chunking + embedding + ES.
+6. Adding or deleting one file on a published standard purges/re-indexes **only that documentId**; other linked files remain unchanged.
+7. Delete standard removes all stored source files, document metadata, clause rows, and ES vectors.
 
-Publish success is not rolled back when indexing fails; the UI exposes index failure and supports manual re-index.
+Publish success is not rolled back when one file fails indexing; the UI exposes per-file failure and supports per-file or all-file re-index.
 
 Rationale:
 
 - Structured indicators remain editable before publish.
-- Draft PDFs should not pollute RAG retrieval.
-- Re-upload must not leave stale vectors in Elasticsearch.
+- Draft source files should not pollute RAG retrieval.
+- Multiple evidence sources (PDF body + Excel limits + scan attachment) are common in real standard packs.
+- Re-upload or delete must not leave stale vectors in Elasticsearch for the affected document only.
+
+### 3C. Multi-Format Extraction And Vision OCR
+
+Format-specific extraction for standard maintenance source files:
+
+| Format | Extractor | Notes |
+| --- | --- | --- |
+| `pdf` | Apache PDFBox | Deterministic text + page numbers |
+| `xlsx` / `xls` | Apache POI row-oriented extractor | Sheet/row text blocks for chunking |
+| `png` / `jpg` / `jpeg` | `ModelGateway.extractImageText` | SiliconFlow `deepseek-ai/DeepSeek-OCR` by default |
+
+Vision OCR configuration lives under `app.ai.model.vision` and reuses the chat gateway base URL/API key. OCR output is reference-only evidence; it must not override structured indicator limits.
+
+When Vision is disabled or the provider fails, image source indexing fails visibly while publish remains successful; users can retry re-index after restoring Vision.
+
+### 3D. Multiple Source Files Per Standard (One-To-Many Documents)
+
+Data model uses existing `qc_standard_document.standard_id` without a uniqueness constraint. Each uploaded file gets its own document row and `documentId`.
+
+Storage layout:
+
+```text
+backend/resources/standard-documents/{standardId}/{documentId}_{safeFileName}
+```
+
+Key behaviors:
+
+| Topic | Decision |
+| --- | --- |
+| Max files | Default 10 per standard via `app.standard-document.max-files-per-standard` |
+| Same format duplicates | Allowed; distinguished by `documentId` and file name |
+| Publish ingest | Ingest every linked file with an uploaded path; return per-file ingest results |
+| Add on published | Create new row + ingest new file only |
+| Delete one file | Delete file + purge clauses/vectors for that `documentId` only |
+| Reindex | Per-file reindex endpoint plus optional reindex-all |
+| Document code uniqueness | Each row uses a unique `document_code` derived from standard code + document id |
+| Legacy API | Singular `/source-file` endpoints remain compatible for one release cycle |
+
+Frontend standard maintenance shows a **source file list** with add/download/delete/reindex actions instead of a single replace-only upload control.
+
+RAG citations SHOULD include source file name so reviewers can tell PDF clauses from Excel rows or OCR text.
 
 ### 4. Implement Consistency Checks Without Blocking All Workflows
 

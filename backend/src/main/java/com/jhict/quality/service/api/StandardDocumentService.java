@@ -13,96 +13,75 @@ import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardDocumentVO;
 import com.jhict.quality.vo.StandardSourceDocumentVO;
 
+import java.util.Collection;
 import java.util.List;
 
-/**
- * Service API for source standard documents and RAG clauses.
- */
 public interface StandardDocumentService {
 
-    /**
-     * Page source documents for standard/agreement/case retrieval.
-     *
-     * @param query page query
-     * @return document page
-     */
     IPage<StandardDocumentVO> pageDocuments(StandardDocumentPageQuery query);
 
-    /**
-     * Get one source document by id.
-     *
-     * @param id source document id
-     * @return document details
-     */
     StandardDocumentVO getDocumentById(String id);
 
-    /**
-     * Page source clauses for RAG retrieval and citation display.
-     *
-     * @param query clause page query
-     * @return clause page
-     */
     IPage<StandardClauseVO> pageClauses(StandardClausePageQuery query);
 
-    /**
-     * Get one source clause by id.
-     *
-     * @param id clause id
-     * @return clause details
-     */
     StandardClauseVO getClauseById(String id);
 
-    /**
-     * List clauses by ids while preserving only existing rows.
-     *
-     * @param clauseIds clause ids
-     * @return clause details
-     */
     List<StandardClauseVO> listClausesByIds(List<String> clauseIds);
 
-    /**
-     * Index prepared clauses into the vector store for demo/RAG retrieval.
-     *
-     * @param cmd indexing command
-     * @return vector indexing response
-     */
     VectorIndexResponse indexPreparedClauses(PreparedClauseIndexCmd cmd);
 
-    /**
-     * Extract, chunk, embed, and index one source document.
-     *
-     * @param cmd ingestion command
-     * @return ingestion summary
-     */
     StandardDocumentIngestVO ingestAndIndexDocument(StandardDocumentIngestCmd cmd);
 
-    /**
-     * Find linked source document by structured standard id.
-     */
-    QcStandardDocument getLinkedDocument(String standardId);
+    List<QcStandardDocument> listLinkedDocuments(String standardId);
 
-    /**
-     * Create or update linked source document metadata from structured standard.
-     */
-    QcStandardDocument syncLinkedDocument(QcQualityStandard standard);
+    QcStandardDocument getLinkedDocument(String standardId, String documentId);
 
-    /**
-     * Remove linked document clauses, vectors, metadata, and stored files.
-     */
+    QcStandardDocument createLinkedDocumentForUpload(QcQualityStandard standard);
+
+    void syncLinkedDocumentsMetadata(QcQualityStandard standard);
+
     void removeLinkedDocument(String standardId);
 
-    /**
-     * Purge indexed clauses and vectors for the linked document.
-     */
-    void purgeLinkedVectors(String standardId);
+    void removeLinkedDocumentFile(String standardId, String documentId);
 
-    /**
-     * Ingest linked PDF for a published standard.
-     */
-    StandardDocumentIngestVO ingestLinkedDocument(String standardId);
+    void purgeDocumentVectors(String documentId);
 
-    /**
-     * Build source document summary for standard detail page.
-     */
+    StandardDocumentIngestVO ingestDocument(String documentId);
+
+    List<StandardDocumentIngestVO> ingestAllLinkedDocuments(String standardId);
+
+    StandardSourceDocumentVO buildSourceDocumentSummary(QcStandardDocument document);
+
+    List<StandardSourceDocumentVO> listSourceDocumentSummaries(String standardId);
+
     StandardSourceDocumentVO buildSourceDocumentSummary(String standardId);
+
+    int countLinkedSourceFiles(String standardId);
+
+    List<QcStandardDocument> listDocumentsByIds(Collection<String> documentIds);
+
+    /** @deprecated use {@link #listLinkedDocuments(String)} */
+    default QcStandardDocument getLinkedDocument(String standardId) {
+        List<QcStandardDocument> documents = listLinkedDocuments(standardId);
+        return documents.isEmpty() ? null : documents.get(documents.size() - 1);
+    }
+
+    /** @deprecated use {@link #syncLinkedDocumentsMetadata(QcQualityStandard)} */
+    default QcStandardDocument syncLinkedDocument(QcQualityStandard standard) {
+        syncLinkedDocumentsMetadata(standard);
+        return getLinkedDocument(standard.getId());
+    }
+
+    /** @deprecated use {@link #purgeDocumentVectors(String)} per document */
+    default void purgeLinkedVectors(String standardId) {
+        for (QcStandardDocument document : listLinkedDocuments(standardId)) {
+            purgeDocumentVectors(document.getId());
+        }
+    }
+
+    /** @deprecated use {@link #ingestAllLinkedDocuments(String)} */
+    default StandardDocumentIngestVO ingestLinkedDocument(String standardId) {
+        List<StandardDocumentIngestVO> results = ingestAllLinkedDocuments(standardId);
+        return results.isEmpty() ? null : results.get(0);
+    }
 }

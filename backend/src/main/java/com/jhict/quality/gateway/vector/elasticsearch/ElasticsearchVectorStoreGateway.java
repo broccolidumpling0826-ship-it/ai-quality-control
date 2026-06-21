@@ -203,6 +203,7 @@ public class ElasticsearchVectorStoreGateway implements VectorStoreGateway {
         body.put("effectiveDate", clause.getEffectiveDate());
         body.put("expiryDate", clause.getExpiryDate());
         body.put("retrievalKeywords", clause.getRetrievalKeywords());
+        body.put("sourceFileName", clause.getSourceFileName());
         if (!CollectionUtils.isEmpty(clause.getEmbedding())) {
             body.put("embedding", clause.getEmbedding());
         }
@@ -313,6 +314,7 @@ public class ElasticsearchVectorStoreGateway implements VectorStoreGateway {
                         .grade(source.path("grade").asText(null))
                         .indicatorCode(source.path("indicatorCode").asText(null))
                         .indicatorName(source.path("indicatorName").asText(null))
+                        .sourceFileName(source.path("sourceFileName").asText(null))
                         .build());
             }
         }

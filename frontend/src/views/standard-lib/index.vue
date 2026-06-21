@@ -346,38 +346,71 @@
           </el-col>
         </el-row>
 
-        <el-divider content-position="left">标准源 PDF</el-divider>
+        <el-divider content-position="left">标准源文件</el-divider>
         <div class="source-file-panel">
-          <el-descriptions v-if="sourceDocument.hasSourceFile" :column="2" border size="small">
-            <el-descriptions-item label="文件名">{{ sourceDocument.sourceFileName }}</el-descriptions-item>
-            <el-descriptions-item label="解析状态">{{ sourceDocument.parseStatus || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="索引状态">{{ sourceDocument.indexStatus || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="条款数">{{ sourceDocument.chunkCount ?? 0 }}</el-descriptions-item>
-            <el-descriptions-item v-if="sourceDocument.parseErrorMessage" label="错误信息" :span="2">
-              {{ sourceDocument.parseErrorMessage }}
-            </el-descriptions-item>
-          </el-descriptions>
-          <el-empty v-else description="尚未上传标准源 PDF" :image-size="64" />
-          <div class="source-file-actions" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <el-table
+            v-if="sourceDocuments.length"
+            :data="sourceDocuments"
+            border
+            size="small"
+            style="width:100%"
+          >
+            <el-table-column label="文件名" min-width="180" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.sourceFileName || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="类型" width="80">
+              <template #default="{ row }">{{ sourceFileTypeLabel(row.sourceFileName) }}</template>
+            </el-table-column>
+            <el-table-column label="解析" width="90">
+              <template #default="{ row }">{{ row.parseStatus || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="索引" width="90">
+              <template #default="{ row }">{{ row.indexStatus || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="条款数" width="72" align="center">
+              <template #default="{ row }">{{ row.chunkCount ?? 0 }}</template>
+            </el-table-column>
+            <el-table-column v-if="drawerMode !== 'view'" label="操作" width="220" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="handleSourceDownload(row)">下载</el-button>
+                <el-button
+                  v-if="formData.status === 'PUBLISHED'"
+                  link
+                  type="warning"
+                  size="small"
+                  :loading="sourceReindexDocumentId === row.documentId"
+                  @click="handleSourceReindex(row)"
+                >
+                  重索引
+                </el-button>
+                <el-button link type="danger" size="small" @click="handleSourceDelete(row)">删除</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column v-else label="操作" width="80" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="handleSourceDownload(row)">下载</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="尚未上传标准源文件" :image-size="64" />
+          <div class="source-file-actions" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <el-upload
               v-if="drawerMode !== 'view' && formData.id"
               :show-file-list="false"
-              accept=".pdf,application/pdf"
+              accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg"
               :http-request="handleSourceUpload"
             >
-              <el-button type="primary" :loading="sourceUploadLoading">
-                {{ sourceDocument.hasSourceFile ? '重传 PDF' : '上传 PDF' }}
-              </el-button>
+              <el-button type="primary" :loading="sourceUploadLoading">新增源文件</el-button>
             </el-upload>
-            <el-button v-if="sourceDocument.hasSourceFile" @click="handleSourceDownload">下载 PDF</el-button>
             <el-button
-              v-if="formData.status === 'PUBLISHED' && sourceDocument.hasSourceFile && drawerMode !== 'view'"
+              v-if="formData.status === 'PUBLISHED' && sourceDocuments.length && drawerMode !== 'view'"
               type="warning"
-              :loading="sourceReindexLoading"
-              @click="handleSourceReindex"
+              :loading="sourceReindexAllLoading"
+              @click="handleSourceReindexAll"
             >
-              重新索引
+              全部重索引
             </el-button>
+            <span v-if="sourceDocuments.length" class="text-meta">已上传 {{ sourceDocuments.length }} / 10</span>
           </div>
           <el-alert
             v-if="drawerMode === 'add'"
@@ -385,7 +418,7 @@
             :closable="false"
             show-icon
             style="margin-top:8px"
-            title="请先保存标准后再上传 PDF。"
+            title="请先保存标准后再上传源文件。每个标准最多 10 个文件，支持 PDF、Excel（xlsx/xls）、图片（png/jpg/jpeg）。"
           />
         </div>
 
@@ -523,7 +556,9 @@ import {
   getStandardById,
   uploadStandardSourceFile,
   downloadStandardSourceFile,
+  deleteStandardSourceFile,
   reindexStandardSourceFile,
+  reindexAllStandardSourceFiles,
   type StandardSourceDocumentSummary
 } from '@/api/standard'
 import { listActiveIndicators } from '@/api/indicator'
@@ -602,16 +637,31 @@ const formData = reactive(defaultForm())
 const indicatorOptions = ref<IndicatorOption[]>([])
 const indicatorOptionsLoading = ref(false)
 
-const defaultSourceDocument = (): StandardSourceDocumentSummary => ({
-  hasSourceFile: false,
-  chunkCount: 0
-})
-const sourceDocument = reactive<StandardSourceDocumentSummary>(defaultSourceDocument())
+const sourceDocuments = ref<StandardSourceDocumentSummary[]>([])
 const sourceUploadLoading = ref(false)
-const sourceReindexLoading = ref(false)
+const sourceReindexDocumentId = ref('')
+const sourceReindexAllLoading = ref(false)
 
-function applySourceDocument(detail?: StandardSourceDocumentSummary) {
-  Object.assign(sourceDocument, defaultSourceDocument(), detail || {})
+function applySourceDocuments(list?: StandardSourceDocumentSummary[]) {
+  sourceDocuments.value = (list || []).filter((item) => item.hasSourceFile !== false)
+}
+
+async function reloadSourceDocuments(standardId: string) {
+  try {
+    const detail = await getStandardById(standardId) as any
+    applySourceDocuments(detail.sourceDocuments)
+  } catch {
+    // handled by request interceptor
+  }
+}
+
+function sourceFileTypeLabel(fileName?: string) {
+  if (!fileName) return '-'
+  const ext = fileName.includes('.') ? fileName.split('.').pop()?.toLowerCase() : ''
+  if (ext === 'pdf') return 'PDF'
+  if (ext === 'xlsx' || ext === 'xls') return 'Excel'
+  if (ext === 'png' || ext === 'jpg' || ext === 'jpeg') return '图片'
+  return ext ? ext.toUpperCase() : '-'
 }
 
 const isCustomerStandard = computed(() => formData.standardType === 'CUSTOMER')
@@ -810,17 +860,17 @@ async function openDrawer(mode: 'add' | 'edit' | 'view', row?: any) {
   await Promise.all([loadIndicatorOptions(), loadCustomerOptions()])
   if (mode === 'add') {
     Object.assign(formData, defaultForm())
-    applySourceDocument()
+    applySourceDocuments()
   } else if (row) {
     try {
       const detail = await getStandardById(row.id) as any
       const indicators = await enrichIndicators(detail.indicators || [])
       Object.assign(formData, mapStandardForm(detail), { indicators })
-      applySourceDocument(detail.sourceDocument)
+      applySourceDocuments(detail.sourceDocuments)
     } catch {
       const indicators = await enrichIndicators(row.indicators || [])
       Object.assign(formData, mapStandardForm(row), { indicators })
-      applySourceDocument()
+      applySourceDocuments()
     }
   }
   drawerVisible.value = true
@@ -917,7 +967,13 @@ async function confirmPublish() {
   try {
     const result = await publishStandard(publishTarget.value.id) as any
     const ingestError = result?.sourceIngestError
-    ElMessage.success(ingestError ? `标准发布成功，但源 PDF 索引失败：${ingestError}` : '标准发布成功')
+    const ingests = (result?.sourceIngests || []) as Array<{ documentId?: string; chunkCount?: number; indexStatus?: string }>
+    let msg = ingestError ? `标准发布成功，但部分源文件索引失败：${ingestError}` : '标准发布成功'
+    if (ingests.length) {
+      const summary = ingests.map((item) => `${item.documentId || '-'}:${item.indexStatus || '-'}(${item.chunkCount ?? 0})`).join('；')
+      msg += `；源文件索引：${summary}`
+    }
+    ElMessage.success(msg)
     publishDialogVisible.value = false
     loadData()
   } finally {
@@ -927,24 +983,24 @@ async function confirmPublish() {
 
 async function handleSourceUpload(options: UploadRequestOptions) {
   if (!formData.id) {
-    ElMessage.warning('请先保存标准后再上传 PDF')
+    ElMessage.warning('请先保存标准后再上传源文件')
     return
   }
   sourceUploadLoading.value = true
   try {
-    const result = await uploadStandardSourceFile(formData.id, options.file as File)
-    applySourceDocument(result)
-    ElMessage.success('PDF 上传成功')
+    await uploadStandardSourceFile(formData.id, options.file as File)
+    await reloadSourceDocuments(formData.id)
+    ElMessage.success('源文件上传成功')
   } finally {
     sourceUploadLoading.value = false
   }
 }
 
-async function handleSourceDownload() {
-  if (!formData.id) return
+async function handleSourceDownload(row: StandardSourceDocumentSummary) {
+  if (!formData.id || !row.documentId) return
   try {
-    const blob = await downloadStandardSourceFile(formData.id)
-    const fileName = sourceDocument.sourceFileName || 'standard-source.pdf'
+    const blob = await downloadStandardSourceFile(formData.id, row.documentId)
+    const fileName = row.sourceFileName || 'standard-source.bin'
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = fileName
@@ -955,16 +1011,47 @@ async function handleSourceDownload() {
   }
 }
 
-async function handleSourceReindex() {
-  if (!formData.id) return
-  sourceReindexLoading.value = true
+async function handleSourceDelete(row: StandardSourceDocumentSummary) {
+  if (!formData.id || !row.documentId) return
   try {
-    await reindexStandardSourceFile(formData.id)
-    const detail = await getStandardById(formData.id) as any
-    applySourceDocument(detail.sourceDocument)
+    await ElMessageBox.confirm(`确定删除源文件「${row.sourceFileName || row.documentId}」？`, '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+  } catch {
+    return
+  }
+  try {
+    await deleteStandardSourceFile(formData.id, row.documentId)
+    await reloadSourceDocuments(formData.id)
+    ElMessage.success('源文件已删除')
+  } catch {
+    // handled by request interceptor
+  }
+}
+
+async function handleSourceReindex(row: StandardSourceDocumentSummary) {
+  if (!formData.id || !row.documentId) return
+  sourceReindexDocumentId.value = row.documentId
+  try {
+    await reindexStandardSourceFile(formData.id, row.documentId)
+    await reloadSourceDocuments(formData.id)
     ElMessage.success('重新索引完成')
   } finally {
-    sourceReindexLoading.value = false
+    sourceReindexDocumentId.value = ''
+  }
+}
+
+async function handleSourceReindexAll() {
+  if (!formData.id) return
+  sourceReindexAllLoading.value = true
+  try {
+    await reindexAllStandardSourceFiles(formData.id)
+    await reloadSourceDocuments(formData.id)
+    ElMessage.success('全部源文件重新索引完成')
+  } finally {
+    sourceReindexAllLoading.value = false
   }
 }
 

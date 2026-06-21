@@ -16,6 +16,9 @@ public class StandardSourceDocumentVO {
     @ApiModelProperty(value = "原始文件名")
     private String sourceFileName;
 
+    @ApiModelProperty(value = "源文件类型扩展名")
+    private String sourceFileType;
+
     @ApiModelProperty(value = "解析状态")
     private String parseStatus;
 

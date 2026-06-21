@@ -61,6 +61,8 @@ public class VectorClauseDocument {
 
     private String retrievalKeywords;
 
+    private String sourceFileName;
+
     private List<Double> embedding;
 
     private Map<String, Object> metadata;

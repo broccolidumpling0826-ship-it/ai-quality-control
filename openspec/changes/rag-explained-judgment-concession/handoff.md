@@ -20,6 +20,11 @@ Backend runtime:
 | `AI_MODEL_THINKING_ENABLED` | Enable provider reasoning/thinking mode when supported | `false` |
 | `AI_MODEL_REASONING_EFFORT` | Provider reasoning effort when supported | `high` |
 | `AI_MODEL_TIMEOUT_MILLIS` | Chat model timeout | `15000` |
+| `AI_VISION_ENABLED` | Enable Vision OCR for image source files | `true` in dev |
+| `AI_VISION_MODEL` | Vision OCR model name | `deepseek-ai/DeepSeek-OCR` |
+| `AI_VISION_OCR_PROMPT` | OCR user prompt sent with image | `<image>\n<|grounding|>Convert the document to markdown.` |
+| `AI_VISION_IMAGE_DETAIL` | OpenAI-compatible image detail level | `high` |
+| `AI_VISION_TIMEOUT_MILLIS` | Vision OCR timeout | `60000` |
 | `EMBEDDING_ENABLED` | Enable embedding model calls | `false` |
 | `EMBEDDING_BASE_URL` | OpenAI-compatible embedding API base URL | `https://api.siliconflow.cn/v1` |
 | `EMBEDDING_API_KEY` | Embedding model API key, separate from chat key | empty |
@@ -32,11 +37,20 @@ Backend runtime:
 | `ES_PASSWORD` | Elasticsearch password | empty |
 | `ES_STANDARD_INDEX` | Clause vector index | `quality-standard-clauses` |
 | `ES_TIMEOUT_MILLIS` | Vector search timeout | `5000` |
-| `STANDARD_DOC_STORAGE_PATH` | Runtime directory for uploaded standard PDFs | `resources/standard-documents` (relative to backend working directory) |
+| `STANDARD_DOC_STORAGE_PATH` | Runtime directory for uploaded standard source files | `resources/standard-documents` (relative to backend working directory) |
+| `STANDARD_DOC_MAX_FILES_PER_STANDARD` | Maximum source files per structured standard | `10` |
+
+Supported source file formats: `pdf`, `xlsx`, `xls`, `png`, `jpg`, `jpeg`. Image OCR uses the same SiliconFlow API key as chat (`AI_MODEL_API_KEY`) with model `deepseek-ai/DeepSeek-OCR` by default.
+
+Each structured standard may have **multiple** linked `qc_standard_document` rows (one per uploaded file). Storage path pattern:
+
+```text
+backend/resources/standard-documents/{standardId}/{documentId}_{safeFileName}
+```
 
 ## Standard Source File Storage
 
-Uploaded standard PDFs from the standard maintenance page are stored under:
+Uploaded standard source files from the standard maintenance page are stored under:
 
 ```text
 backend/resources/standard-documents/{standardId}/
@@ -46,19 +60,35 @@ This is a runtime directory, not `src/main/resources`. Each structured standard 
 
 Ingestion behavior:
 
-- `DRAFT` + upload/replace: store/replace file only, reset parse/index status to pending, no ES write
-- `PUBLISH`: parse PDF → deterministic chunk → embedding → ES index
-- `PUBLISHED` + replace: purge old clauses/vectors, store new file, re-index immediately
-- publish success with index failure: keep standard published, expose failure and allow manual re-index
+- `DRAFT` + upload: store file as new linked document row; no ES write
+- `PUBLISH`: ingest **each** linked file with an uploaded path (PDFBox / POI Excel rows / Vision OCR for images) → chunk → embed → ES
+- `PUBLISHED` + add file: create new document row, ingest new file only
+- `PUBLISHED` + delete one file: purge clauses/vectors for that `documentId` only
+- `PUBLISHED` + reindex one/all: per-file or all-file vector rebuild
+- publish success with partial index failure: keep standard published, expose per-file errors
+
+Multi-file API (planned implementation):
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/v1/standards/{id}/source-files` | List all source files |
+| POST | `/api/v1/standards/{id}/source-files` | Add one source file |
+| GET | `/api/v1/standards/{id}/source-files/{documentId}` | Download one file |
+| DELETE | `/api/v1/standards/{id}/source-files/{documentId}` | Delete one file + vectors |
+| POST | `/api/v1/standards/{id}/source-files/{documentId}/reindex` | Reindex one file |
+| POST | `/api/v1/standards/{id}/source-files/reindex-all` | Reindex all files |
+
+Legacy singular `/source-file` endpoints remain compatible for one release cycle.
 
 ## RAG Ingestion Contract
 
 The current RAG requirement is a full ingestion pipeline, not only a prepared-clause demo:
 
-1. Register or upload a source document from PDF, Word, Excel, Markdown, or plain text.
+1. Register or upload a source document from PDF, Excel (`xlsx`/`xls`), image (`png`/`jpg`/`jpeg`), Markdown, or plain text.
 2. Extract text deterministically:
    - PDF: Apache PDFBox.
-   - Word/Excel: Apache POI.
+   - Excel: Apache POI row-oriented extractor.
+   - Image: ModelGateway Vision OCR (`deepseek-ai/DeepSeek-OCR` on SiliconFlow by default).
    - Markdown/text: direct parser.
 3. Preserve citation anchors such as document id, standard code, version, page number when available, clause heading, and applicability metadata.
 4. Chunk text with code rules based on chapter, clause, paragraph, and natural boundaries. Optional lightweight NLP sentence segmentation may be used only as a fallback. The embedding model must not decide chunk boundaries.

@@ -80,6 +80,7 @@
               </el-tag>
               <span class="mono">{{ item.standardCode || '-' }}</span>
               <span>{{ item.clauseNo || '-' }}</span>
+              <span v-if="item.sourceFileName" class="text-meta">{{ item.sourceFileName }}</span>
               <span v-if="item.score != null" class="mono">{{ Number(item.score).toFixed(3) }}</span>
             </div>
             <p>{{ item.paragraphText }}</p>

@@ -149,7 +149,7 @@ public class StandardServiceImpl implements StandardService {
         );
         saveStandardIndicators(cmd.getId(), cmd.getIndicators());
 
-        standardDocumentService.syncLinkedDocument(existing);
+        standardDocumentService.syncLinkedDocumentsMetadata(existing);
 
         log.info("更新质量标准，id={}", cmd.getId());
     }
@@ -215,7 +215,7 @@ public class StandardServiceImpl implements StandardService {
         standard.setStatus("PUBLISHED");
         qualityStandardMapper.updateById(standard);
 
-        standardDocumentService.syncLinkedDocument(standard);
+        standardDocumentService.syncLinkedDocumentsMetadata(standard);
 
         // 查询同体系其他已发布的标准（作为提示信息返回）
         List<QcQualityStandard> otherPublished = qualityStandardMapper.findOtherPublishedInSameScope(
@@ -242,14 +242,17 @@ public class StandardServiceImpl implements StandardService {
                 ? "标准发布成功"
                 : "标准发布成功，以下同体系已发布版本请注意处理有效期：" + needingExpiryList.size() + "条");
 
+        List<StandardSourceDocumentVO> sourceDocuments = standardDocumentService.listSourceDocumentSummaries(id);
+        result.put("sourceDocuments", sourceDocuments);
         StandardSourceDocumentVO sourceDocument = standardDocumentService.buildSourceDocumentSummary(id);
         result.put("sourceDocument", sourceDocument);
-        if (Boolean.TRUE.equals(sourceDocument.getHasSourceFile())) {
+        if (!sourceDocuments.isEmpty() && sourceDocuments.stream().anyMatch(item -> Boolean.TRUE.equals(item.getHasSourceFile()))) {
             try {
-                StandardDocumentIngestVO ingestVO = standardDocumentService.ingestLinkedDocument(id);
-                result.put("sourceIngest", ingestVO);
+                List<StandardDocumentIngestVO> ingestResults = standardDocumentService.ingestAllLinkedDocuments(id);
+                result.put("sourceIngests", ingestResults);
+                result.put("sourceIngest", ingestResults.isEmpty() ? null : ingestResults.get(0));
             } catch (Exception ex) {
-                log.warn("标准发布后立即索引源 PDF 失败，standardId={}, error={}", id, ex.getMessage());
+                log.warn("标准发布后立即索引源文件失败，standardId={}, error={}", id, ex.getMessage());
                 result.put("sourceIngestError", ex.getMessage());
             }
         }
@@ -365,6 +368,7 @@ public class StandardServiceImpl implements StandardService {
         }).collect(Collectors.toList());
 
         detailVO.setIndicators(indicatorDetails);
+        detailVO.setSourceDocuments(standardDocumentService.listSourceDocumentSummaries(id));
         detailVO.setSourceDocument(standardDocumentService.buildSourceDocumentSummary(id));
         return detailVO;
     }

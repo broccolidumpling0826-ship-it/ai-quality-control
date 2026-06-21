@@ -7,6 +7,8 @@ import com.jhict.quality.gateway.model.ModelChatResponse;
 import com.jhict.quality.gateway.model.ModelEmbedding;
 import com.jhict.quality.gateway.model.ModelEmbeddingRequest;
 import com.jhict.quality.gateway.model.ModelEmbeddingResponse;
+import com.jhict.quality.gateway.model.ModelVisionExtractionRequest;
+import com.jhict.quality.gateway.model.ModelVisionExtractionResponse;
 import com.jhict.quality.gateway.model.ModelGateway;
 import com.jhict.quality.gateway.model.ModelMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +41,7 @@ public class OpenAiCompatibleModelGateway implements ModelGateway {
     private static final String DEFAULT_CHAT_PROVIDER = "SILICONFLOW";
     private static final String OPERATION_CHAT = "chat";
     private static final String OPERATION_EMBED = "embed";
+    private static final String OPERATION_VISION = "vision_ocr";
     private static final int RAW_RESPONSE_LIMIT = 4000;
 
     @Resource
@@ -46,6 +49,9 @@ public class OpenAiCompatibleModelGateway implements ModelGateway {
 
     @Resource
     private EmbeddingModelProperties embeddingProperties;
+
+    @Resource
+    private VisionModelProperties visionProperties;
 
     @Resource
     private ObjectMapper objectMapper;
@@ -98,6 +104,34 @@ public class OpenAiCompatibleModelGateway implements ModelGateway {
         } catch (Exception ex) {
             logGatewayFailure(OPERATION_EMBED, traceId, request == null ? null : request.getBusinessId(), "GATEWAY_ERROR", ex);
             return buildEmbeddingFailure(request, start, "GATEWAY_ERROR", "模型网关处理失败");
+        }
+    }
+
+    @Override
+    public ModelVisionExtractionResponse extractImageText(ModelVisionExtractionRequest request) {
+        long start = System.currentTimeMillis();
+        String traceId = request == null ? null : request.getTraceId();
+        if (!isVisionConfigured()) {
+            return buildVisionFailure(request, start, "VISION_DISABLED", "Vision OCR 未启用或未配置 API Key");
+        }
+        if (request == null || !StringUtils.hasText(request.getImageBase64())) {
+            return buildVisionFailure(request, start, "INVALID_REQUEST", "Vision OCR 缺少图片内容");
+        }
+        try {
+            Map<String, Object> body = buildVisionBody(request);
+            ResponseEntity<String> response = postJson(chatUrl(), body, effectiveVisionTimeout(request.getTimeoutMillis()));
+            return parseVisionResponse(request, response.getBody(), start);
+        } catch (ResourceAccessException ex) {
+            logGatewayFailure(OPERATION_VISION, traceId, request.getBusinessId(), "TIMEOUT_OR_IO", ex);
+            return buildVisionFailure(request, start, "TIMEOUT_OR_IO", "Vision OCR 服务连接超时或不可达");
+        } catch (RestClientResponseException ex) {
+            logProviderFailure(OPERATION_VISION, traceId, request.getBusinessId(),
+                    "PROVIDER_ERROR", ex.getRawStatusCode(), ex);
+            return buildVisionFailure(request, start, "PROVIDER_ERROR",
+                    "Vision OCR 服务返回错误：" + ex.getRawStatusCode(), truncate(ex.getResponseBodyAsString()));
+        } catch (Exception ex) {
+            logGatewayFailure(OPERATION_VISION, traceId, request.getBusinessId(), "GATEWAY_ERROR", ex);
+            return buildVisionFailure(request, start, "GATEWAY_ERROR", "Vision OCR 网关处理失败");
         }
     }
 
@@ -382,6 +416,107 @@ public class OpenAiCompatibleModelGateway implements ModelGateway {
             return text;
         }
         return text.substring(0, RAW_RESPONSE_LIMIT);
+    }
+
+    private Map<String, Object> buildVisionBody(ModelVisionExtractionRequest request) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        String modelName = choose(request.getModelName(), visionProperties.getModel());
+        body.put("model", modelName);
+        body.put("messages", buildVisionMessages(request));
+        body.put("enable_thinking", false);
+        return body;
+    }
+
+    private List<Map<String, Object>> buildVisionMessages(ModelVisionExtractionRequest request) {
+        List<Map<String, Object>> messages = new ArrayList<>();
+        if (StringUtils.hasText(request.getSystemPrompt())) {
+            Map<String, Object> systemMessage = new LinkedHashMap<>();
+            systemMessage.put("role", "system");
+            systemMessage.put("content", request.getSystemPrompt());
+            messages.add(systemMessage);
+        }
+        String mimeType = choose(request.getImageMimeType(), "image/jpeg");
+        String dataUrl = "data:" + mimeType + ";base64," + request.getImageBase64();
+        String detail = choose(request.getImageDetail(), visionProperties.getImageDetail());
+        String prompt = choose(request.getOcrPrompt(), visionProperties.getOcrPrompt());
+
+        Map<String, Object> imagePart = new LinkedHashMap<>();
+        imagePart.put("type", "image_url");
+        Map<String, Object> imageUrl = new LinkedHashMap<>();
+        imageUrl.put("url", dataUrl);
+        imageUrl.put("detail", detail);
+        imagePart.put("image_url", imageUrl);
+
+        Map<String, Object> textPart = new LinkedHashMap<>();
+        textPart.put("type", "text");
+        textPart.put("text", prompt);
+
+        List<Map<String, Object>> content = new ArrayList<>();
+        content.add(imagePart);
+        content.add(textPart);
+
+        Map<String, Object> userMessage = new LinkedHashMap<>();
+        userMessage.put("role", "user");
+        userMessage.put("content", content);
+        messages.add(userMessage);
+        return messages;
+    }
+
+    private ModelVisionExtractionResponse parseVisionResponse(ModelVisionExtractionRequest request,
+                                                              String responseBody, long start) throws Exception {
+        JsonNode root = objectMapper.readTree(responseBody);
+        JsonNode choice = root.path("choices").isArray() && root.path("choices").size() > 0
+                ? root.path("choices").get(0)
+                : null;
+        String content = choice == null ? null : choice.path("message").path("content").asText(null);
+        JsonNode usage = root.path("usage");
+        return ModelVisionExtractionResponse.builder()
+                .success(StringUtils.hasText(content))
+                .traceId(request.getTraceId())
+                .provider(chatProvider())
+                .modelName(root.path("model").asText(choose(request.getModelName(), visionProperties.getModel())))
+                .extractedText(content)
+                .finishReason(choice == null ? null : choice.path("finish_reason").asText(null))
+                .promptTokens(intOrNull(usage, "prompt_tokens"))
+                .completionTokens(intOrNull(usage, "completion_tokens"))
+                .totalTokens(intOrNull(usage, "total_tokens"))
+                .latencyMillis(System.currentTimeMillis() - start)
+                .rawResponse(truncate(responseBody))
+                .metadata(request.getMetadata())
+                .build();
+    }
+
+    private ModelVisionExtractionResponse buildVisionFailure(ModelVisionExtractionRequest request, long start,
+                                                             String errorCategory, String errorMessage) {
+        return buildVisionFailure(request, start, errorCategory, errorMessage, null);
+    }
+
+    private ModelVisionExtractionResponse buildVisionFailure(ModelVisionExtractionRequest request, long start,
+                                                             String errorCategory, String errorMessage,
+                                                             String rawResponse) {
+        return ModelVisionExtractionResponse.builder()
+                .success(false)
+                .traceId(request == null ? null : request.getTraceId())
+                .provider(chatProvider())
+                .modelName(choose(request == null ? null : request.getModelName(), visionProperties.getModel()))
+                .latencyMillis(System.currentTimeMillis() - start)
+                .errorCategory(errorCategory)
+                .errorMessage(errorMessage)
+                .rawResponse(rawResponse)
+                .metadata(request == null ? null : request.getMetadata())
+                .build();
+    }
+
+    private boolean isVisionConfigured() {
+        return visionProperties.isEnabled() && isConfigured();
+    }
+
+    private int effectiveVisionTimeout(Integer requestTimeoutMillis) {
+        Integer timeout = requestTimeoutMillis != null ? requestTimeoutMillis : visionProperties.getTimeoutMillis();
+        if (timeout == null || timeout <= 0) {
+            return 60000;
+        }
+        return timeout;
     }
 
     private void logGatewayFailure(String operation, String traceId, String businessId,

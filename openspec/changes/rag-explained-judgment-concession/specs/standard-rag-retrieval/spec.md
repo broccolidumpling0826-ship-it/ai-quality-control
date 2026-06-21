@@ -104,5 +104,40 @@ The system SHALL retrieve clauses only from active source documents linked to pu
 - **THEN** RAG queries SHALL be able to retrieve clauses from that standard's indexed chunks with citation metadata
 
 #### Scenario: Draft standard upload is not retrievable
-- **WHEN** a standard remains in `DRAFT` status with an uploaded PDF
+- **WHEN** a standard remains in `DRAFT` status with an uploaded source file
 - **THEN** RAG queries SHALL NOT return clauses from that draft-only source document
+
+### Requirement: Excel table sources are extracted as row-oriented evidence
+The system SHALL extract `xlsx` and `xls` standard source files into row-oriented text blocks suitable for clause-aware chunking.
+
+#### Scenario: Excel upload produces row-oriented segments
+- **WHEN** a published standard has an uploaded Excel source file
+- **THEN** the system SHALL extract each sheet row as a text segment with sheet and row context
+- **AND** extracted table text SHALL be marked as extracted evidence rather than structured judgment truth
+
+### Requirement: Image sources are extracted through Vision OCR
+The system SHALL extract text from scanned `png`, `jpg`, and `jpeg` standard source files through the configured Vision OCR model gateway.
+
+#### Scenario: Image upload produces OCR text for indexing
+- **WHEN** a published standard has an uploaded image source file and Vision OCR is enabled
+- **THEN** the system SHALL call the configured Vision model (default `deepseek-ai/DeepSeek-OCR` on SiliconFlow) with the image content
+- **AND** it SHALL index the returned text as reference-only extracted evidence with source metadata
+
+#### Scenario: Vision OCR output is non-deterministic and reference-only
+- **WHEN** text is extracted from an image source through Vision OCR
+- **THEN** the system SHALL treat the result as reference-only citation evidence
+- **AND** it SHALL NOT use OCR output to override structured indicator limits in `qc_standard_indicator`
+
+### Requirement: Multiple source files for one standard are retrievable together
+The system SHALL retrieve and cite clauses from all successfully indexed source files linked to a published structured standard.
+
+#### Scenario: RAG retrieves clauses from PDF and Excel together
+- **WHEN** a published standard has both an indexed PDF and an indexed Excel source file
+- **AND** a user asks a question that matches content from either file
+- **THEN** the system SHALL be able to retrieve clauses from both `documentId` values
+- **AND** the answer or citation list SHALL identify the source file name where available
+
+#### Scenario: Partially indexed standard still retrieves successful files
+- **WHEN** a published standard has multiple source files and one file failed indexing while others succeeded
+- **THEN** RAG queries SHALL retrieve clauses only from successfully indexed source files
+- **AND** the system SHALL NOT invent content from the failed source file

@@ -37,6 +37,7 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -147,8 +148,11 @@ public class StandardRagServiceImpl implements StandardRagService {
             userPrompt.append("[").append(i + 1).append("] ")
                     .append(nullToEmpty(source.getStandardCode()))
                     .append(" ")
-                    .append(nullToEmpty(source.getClauseNo()))
-                    .append("：")
+                    .append(nullToEmpty(source.getClauseNo()));
+            if (StringUtils.hasText(source.getSourceFileName())) {
+                userPrompt.append(" (").append(source.getSourceFileName()).append(")");
+            }
+            userPrompt.append("：")
                     .append(nullToEmpty(source.getParagraphText()))
                     .append("\n");
         }
@@ -327,6 +331,7 @@ public class StandardRagServiceImpl implements StandardRagService {
         source.setClauseNo(result.getClauseNo());
         source.setPageNo(result.getPageNo());
         source.setParagraphText(result.getParagraphText());
+        source.setSourceFileName(result.getSourceFileName());
         source.setScore(result.getScore());
         source.setReferenceOnly(result.getScore() != null && result.getScore() < 0.60D);
         return source;
@@ -342,10 +347,33 @@ public class StandardRagServiceImpl implements StandardRagService {
         query.setPageNum(1);
         query.setPageSize(safeTopK(cmd.getTopK()));
         IPage<StandardClauseVO> page = standardDocumentService.pageClauses(query);
-        return page.getRecords().stream().map(this::toSource).collect(Collectors.toList());
+        List<StandardClauseVO> records = page.getRecords();
+        if (CollectionUtils.isEmpty(records)) {
+            return new ArrayList<>();
+        }
+        Set<String> documentIds = records.stream()
+                .map(StandardClauseVO::getDocumentId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Map<String, String> sourceFileNameByDocumentId = loadSourceFileNames(documentIds);
+        return records.stream()
+                .map(clause -> toSource(clause, sourceFileNameByDocumentId.get(clause.getDocumentId())))
+                .collect(Collectors.toList());
     }
 
-    private StandardRagSourceVO toSource(StandardClauseVO clause) {
+    private Map<String, String> loadSourceFileNames(Set<String> documentIds) {
+        if (CollectionUtils.isEmpty(documentIds)) {
+            return Collections.emptyMap();
+        }
+        return standardDocumentService.listDocumentsByIds(documentIds).stream()
+                .filter(doc -> StringUtils.hasText(doc.getId()))
+                .collect(Collectors.toMap(
+                        doc -> doc.getId(),
+                        doc -> doc.getSourceFileName() == null ? "" : doc.getSourceFileName(),
+                        (left, right) -> left));
+    }
+
+    private StandardRagSourceVO toSource(StandardClauseVO clause, String sourceFileName) {
         StandardRagSourceVO source = new StandardRagSourceVO();
         source.setClauseId(clause.getId());
         source.setDocumentId(clause.getDocumentId());
@@ -356,6 +384,7 @@ public class StandardRagServiceImpl implements StandardRagService {
         source.setClauseNo(clause.getClauseNo());
         source.setPageNo(clause.getPageNo());
         source.setParagraphText(clause.getParagraphText());
+        source.setSourceFileName(sourceFileName);
         source.setScore(RAW_RETRIEVAL_SCORE);
         source.setReferenceOnly(true);
         return source;

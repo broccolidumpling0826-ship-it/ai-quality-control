@@ -1,6 +1,6 @@
-# 模拟标准与 PDF 测试包
+# 模拟标准与多格式源文件测试包
 
-本目录提供 **2 份模拟质量标准** 及 **2 份配套 PDF**，用于验证「标准维护 → 上传 PDF → 发布入库 → RAG 引用」链路。
+本目录提供 **2 份模拟质量标准** 及 **配套源文件（PDF / Excel）**，用于验证「标准维护 → 上传源文件 → 发布入库 → RAG 引用」链路。
 
 > 均为联调模拟数据，**不得用于生产判定**。
 
@@ -10,8 +10,19 @@
 | --- | --- |
 | `mock-standard-A-q345b-enterprise.pdf` | 企业标准 Q345B 源 PDF |
 | `mock-standard-B-q235b-customer.pdf` | 客户协议 Q235B 源 PDF |
+| `mock-standard-table-q345b.xlsx` | 企业标准 Q345B 指标表格（Excel 源文件） |
+| `mock-standard-scan-q235b.png` | 客户协议 Q235B 扫描件模拟（Vision OCR 源文件） |
 | `../init-mock-standards-for-pdf-test.sql` | 预置两条 **DRAFT** 结构化标准 + 指标 |
 | `generate-mock-standard-pdfs.py` | PDF 生成脚本（可重复执行） |
+| `generate-mock-standard-table-xlsx.py` | Excel 生成脚本（可重复执行） |
+| `generate-mock-standard-scan-png.py` | 扫描图片生成脚本（可重复执行） |
+
+## 支持的上传格式
+
+标准维护页「标准源文件」支持：`pdf`、`xlsx`、`xls`、`png`、`jpg`、`jpeg`。
+
+- **PDF / Excel**：本地 POI/PDFBox 解析
+- **图片**：硅基流动 `deepseek-ai/DeepSeek-OCR`（Vision API，配置见 `application-dev.yml` → `app.ai.model.vision`）
 
 ## 标准 A：企业标准 Q345B
 
@@ -66,11 +77,13 @@
 
 ## 快速使用
 
-### 1. 生成 PDF（若尚未生成）
+### 1. 生成演示源文件（若尚未生成）
 
 ```bash
 cd backend/scripts/demo-documents
 python3 generate-mock-standard-pdfs.py
+python3 generate-mock-standard-table-xlsx.py
+python3 generate-mock-standard-scan-png.py
 ```
 
 ### 2. 导入结构化标准（可选，也可在 UI 手工新建）
@@ -85,10 +98,12 @@ mysql -h 127.0.0.1 -P 3307 -u root -p ai_quality_control \
 1. 登录 `admin / Admin123456`
 2. 进入 **标准与协议 → 标准维护**
 3. 编辑 `stdmock001` 或 `stdmock002`（或按上表手工新建）
-4. 在「标准源 PDF」上传对应 PDF
+4. 在「标准源文件」上传对应 PDF 或 Excel（`mock-standard-table-q345b.xlsx`）
 5. 草稿阶段确认索引状态为 `PENDING`、未入 ES
 6. 点击 **发布**，观察解析/索引变为 `INDEXED`
-7. 在 **标准 RAG** 页用上方示例问题检索，应能引用 PDF 条款
+7. 在 **标准 RAG** 页用上方示例问题检索，应能引用源文件条款
+
+**图片 OCR 联调**：上传扫描版 `png/jpg/jpeg` 后发布；需启用 `AI_VISION_ENABLED=true` 且配置有效的 `AI_MODEL_API_KEY`。
 
 ### 4. API 抽验
 

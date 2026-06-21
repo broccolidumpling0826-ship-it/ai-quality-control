@@ -64,6 +64,7 @@ export const getSpecRanges = (params: {
 export interface StandardSourceDocumentSummary {
   documentId?: string
   sourceFileName?: string
+  sourceFileType?: string
   parseStatus?: string
   indexStatus?: string
   indexedAt?: string
@@ -72,23 +73,41 @@ export interface StandardSourceDocumentSummary {
   hasSourceFile?: boolean
 }
 
+export interface StandardDocumentIngestSummary {
+  documentId?: string
+  parseStatus?: string
+  indexStatus?: string
+  chunkCount?: number
+  indexedCount?: number
+  errorMessage?: string
+}
+
+export const listStandardSourceFiles = (standardId: string) =>
+  get<StandardSourceDocumentSummary[]>(`/standards/${standardId}/source-files`)
+
 export const uploadStandardSourceFile = (standardId: string, file: File) => {
   const formData = new FormData()
   formData.append('file', file)
-  return post<StandardSourceDocumentSummary>(`/standards/${standardId}/source-file`, formData)
+  return post<StandardSourceDocumentSummary>(`/standards/${standardId}/source-files`, formData)
 }
 
-export async function downloadStandardSourceFile(standardId: string): Promise<Blob> {
+export async function downloadStandardSourceFile(standardId: string, documentId: string): Promise<Blob> {
   const token = localStorage.getItem('qc_token')
-  const response = await fetch(`/api/v1/standards/${standardId}/source-file`, {
+  const response = await fetch(`/api/v1/standards/${standardId}/source-files/${documentId}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   })
   if (!response.ok) {
     const text = await response.text()
-    throw new Error(text || '下载标准源 PDF 失败')
+    throw new Error(text || '下载标准源文件失败')
   }
   return response.blob()
 }
 
-export const reindexStandardSourceFile = (standardId: string) =>
-  post(`/standards/${standardId}/source-file/reindex`)
+export const deleteStandardSourceFile = (standardId: string, documentId: string) =>
+  del(`/standards/${standardId}/source-files/${documentId}`)
+
+export const reindexStandardSourceFile = (standardId: string, documentId: string) =>
+  post<StandardDocumentIngestSummary>(`/standards/${standardId}/source-files/${documentId}/reindex`)
+
+export const reindexAllStandardSourceFiles = (standardId: string) =>
+  post<StandardDocumentIngestSummary[]>(`/standards/${standardId}/source-files/reindex-all`)

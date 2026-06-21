@@ -23,6 +23,8 @@ public class StandardRagSourceVO {
 
     private String paragraphText;
 
+    private String sourceFileName;
+
     private Double score;
 
     private Boolean referenceOnly;

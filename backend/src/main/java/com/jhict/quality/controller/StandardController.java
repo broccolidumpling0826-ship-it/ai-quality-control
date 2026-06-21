@@ -146,17 +146,71 @@ public class StandardController {
         return ApiResult.success(standardService.listIndicators(keyword, category));
     }
 
+    @GetMapping("/{id}/source-files")
+    @ApiOperation(value = "列出标准全部源文件")
+    @SaCheckPermission("menu:standard")
+    public ApiResult<List<StandardSourceDocumentVO>> listSourceFiles(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id) {
+        return ApiResult.success(standardSourceFileService.listSourceFiles(id));
+    }
+
+    @PostMapping("/{id}/source-files")
+    @ApiOperation(value = "新增标准源文件")
+    @SaCheckPermission("standard:manage")
+    public ApiResult<StandardSourceDocumentVO> addSourceFile(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id,
+            @ApiParam(value = "源文件（pdf/xlsx/xls/png/jpg/jpeg）", required = true) @RequestPart("file") MultipartFile file) {
+        return ApiResult.success("上传成功", standardSourceFileService.uploadSourceFile(id, file));
+    }
+
+    @GetMapping("/{id}/source-files/{documentId}")
+    @ApiOperation(value = "下载指定标准源文件")
+    @SaCheckPermission("menu:standard")
+    public void downloadSourceFileById(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id,
+            @ApiParam(value = "源文档ID", required = true) @PathVariable String documentId,
+            HttpServletResponse response) {
+        standardSourceFileService.downloadSourceFile(id, documentId, response);
+    }
+
+    @DeleteMapping("/{id}/source-files/{documentId}")
+    @ApiOperation(value = "删除指定标准源文件")
+    @SaCheckPermission("standard:manage")
+    public ApiResult<Void> deleteSourceFile(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id,
+            @ApiParam(value = "源文档ID", required = true) @PathVariable String documentId) {
+        standardSourceFileService.deleteSourceFile(id, documentId);
+        return ApiResult.success("删除成功", null);
+    }
+
+    @PostMapping("/{id}/source-files/{documentId}/reindex")
+    @ApiOperation(value = "重新索引指定标准源文件")
+    @SaCheckPermission("standard:manage")
+    public ApiResult<StandardDocumentIngestVO> reindexSourceFileById(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id,
+            @ApiParam(value = "源文档ID", required = true) @PathVariable String documentId) {
+        return ApiResult.success(standardSourceFileService.reindexSourceFile(id, documentId));
+    }
+
+    @PostMapping("/{id}/source-files/reindex-all")
+    @ApiOperation(value = "重新索引标准全部源文件")
+    @SaCheckPermission("standard:manage")
+    public ApiResult<List<StandardDocumentIngestVO>> reindexAllSourceFiles(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id) {
+        return ApiResult.success(standardSourceFileService.reindexAllSourceFiles(id));
+    }
+
     @PostMapping("/{id}/source-file")
-    @ApiOperation(value = "上传标准源 PDF")
+    @ApiOperation(value = "上传标准源文件（兼容接口，行为同新增）")
     @SaCheckPermission("standard:manage")
     public ApiResult<StandardSourceDocumentVO> uploadSourceFile(
             @ApiParam(value = "标准ID", required = true) @PathVariable String id,
-            @ApiParam(value = "PDF 文件", required = true) @RequestPart("file") MultipartFile file) {
+            @ApiParam(value = "源文件（pdf/xlsx/xls/png/jpg/jpeg）", required = true) @RequestPart("file") MultipartFile file) {
         return ApiResult.success("上传成功", standardSourceFileService.uploadSourceFile(id, file));
     }
 
     @GetMapping("/{id}/source-file")
-    @ApiOperation(value = "下载标准源 PDF")
+    @ApiOperation(value = "下载标准源文件")
     @SaCheckPermission("menu:standard")
     public void downloadSourceFile(
             @ApiParam(value = "标准ID", required = true) @PathVariable String id,
@@ -165,7 +219,7 @@ public class StandardController {
     }
 
     @PostMapping("/{id}/source-file/reindex")
-    @ApiOperation(value = "重新解析并索引标准源 PDF")
+    @ApiOperation(value = "重新解析并索引标准源文件")
     @SaCheckPermission("standard:manage")
     public ApiResult<StandardDocumentIngestVO> reindexSourceFile(
             @ApiParam(value = "标准ID", required = true) @PathVariable String id) {

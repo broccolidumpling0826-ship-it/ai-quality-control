@@ -25,6 +25,14 @@ public interface ModelGateway {
     ModelEmbeddingResponse embed(ModelEmbeddingRequest request);
 
     /**
+     * Extract text from an image through the configured Vision OCR model.
+     *
+     * @param request provider-neutral vision OCR request
+     * @return provider-neutral vision OCR response
+     */
+    ModelVisionExtractionResponse extractImageText(ModelVisionExtractionRequest request);
+
+    /**
      * @return provider name for logs and assessment records
      */
     String provider();

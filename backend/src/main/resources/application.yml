@@ -60,6 +60,8 @@ app:
   standard-document:
     storage-path: ${STANDARD_DOC_STORAGE_PATH:resources/standard-documents}
     max-file-size-mb: ${STANDARD_DOC_MAX_MB:50}
+    allowed-extensions: ${STANDARD_DOC_ALLOWED_EXTENSIONS:pdf,xlsx,xls,png,jpg,jpeg}
+    max-files-per-standard: ${STANDARD_DOC_MAX_FILES_PER_STANDARD:10}
   cert:
     # 质保书纳入的指标类别（D-017）：默认成分/性能/尺寸；ADMIN 可修改此配置项
     included-categories: COMPOSITION,PERFORMANCE,DIMENSION
@@ -76,6 +78,12 @@ app:
       thinking-enabled: ${AI_MODEL_THINKING_ENABLED:false}
       reasoning-effort: ${AI_MODEL_REASONING_EFFORT:high}
       timeout-millis: ${AI_MODEL_TIMEOUT_MILLIS:15000}
+      vision:
+        enabled: ${AI_VISION_ENABLED:true}
+        model: ${AI_VISION_MODEL:deepseek-ai/DeepSeek-OCR}
+        ocr-prompt: ${AI_VISION_OCR_PROMPT:<image>\n<|grounding|>Convert the document to markdown.}
+        image-detail: ${AI_VISION_IMAGE_DETAIL:high}
+        timeout-millis: ${AI_VISION_TIMEOUT_MILLIS:60000}
     embedding:
       enabled: ${EMBEDDING_ENABLED:false}
       base-url: ${EMBEDDING_BASE_URL:https://api.siliconflow.cn/v1}

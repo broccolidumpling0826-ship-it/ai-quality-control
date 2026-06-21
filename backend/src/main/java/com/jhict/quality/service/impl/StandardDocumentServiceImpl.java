@@ -42,6 +42,7 @@ import org.springframework.util.StringUtils;
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -178,11 +179,19 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
                     .build();
         }
 
+        String sourceFileName = null;
+        if (StringUtils.hasText(safeCmd.getDocumentId())) {
+            QcStandardDocument sourceDocument = standardDocumentMapper.selectById(safeCmd.getDocumentId());
+            if (sourceDocument != null) {
+                sourceFileName = sourceDocument.getSourceFileName();
+            }
+        }
+
         VectorIndexRequest request = VectorIndexRequest.builder()
                 .businessType("STANDARD_CLAUSE")
                 .businessId(safeCmd.getDocumentId())
                 .indexName(safeCmd.getIndexName())
-                .clauses(toVectorClauseDocuments(clauses, embeddingByIndex))
+                .clauses(toVectorClauseDocuments(clauses, embeddingByIndex, sourceFileName))
                 .build();
         VectorIndexResponse response = vectorStoreGateway.indexClauses(request);
         if (response.isSuccess() || !CollectionUtils.isEmpty(response.getFailedClauseIds())) {
@@ -241,53 +250,85 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
     }
 
     @Override
-    public QcStandardDocument getLinkedDocument(String standardId) {
+    public List<QcStandardDocument> listLinkedDocuments(String standardId) {
         if (!StringUtils.hasText(standardId)) {
+            return java.util.Collections.emptyList();
+        }
+        return standardDocumentMapper.selectList(new LambdaQueryWrapper<QcStandardDocument>()
+                .eq(QcStandardDocument::getStandardId, standardId)
+                .eq(QcStandardDocument::getStatus, "ACTIVE")
+                .orderByAsc(QcStandardDocument::getCreateDateTime));
+    }
+
+    @Override
+    public QcStandardDocument getLinkedDocument(String standardId, String documentId) {
+        if (!StringUtils.hasText(standardId) || !StringUtils.hasText(documentId)) {
             return null;
         }
         return standardDocumentMapper.selectOne(new LambdaQueryWrapper<QcStandardDocument>()
                 .eq(QcStandardDocument::getStandardId, standardId)
+                .eq(QcStandardDocument::getId, documentId)
                 .eq(QcStandardDocument::getStatus, "ACTIVE")
                 .last("LIMIT 1"));
     }
 
     @Override
-    public QcStandardDocument syncLinkedDocument(QcQualityStandard standard) {
+    public QcStandardDocument createLinkedDocumentForUpload(QcQualityStandard standard) {
         if (standard == null || !StringUtils.hasText(standard.getId())) {
-            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "标准信息不完整，无法同步源文档");
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "标准信息不完整，无法创建源文档");
         }
-        QcStandardDocument existing = getLinkedDocument(standard.getId());
-        if (existing == null) {
-            QcStandardDocument document = buildLinkedDocumentEntity(standard);
-            document.setParseStatus("PENDING");
-            document.setIndexStatus("PENDING");
-            document.setStatus("ACTIVE");
-            standardDocumentMapper.insert(document);
-            return document;
+        QcStandardDocument document = buildLinkedDocumentEntity(standard);
+        document.setParseStatus("PENDING");
+        document.setIndexStatus("PENDING");
+        document.setStatus("ACTIVE");
+        standardDocumentMapper.insert(document);
+        QcStandardDocument codeUpdate = new QcStandardDocument();
+        codeUpdate.setId(document.getId());
+        codeUpdate.setDocumentCode(buildUniqueDocumentCode(standard.getStandardCode(), document.getId()));
+        standardDocumentMapper.updateById(codeUpdate);
+        document.setDocumentCode(codeUpdate.getDocumentCode());
+        return document;
+    }
+
+    @Override
+    public void syncLinkedDocumentsMetadata(QcQualityStandard standard) {
+        if (standard == null || !StringUtils.hasText(standard.getId())) {
+            return;
         }
-        applyStandardSnapshot(existing.getId(), standard);
-        return standardDocumentMapper.selectById(existing.getId());
+        for (QcStandardDocument document : listLinkedDocuments(standard.getId())) {
+            applyStandardSnapshot(document.getId(), standard);
+        }
     }
 
     @Override
     public void removeLinkedDocument(String standardId) {
-        QcStandardDocument document = getLinkedDocument(standardId);
-        if (document != null) {
-            purgeLinkedVectors(standardId);
-            standardDocumentMapper.deleteById(document.getId());
+        for (QcStandardDocument document : listLinkedDocuments(standardId)) {
+            removeLinkedDocumentFile(standardId, document.getId());
         }
         standardSourceFileStorageService.deleteStandardDirectory(standardId);
     }
 
     @Override
-    public void purgeLinkedVectors(String standardId) {
-        QcStandardDocument document = getLinkedDocument(standardId);
+    public void removeLinkedDocumentFile(String standardId, String documentId) {
+        QcStandardDocument document = getLinkedDocument(standardId, documentId);
         if (document == null) {
+            throw new ServiceException(ApiResult.CODE_NOT_FOUND, "标准源文件不存在");
+        }
+        purgeDocumentVectors(documentId);
+        if (StringUtils.hasText(document.getSourceFilePath())) {
+            standardSourceFileStorageService.deleteStoredFile(document.getSourceFilePath());
+        }
+        standardDocumentMapper.deleteById(documentId);
+    }
+
+    @Override
+    public void purgeDocumentVectors(String documentId) {
+        if (!StringUtils.hasText(documentId)) {
             return;
         }
-        deleteExistingClauses(document.getId(), defaultIndexName());
+        deleteExistingClauses(documentId, defaultIndexName());
         QcStandardDocument update = new QcStandardDocument();
-        update.setId(document.getId());
+        update.setId(documentId);
         update.setIndexStatus("PENDING");
         update.setIndexedAt(null);
         update.setParseErrorMessage(null);
@@ -295,21 +336,47 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
     }
 
     @Override
-    public StandardDocumentIngestVO ingestLinkedDocument(String standardId) {
-        QcStandardDocument document = getLinkedDocument(standardId);
+    public StandardDocumentIngestVO ingestDocument(String documentId) {
+        if (!StringUtils.hasText(documentId)) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "源文档ID不能为空");
+        }
+        QcStandardDocument document = standardDocumentMapper.selectById(documentId);
         if (document == null || !StringUtils.hasText(document.getSourceFilePath())) {
-            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "标准未上传源 PDF，无法索引");
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "源文件未上传，无法索引");
         }
         StandardDocumentIngestCmd cmd = new StandardDocumentIngestCmd();
-        cmd.setDocumentId(document.getId());
+        cmd.setDocumentId(documentId);
         cmd.setReindexExisting(Boolean.TRUE);
         cmd.setIndexName(defaultIndexName());
         return ingestAndIndexDocument(cmd);
     }
 
     @Override
-    public StandardSourceDocumentVO buildSourceDocumentSummary(String standardId) {
-        QcStandardDocument document = getLinkedDocument(standardId);
+    public List<StandardDocumentIngestVO> ingestAllLinkedDocuments(String standardId) {
+        List<StandardDocumentIngestVO> results = new ArrayList<>();
+        for (QcStandardDocument document : listLinkedDocuments(standardId)) {
+            if (!StringUtils.hasText(document.getSourceFilePath())) {
+                continue;
+            }
+            try {
+                results.add(ingestDocument(document.getId()));
+            } catch (ServiceException ex) {
+                StandardDocumentIngestVO failure = new StandardDocumentIngestVO();
+                failure.setDocumentId(document.getId());
+                failure.setParseStatus("FAILED");
+                failure.setIndexStatus("FAILED");
+                failure.setErrorMessage(ex.getMessage());
+                results.add(failure);
+            }
+        }
+        if (results.isEmpty()) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "标准未上传源文件，无法索引");
+        }
+        return results;
+    }
+
+    @Override
+    public StandardSourceDocumentVO buildSourceDocumentSummary(QcStandardDocument document) {
         StandardSourceDocumentVO vo = new StandardSourceDocumentVO();
         if (document == null) {
             vo.setHasSourceFile(false);
@@ -317,6 +384,7 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
         }
         vo.setDocumentId(document.getId());
         vo.setSourceFileName(document.getSourceFileName());
+        vo.setSourceFileType(document.getFileType());
         vo.setParseStatus(document.getParseStatus());
         vo.setIndexStatus(document.getIndexStatus());
         vo.setIndexedAt(document.getIndexedAt());
@@ -329,10 +397,57 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
         return vo;
     }
 
+    @Override
+    public List<StandardSourceDocumentVO> listSourceDocumentSummaries(String standardId) {
+        List<StandardSourceDocumentVO> summaries = new ArrayList<>();
+        for (QcStandardDocument document : listLinkedDocuments(standardId)) {
+            summaries.add(buildSourceDocumentSummary(document));
+        }
+        return summaries;
+    }
+
+    @Override
+    public StandardSourceDocumentVO buildSourceDocumentSummary(String standardId) {
+        List<StandardSourceDocumentVO> summaries = listSourceDocumentSummaries(standardId);
+        if (summaries.isEmpty()) {
+            StandardSourceDocumentVO vo = new StandardSourceDocumentVO();
+            vo.setHasSourceFile(false);
+            return vo;
+        }
+        for (int i = summaries.size() - 1; i >= 0; i--) {
+            if (Boolean.TRUE.equals(summaries.get(i).getHasSourceFile())) {
+                return summaries.get(i);
+            }
+        }
+        return summaries.get(summaries.size() - 1);
+    }
+
+    @Override
+    public int countLinkedSourceFiles(String standardId) {
+        return (int) listLinkedDocuments(standardId).stream()
+                .filter(document -> StringUtils.hasText(document.getSourceFilePath()))
+                .count();
+    }
+
+    @Override
+    public List<QcStandardDocument> listDocumentsByIds(Collection<String> documentIds) {
+        if (CollectionUtils.isEmpty(documentIds)) {
+            return Collections.emptyList();
+        }
+        return standardDocumentMapper.selectBatchIds(documentIds);
+    }
+
+    private String buildUniqueDocumentCode(String standardCode, String documentId) {
+        String base = StringUtils.hasText(standardCode) ? standardCode : "STD";
+        String suffix = StringUtils.hasText(documentId) && documentId.length() > 8
+                ? documentId.substring(documentId.length() - 8)
+                : documentId;
+        return base + "-SRC-" + suffix;
+    }
+
     private QcStandardDocument buildLinkedDocumentEntity(QcQualityStandard standard) {
         QcStandardDocument document = new QcStandardDocument();
         document.setStandardId(standard.getId());
-        document.setDocumentCode(standard.getStandardCode());
         document.setDocumentName(standard.getStandardName());
         document.setDocumentType("STANDARD");
         document.setStandardType(standard.getStandardType());
@@ -352,7 +467,7 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
     private void applyStandardSnapshot(String documentId, QcQualityStandard standard) {
         QcStandardDocument update = new QcStandardDocument();
         update.setId(documentId);
-        update.setDocumentCode(standard.getStandardCode());
+        update.setDocumentCode(buildUniqueDocumentCode(standard.getStandardCode(), documentId));
         update.setDocumentName(standard.getStandardName());
         update.setStandardType(standard.getStandardType());
         update.setStandardCode(standard.getStandardCode());
@@ -518,9 +633,10 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
     }
 
     private List<VectorClauseDocument> toVectorClauseDocuments(List<QcStandardClause> clauses,
-                                                               Map<Integer, List<Double>> embeddingByIndex) {
+                                                               Map<Integer, List<Double>> embeddingByIndex,
+                                                               String sourceFileName) {
         return java.util.stream.IntStream.range(0, clauses.size())
-                .mapToObj(i -> toVectorClauseDocument(clauses.get(i), embeddingByIndex.get(i)))
+                .mapToObj(i -> toVectorClauseDocument(clauses.get(i), embeddingByIndex.get(i), sourceFileName))
                 .collect(Collectors.toList());
     }
 
@@ -557,7 +673,8 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
                 nullToEmpty(clause.getParagraphText()));
     }
 
-    private VectorClauseDocument toVectorClauseDocument(QcStandardClause clause, List<Double> embedding) {
+    private VectorClauseDocument toVectorClauseDocument(QcStandardClause clause, List<Double> embedding,
+                                                          String sourceFileName) {
         return VectorClauseDocument.builder()
                 .clauseId(clause.getId())
                 .documentId(clause.getDocumentId())
@@ -581,6 +698,7 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
                 .effectiveDate(clause.getEffectiveDate() == null ? null : clause.getEffectiveDate().toString())
                 .expiryDate(clause.getExpiryDate() == null ? null : clause.getExpiryDate().toString())
                 .retrievalKeywords(clause.getRetrievalKeywords())
+                .sourceFileName(sourceFileName)
                 .embedding(embedding)
                 .build();
     }

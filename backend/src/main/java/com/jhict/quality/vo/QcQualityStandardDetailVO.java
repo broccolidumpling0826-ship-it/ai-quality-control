@@ -16,7 +16,10 @@ public class QcQualityStandardDetailVO extends QcQualityStandardVO {
     @ApiModelProperty(value = "标准指标列表")
     private List<StandardIndicatorDetail> indicators;
 
-    @ApiModelProperty(value = "关联源 PDF 摘要")
+    @ApiModelProperty(value = "关联源文件列表")
+    private List<StandardSourceDocumentVO> sourceDocuments;
+
+    @ApiModelProperty(value = "关联源文件摘要（兼容：最近上传的一条）")
     private StandardSourceDocumentVO sourceDocument;
 
     @Data

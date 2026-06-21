@@ -50,5 +50,7 @@ public class VectorSearchResult {
 
     private String indicatorName;
 
+    private String sourceFileName;
+
     private Map<String, Object> metadata;
 }

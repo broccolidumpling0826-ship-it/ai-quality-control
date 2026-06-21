@@ -29,6 +29,8 @@ mybatis-plus:
 app:
   upload:
     base-path: /tmp/quality-control/uploads
+  standard-document:
+    max-files-per-standard: 10
   ai:
     model:
       provider: SILICONFLOW

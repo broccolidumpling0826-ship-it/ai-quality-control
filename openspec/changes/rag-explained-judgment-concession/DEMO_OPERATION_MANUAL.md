@@ -483,24 +483,78 @@ flowchart LR
 
 默认权重：rule 0.6 / rag 0.3 / llm 0.1。
 
-### 10.5 标准维护页上传 PDF 并发布入库（新增）
+### 10.5 标准维护页上传多格式源文件并发布入库
 
 **路径**：标准与协议 → 标准维护  
 
-**演示步骤**：
+**支持格式**：`pdf`、`xlsx`、`xls`、`png`、`jpg`、`jpeg`（单标准仅 1 个源文件，最大 50MB）
+
+**前置条件**：
+
+- Embedding / ES 已启用（发布入库需要）
+- 图片 OCR 额外需要：`app.ai.model.vision.enabled=true`，且 `AI_MODEL_API_KEY` 有效（默认模型 `deepseek-ai/DeepSeek-OCR`）
+
+**演示资产**（`backend/scripts/demo-documents/`）：
+
+| 文件 | 用途 |
+| --- | --- |
+| `mock-standard-A-q345b-enterprise.pdf` | PDF 解析演示 |
+| `mock-standard-table-q345b.xlsx` | Excel 行文本演示 |
+| `mock-standard-scan-q235b.png` | Vision OCR 演示 |
+
+生成脚本：
+
+```bash
+cd backend/scripts/demo-documents
+python3 generate-mock-standard-pdfs.py
+python3 generate-mock-standard-table-xlsx.py
+python3 generate-mock-standard-scan-png.py
+```
+
+#### A. PDF 源文件（PDFBox）
 
 1. 新建或编辑一条 **草稿** 标准，保存后再次打开编辑抽屉。
-2. 在「标准源 PDF」区块上传 `.pdf`（仅 PDF，最大 50MB）。
-3. 确认显示文件名、解析/索引状态为 `PENDING`（草稿不会写入 ES）。
-4. 点击「发布」：发布后系统自动 PDFBox 解析 → 规则切块 → Embedding → ES 索引。
-5. 若索引失败，标准仍为 `PUBLISHED`，可在抽屉中点击「重新索引」重试。
-6. 对已发布标准「重传 PDF」：系统会先清理旧条款与 ES 向量，再对新文件立即 re-ingest。
-7. 「下载 PDF」可验证本地存储路径 `backend/resources/standard-documents/{standardId}/`。
-8. 删除标准时，关联 PDF、文档元数据、条款与 ES 向量一并清理。
+2. 在「标准源文件」区块上传 `mock-standard-A-q345b-enterprise.pdf`。
+3. 确认文件名、文件类型（PDF）、解析/索引状态为 `PENDING`（草稿不会写入 ES）。
+4. 点击「发布」：PDFBox 解析 → 规则切块 → Embedding → ES 索引。
+5. 在 **标准 RAG** 提问：`Q345B 热轧板抗拉强度企业标准范围是多少？` 应能引用 PDF 条款。
+
+#### B. Excel 表格源文件（Apache POI）
+
+1. 编辑 `stdmock001`（或新建草稿），上传 `mock-standard-table-q345b.xlsx`。
+2. 草稿阶段仍为 `PENDING`；发布后索引成功。
+3. RAG 提问：`Q345B 屈服强度 ReL 指标下限是多少？` 应能引用表格行文本。
+
+#### C. 扫描图片源文件（DeepSeek-OCR / 硅基流动）
+
+1. 编辑 `stdmock002`（或新建草稿），上传 `mock-standard-scan-q235b.png`。
+2. 发布后系统调用 Vision OCR 提取文字再切块入库。
+3. RAG 提问：`西南建材 Q235B 冷轧板延伸率协议下限是多少？` 应能引用 OCR 文本。
+4. **降级演示**：临时设置 `app.ai.model.vision.enabled=false` 并重启后端 → 发布/重传图片后索引失败，标准仍为 `PUBLISHED`，可点「重新索引」；恢复 Vision 后重试成功。
+
+#### 通用操作
+
+1. 对已发布标准「重传源文件」：系统先清理旧条款与 ES 向量，再对新文件立即 re-ingest。
+2. 「下载源文件」可验证本地存储路径 `backend/resources/standard-documents/{standardId}/`。
+3. 删除标准时，关联源文件、文档元数据、条款与 ES 向量一并清理。
 
 **讲解要点**：
 
-> 「结构化指标仍是判定真源；PDF 只用于 RAG 引用与解释。草稿只存文件，发布后才向量化；RAG 检索会自动排除未发布标准关联的条款。」
+> 「结构化指标仍是判定真源；PDF/Excel/图片提取文本只用于 RAG 引用与解释。草稿只存文件，发布后才向量化；RAG 检索会自动排除未发布标准关联的条款。图片 OCR 结果非确定性，不得回写结构化限值。」
+
+### 10.6 一标准多源文件（OpenSpec §15，待实现）
+
+**目标**：同一标准可同时保留 PDF + Excel + 图片等多个源文件，每个文件独立解析/索引。
+
+**规范要点**（实现后演示）：
+
+1. 在标准维护页 **连续上传** 多个文件（不覆盖旧文件）。
+2. 列表展示每个文件的解析/索引状态与条款数。
+3. 发布后对 **所有** 已上传文件批量 ingest；单文件失败不影响标准发布状态。
+4. 删除其中一个文件仅清理该文件的 ES 向量。
+5. RAG 检索可同时引用 PDF 条款与 Excel 行文本。
+
+详见 [`MULTI_SOURCE_FILES_PROPOSAL.md`](MULTI_SOURCE_FILES_PROPOSAL.md) 与 `tasks.md` §15。
 
 ---
 
@@ -536,12 +590,12 @@ curl -s http://localhost:8080/api/v1/cert-data/qa \
   -d '{"queryType":"COIL","coilNo":"Z004001","question":"这卷为什么不能出正式质保书？"}' \
   | python3 -m json.tool | head -40
 
-# 上传标准源 PDF（将 {standardId} 与 PDF 路径替换为实际值）
+# 上传标准源文件（将 {standardId} 与文件路径替换为实际值；支持 pdf/xlsx/xls/png/jpg/jpeg）
 curl -s -X POST "http://localhost:8080/api/v1/standards/{standardId}/source-file" \
   -H "Authorization: Bearer $TOKEN" \
-  -F "file=@/path/to/standard.pdf" | python3 -m json.tool
+  -F "file=@backend/scripts/demo-documents/mock-standard-table-q345b.xlsx" | python3 -m json.tool
 
-# 重新索引已发布标准的源 PDF
+# 重新索引已发布标准的源文件
 curl -s -X POST "http://localhost:8080/api/v1/standards/{standardId}/source-file/reindex" \
   -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
 ```

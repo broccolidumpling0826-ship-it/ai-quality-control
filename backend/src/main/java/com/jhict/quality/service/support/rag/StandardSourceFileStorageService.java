@@ -15,15 +15,18 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Locale;
-import java.util.UUID;
+import java.util.Set;
 import java.util.stream.Stream;
 
 @Service
 public class StandardSourceFileStorageService {
 
-    private static final String PDF_SUFFIX = ".pdf";
+    private static final Set<String> DEFAULT_ALLOWED_EXTENSIONS = new HashSet<>(
+            Arrays.asList("pdf", "xlsx", "xls", "png", "jpg", "jpeg"));
 
     @Value("${app.standard-document.storage-path:resources/standard-documents}")
     private String storagePath;
@@ -31,32 +34,48 @@ public class StandardSourceFileStorageService {
     @Value("${app.standard-document.max-file-size-mb:50}")
     private long maxFileSizeMb;
 
-    public void validatePdf(MultipartFile file) {
+    @Value("${app.standard-document.allowed-extensions:pdf,xlsx,xls,png,jpg,jpeg}")
+    private String allowedExtensions;
+
+    @Value("${app.standard-document.max-files-per-standard:10}")
+    private int maxFilesPerStandard;
+
+    public void validateSourceFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "请上传 PDF 文件");
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "请上传标准源文件");
         }
-        String originalName = file.getOriginalFilename();
-        if (!StringUtils.hasText(originalName) || !originalName.toLowerCase(Locale.ROOT).endsWith(PDF_SUFFIX)) {
-            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "仅支持 PDF 标准源文件");
+        String extension = extensionOf(file.getOriginalFilename());
+        if (!isAllowedExtension(extension)) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST,
+                    "仅支持 PDF、Excel（xlsx/xls）或图片（png/jpg/jpeg）标准源文件");
         }
         long maxBytes = maxFileSizeMb * 1024L * 1024L;
         if (file.getSize() > maxBytes) {
-            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "PDF 文件大小不能超过 " + maxFileSizeMb + "MB");
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "源文件大小不能超过 " + maxFileSizeMb + "MB");
         }
     }
 
-    public StoredStandardFile save(String standardId, MultipartFile file) {
-        validatePdf(file);
+    public void assertCanAddFile(int currentFileCount) {
+        if (currentFileCount >= maxFilesPerStandard) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST,
+                    "每个标准最多上传 " + maxFilesPerStandard + " 个源文件");
+        }
+    }
+
+    public StoredStandardFile save(String standardId, String documentId, MultipartFile file) {
+        validateSourceFile(file);
         if (!StringUtils.hasText(standardId)) {
             throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "标准ID不能为空");
+        }
+        if (!StringUtils.hasText(documentId)) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "源文档ID不能为空");
         }
         try {
             Path standardDir = resolveStandardDir(standardId);
             Files.createDirectories(standardDir);
-            clearDirectory(standardDir);
 
             String safeName = sanitizeFileName(file.getOriginalFilename());
-            String storedName = UUID.randomUUID().toString().replace("-", "") + "_" + safeName;
+            String storedName = documentId + "_" + safeName;
             Path target = standardDir.resolve(storedName);
 
             String hash;
@@ -69,11 +88,28 @@ public class StandardSourceFileStorageService {
             }
 
             String relativePath = toRelativePath(target);
-            return new StoredStandardFile(safeName, relativePath, hash, target);
+            return new StoredStandardFile(safeName, relativePath, hash, target, extensionOf(safeName));
         } catch (ServiceException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new ServiceException(ApiResult.CODE_SERVER_ERROR, "保存标准 PDF 失败: " + ex.getMessage());
+            throw new ServiceException(ApiResult.CODE_SERVER_ERROR, "保存标准源文件失败: " + ex.getMessage());
+        }
+    }
+
+    public void deleteStoredFile(String relativePath) {
+        if (!StringUtils.hasText(relativePath)) {
+            return;
+        }
+        try {
+            Path path = resolveReadablePath(relativePath);
+            Files.deleteIfExists(path);
+        } catch (ServiceException ex) {
+            if (ApiResult.CODE_NOT_FOUND.equals(ex.getCode())) {
+                return;
+            }
+            throw ex;
+        } catch (IOException ex) {
+            throw new ServiceException(ApiResult.CODE_SERVER_ERROR, "删除标准源文件失败: " + ex.getMessage());
         }
     }
 
@@ -113,6 +149,27 @@ public class StandardSourceFileStorageService {
         }
     }
 
+    public String contentTypeForExtension(String extension) {
+        if (!StringUtils.hasText(extension)) {
+            return "application/octet-stream";
+        }
+        switch (extension.toLowerCase(Locale.ROOT)) {
+            case "pdf":
+                return "application/pdf";
+            case "xlsx":
+                return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "xls":
+                return "application/vnd.ms-excel";
+            case "png":
+                return "image/png";
+            case "jpg":
+            case "jpeg":
+                return "image/jpeg";
+            default:
+                return "application/octet-stream";
+        }
+    }
+
     private Path resolveStandardDir(String standardId) {
         return Paths.get(storagePath, standardId).normalize().toAbsolutePath();
     }
@@ -126,17 +183,6 @@ public class StandardSourceFileStorageService {
         return Paths.get(storagePath, normalizedTarget.getFileName().toString()).toString().replace('\\', '/');
     }
 
-    private void clearDirectory(Path dir) throws IOException {
-        if (!Files.exists(dir)) {
-            return;
-        }
-        try (Stream<Path> walk = Files.list(dir)) {
-            for (Path path : (Iterable<Path>) walk::iterator) {
-                Files.deleteIfExists(path);
-            }
-        }
-    }
-
     private String sanitizeFileName(String originalName) {
         String name = originalName.replace("\\", "/");
         int slash = name.lastIndexOf('/');
@@ -144,10 +190,45 @@ public class StandardSourceFileStorageService {
             name = name.substring(slash + 1);
         }
         name = name.replaceAll("[^a-zA-Z0-9._\\-\\u4e00-\\u9fa5]", "_");
-        if (!name.toLowerCase(Locale.ROOT).endsWith(PDF_SUFFIX)) {
-            name = name + PDF_SUFFIX;
+        String extension = extensionOf(name);
+        if (!StringUtils.hasText(extension)) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "源文件缺少有效扩展名");
+        }
+        if (!isAllowedExtension(extension)) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "不支持的源文件扩展名: " + extension);
+        }
+        if (!name.toLowerCase(Locale.ROOT).endsWith("." + extension)) {
+            name = name + "." + extension;
         }
         return name;
+    }
+
+    private boolean isAllowedExtension(String extension) {
+        return StringUtils.hasText(extension) && allowedExtensionSet().contains(extension.toLowerCase(Locale.ROOT));
+    }
+
+    private Set<String> allowedExtensionSet() {
+        if (!StringUtils.hasText(allowedExtensions)) {
+            return DEFAULT_ALLOWED_EXTENSIONS;
+        }
+        Set<String> extensions = new HashSet<>();
+        for (String item : allowedExtensions.split(",")) {
+            if (StringUtils.hasText(item)) {
+                extensions.add(item.trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        return extensions.isEmpty() ? DEFAULT_ALLOWED_EXTENSIONS : extensions;
+    }
+
+    private String extensionOf(String fileName) {
+        if (!StringUtils.hasText(fileName)) {
+            return "";
+        }
+        int index = fileName.lastIndexOf('.');
+        if (index < 0 || index == fileName.length() - 1) {
+            return "";
+        }
+        return fileName.substring(index + 1).toLowerCase(Locale.ROOT);
     }
 
     private String toHex(byte[] digest) {
@@ -163,12 +244,15 @@ public class StandardSourceFileStorageService {
         private final String relativePath;
         private final String fileHash;
         private final Path absolutePath;
+        private final String fileExtension;
 
-        public StoredStandardFile(String originalFileName, String relativePath, String fileHash, Path absolutePath) {
+        public StoredStandardFile(String originalFileName, String relativePath, String fileHash,
+                                  Path absolutePath, String fileExtension) {
             this.originalFileName = originalFileName;
             this.relativePath = relativePath;
             this.fileHash = fileHash;
             this.absolutePath = absolutePath;
+            this.fileExtension = fileExtension;
         }
 
         public String getOriginalFileName() {
@@ -185,6 +269,10 @@ public class StandardSourceFileStorageService {
 
         public Path getAbsolutePath() {
             return absolutePath;
+        }
+
+        public String getFileExtension() {
+            return fileExtension;
         }
     }
 }

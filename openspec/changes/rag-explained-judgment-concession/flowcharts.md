@@ -134,14 +134,16 @@ Data contract alignment:
 
 ```mermaid
 flowchart TD
-    A[FE: 标准库上传/登记 PDF、Office、Markdown 或文本文件] --> B[BE: StandardDocumentController]
-    B --> C[BE: StandardDocumentService 保存文档元数据和原始文件信息]
+    A[FE: 标准库上传/登记多个 PDF、Excel、图片或文本文件] --> B[BE: StandardController source-files API]
+    B --> C[BE: 为每个文件创建/更新独立 qc_standard_document 行]
     C --> D{文件类型}
     D -- PDF --> E[BE: Apache PDFBox 提取文本和页码]
-    D -- Word/Excel --> F[BE: Apache POI 提取文本/表格行文本]
+    D -- Excel --> F[BE: Apache POI 行导向表格文本]
+    D -- PNG/JPG/JPEG --> V[BE: ModelGateway Vision OCR DeepSeek-OCR]
     D -- Markdown/Text --> G[BE: 直接读取文本]
     E --> H[BE: 保存 parseStatus、解析错误和引用锚点]
     F --> H
+    V --> H
     G --> H
     H --> I[BE: ClauseChunker 按章节/条款/段落边界切片]
     I --> J{切片是否过长或边界不清}
@@ -165,7 +167,8 @@ Ingestion rules:
 
 - Chunking is deterministic code behavior. The embedding model must not decide where the document is cut.
 - Clause headings and paragraph boundaries are preferred. Lightweight NLP sentence segmentation is only a fallback for unclear text boundaries.
-- PDF/Office/table extraction output is retrieval evidence only. It must not become structured judgment truth unless a human维护标准指标后写入结构化标准表.
+- PDF/Excel/Vision OCR extraction output is retrieval evidence only. It must not become structured judgment truth unless a human维护标准指标后写入结构化标准表.
+- One structured standard may produce multiple indexed documents; RAG retrieval merges clauses across all successfully indexed `documentId` values for that standard.
 - Every indexed ES chunk must contain source text, embedding vector, document metadata, citation anchors, applicability metadata, and index status traceability.
 
 ### 6.2 Standard RAG Retrieval Flow

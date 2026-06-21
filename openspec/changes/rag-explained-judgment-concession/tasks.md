@@ -136,3 +136,23 @@
 - [x] 13.7 Add standard maintenance PDF upload/download/replace UI on `standard-lib/index.vue`
 - [x] 13.8 Filter RAG retrieval to exclude draft-only linked source documents
 - [ ] 13.9 Verify publish/upload/replace/delete E2E and update demo operation manual
+
+## 14. Multi-format Standard Source Files
+
+- [x] 14.1 Update OpenSpec delta for multi-format source files (PDF/Excel/image) and Vision OCR requirements
+- [x] 14.2 Extend storage validation and download content types for pdf/xlsx/xls/png/jpg/jpeg
+- [x] 14.3 Add Vision OCR gateway config (`deepseek-ai/DeepSeek-OCR`) and `ModelGateway.extractImageText`
+- [x] 14.4 Add `ImageVisionSourceDocumentTextExtractor` and `ExcelTableSourceDocumentTextExtractor`
+- [x] 14.5 Update standard maintenance UI for multi-format upload/download labels
+- [x] 14.6 Add mock xlsx/png demo assets, unit tests, and E2E verification steps
+
+## 15. Multiple Source Files Per Standard
+
+- [x] 15.1 Update `standard-source-file-management` and `standard-rag-retrieval` spec for one-to-many source files
+- [x] 15.2 Update design §3B/§3D, proposal, handoff, flowcharts, and demo manual for multi-file behavior
+- [x] 15.3 Add config `app.standard-document.max-files-per-standard` (default 10) and document-code uniqueness strategy
+- [x] 15.4 Backend: list/create/delete per `documentId`; storage path `{standardId}/{documentId}_{file}`; no directory wipe on upload
+- [x] 15.5 Backend API: `/source-files` list/upload/download/delete/reindex + legacy `/source-file` compatibility
+- [x] 15.6 Publish/delete standard: ingest all linked files on publish; cascade delete all documents; partial failure handling
+- [x] 15.7 Frontend: source file table with add/download/delete/reindex; publish result shows per-file ingest array
+- [x] 15.8 RAG citations include source file name; E2E PDF+Excel coexist retrieval; update verification report
