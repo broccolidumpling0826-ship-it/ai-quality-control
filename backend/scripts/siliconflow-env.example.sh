@@ -8,7 +8,7 @@
 export AI_MODEL_PROVIDER="SILICONFLOW"
 export AI_MODEL_ENABLED=true
 export AI_MODEL_BASE_URL="https://api.siliconflow.cn/v1"
-export AI_MODEL_API_KEY="sk-your-siliconflow-chat-api-key"
+export AI_MODEL_API_KEY="your-chat-api-key"
 export AI_MODEL_CHAT_MODEL="deepseek-ai/DeepSeek-V3.2"
 
 # SiliconFlow supports provider-specific thinking parameters on supported models.
@@ -21,6 +21,6 @@ export AI_MODEL_TIMEOUT_MILLIS=15000
 export EMBEDDING_PROVIDER="SILICONFLOW"
 export EMBEDDING_ENABLED=true
 export EMBEDDING_BASE_URL="https://api.siliconflow.cn/v1"
-export EMBEDDING_API_KEY="sk-your-siliconflow-embedding-api-key"
+export EMBEDDING_API_KEY="your-embedding-api-key"
 export EMBEDDING_MODEL="BAAI/bge-m3"
 export EMBEDDING_TIMEOUT_MILLIS=15000

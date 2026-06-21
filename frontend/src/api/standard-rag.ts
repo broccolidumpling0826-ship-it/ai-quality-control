@@ -35,8 +35,34 @@ export interface StandardRagAnswer {
   degradationSource?: string
   degradationReason?: string
   cacheHit?: boolean
+  embeddingUsed?: boolean
+  retrievalMode?: string
+  chatPromptSourceCount?: number
   sources?: RagSource[]
+}
+
+export interface StandardDocumentIngestCommand {
+  documentId: string
+  reindexExisting?: boolean
+  indexName?: string
+  maxChunkChars?: number
+}
+
+export interface StandardDocumentIngestResult {
+  documentId?: string
+  parseStatus?: string
+  indexStatus?: string
+  extractedPageCount?: number
+  chunkCount?: number
+  indexedCount?: number
+  failedClauseIds?: string[]
+  retrievalMode?: string
+  errorCategory?: string
+  errorMessage?: string
 }
 
 export const queryStandardRag = (data: StandardRagQuery) =>
   post<StandardRagAnswer>('/standard-rag/query', data)
+
+export const ingestStandardDocument = (data: StandardDocumentIngestCommand) =>
+  post<StandardDocumentIngestResult>('/standard-documents/ingest-index', data)

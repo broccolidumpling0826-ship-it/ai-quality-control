@@ -25,6 +25,8 @@
         <knife4j.version>4.4.0</knife4j.version>
         <hutool.version>5.8.25</hutool.version>
         <fastjson2.version>2.0.47</fastjson2.version>
+        <pdfbox.version>2.0.30</pdfbox.version>
+        <poi.version>5.2.5</poi.version>
         <!-- 6.x 兼容 Spring Boot 2.7 自带的 Logback 1.2；7.4+ 需要 Logback 1.3 -->
         <logstash-logback-encoder.version>6.6</logstash-logback-encoder.version>
     </properties>
@@ -129,6 +131,28 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
+        </dependency>
+
+        <!-- Standard document text extraction for RAG ingestion -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-scratchpad</artifactId>
+            <version>${poi.version}</version>
         </dependency>
 
         <!-- BCrypt -->

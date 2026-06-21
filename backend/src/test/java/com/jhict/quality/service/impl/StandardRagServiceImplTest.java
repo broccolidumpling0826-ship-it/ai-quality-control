@@ -73,7 +73,7 @@ class StandardRagServiceImplTest {
         assertEquals("LOW", answer.getConfidenceLabel());
         assertEquals(AiDegradationSource.RAW_RETRIEVAL.getCode(), answer.getDegradationSource());
         assertTrue(answer.getSources().get(0).getReferenceOnly());
-        verifyNoInteractions(modelGateway);
+        verify(modelGateway, never()).chat(any());
     }
 
     @Test
@@ -91,7 +91,7 @@ class StandardRagServiceImplTest {
         assertTrue(answer.getRefused());
         assertEquals("LOW", answer.getConfidenceLabel());
         assertEquals(AiDegradationSource.UNAVAILABLE.getCode(), answer.getDegradationSource());
-        verifyNoInteractions(modelGateway);
+        verify(modelGateway, never()).chat(any());
     }
 
     @Test
@@ -104,7 +104,7 @@ class StandardRagServiceImplTest {
         assertEquals("LOW", answer.getConfidenceLabel());
         assertEquals(AiDegradationSource.RAW_RETRIEVAL.getCode(), answer.getDegradationSource());
         assertTrue(answer.getAnswer().contains("检测到"));
-        verifyNoInteractions(modelGateway);
+        verify(modelGateway, never()).chat(any());
     }
 
     private StandardRagQueryCmd cmd(String query) {

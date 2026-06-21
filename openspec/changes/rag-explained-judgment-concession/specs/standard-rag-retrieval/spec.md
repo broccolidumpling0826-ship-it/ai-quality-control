@@ -11,23 +11,72 @@ The system SHALL store original national standard, enterprise standard, customer
 - **WHEN** a document is registered for a specific variety, grade, customer, or usage scope
 - **THEN** the system SHALL persist the applicability metadata for later retrieval filtering
 
+### Requirement: Uploaded PDF and Office documents are parsed into text
+The system SHALL ingest source files such as PDF, Word, Excel, and Markdown/text documents by extracting text before indexing, while preserving source metadata for citation.
+
+#### Scenario: Upload PDF standard document
+- **WHEN** a quality engineer uploads a PDF standard document such as a national standard or customer agreement
+- **THEN** the system SHALL extract text using a deterministic document parser such as Apache PDFBox for PDF or Apache POI for Office files
+- **AND** the system SHALL persist parse status, source file metadata, and any parse error without deleting the original document record
+
+#### Scenario: Extracted text preserves citation anchors
+- **WHEN** text is extracted from a source document
+- **THEN** the system SHALL preserve page number when available, document id, standard code, version, effective dates, customer/applicability metadata, and recognizable clause headings for later citation
+
+#### Scenario: Tables are extracted conservatively
+- **WHEN** a PDF or Office document contains tables
+- **THEN** the system MAY extract table text into row-oriented text blocks
+- **AND** it SHALL mark table-derived text as extracted evidence rather than structured judgment truth
+
+### Requirement: Document chunking is deterministic and clause-aware
+The system SHALL chunk extracted standard text into retrieval clauses by code rules using chapter, clause, paragraph, and natural boundary structure, not by asking the embedding model to decide chunks.
+
+#### Scenario: Standard has clear clause numbers
+- **WHEN** extracted text contains headings such as `7.3 力学性能` or `3.1 Customer Mechanical Requirement`
+- **THEN** the system SHALL create chunks that keep the heading and its complete paragraph together
+- **AND** each chunk SHALL include clause number, clause title when available, page number when available, and original paragraph text
+
+#### Scenario: Paragraph is too long
+- **WHEN** a clause paragraph exceeds the configured chunk size
+- **THEN** the system SHALL split on natural paragraph or sentence boundaries and keep overlap only when needed to preserve context
+
+#### Scenario: Optional lightweight NLP boundary detection
+- **WHEN** paragraph boundaries are unclear
+- **THEN** the system MAY use lightweight NLP tools such as jieba or spaCy for sentence segmentation before merging adjacent sentences into coherent chunks
+- **AND** the system SHALL NOT require an additional semantic model for chunking in the default path
+
 ### Requirement: Standard clauses are indexed for RAG
-The system SHALL split registered documents into clauses and index clause text plus citation metadata through the vector-store gateway.
+The system SHALL split registered documents into clauses, generate embeddings for clause text, and index clause text, vector, and citation metadata through the vector-store gateway.
 
 #### Scenario: Clause index contains citation fields
 - **WHEN** a document is indexed
-- **THEN** each indexed clause SHALL include document id, standard code, standard name, version, standard type, clause number, page number, original text, and applicability metadata
+- **THEN** each indexed clause SHALL include document id, standard code, standard name, version, standard type, clause number, page number, original text, applicability metadata, and embedding vector
+
+#### Scenario: Text is vectorized before storage
+- **WHEN** a chunk is ready for indexing
+- **THEN** the system SHALL call the configured embedding model with the chunk text and relevant metadata context
+- **AND** it SHALL store the returned vector in the vector index with the chunk source fields
+
+#### Scenario: Embedding failure is visible
+- **WHEN** vector generation fails for one or more chunks
+- **THEN** the system SHALL mark those chunks as embedding/index failed and SHALL NOT silently index them as successful vector chunks
 
 #### Scenario: Indexing failure is visible
 - **WHEN** indexing a document fails
 - **THEN** the system SHALL persist an indexing failure status and error message without deleting the source document metadata
 
 ### Requirement: Natural language standard retrieval returns cited answers
-The system SHALL answer natural-language standard queries using retrieved standard/agreement/case clauses and SHALL include source clauses in every generated answer.
+The system SHALL answer natural-language standard queries using the pipeline `query text -> query embedding -> vector/keyword retrieval -> source-grounded answer generation` and SHALL include source clauses in every generated answer.
 
 #### Scenario: Query with matching clauses
 - **WHEN** a user asks a question that matches uploaded standard clauses
-- **THEN** the system SHALL return an answer, matched clauses, standard names, versions, clause numbers, page numbers, and retrieval scores
+- **THEN** the system SHALL embed the query text, retrieve matching clauses from the vector index with applicable filters, and pass only the retrieved clauses plus system rules to the chat model
+- **AND** it SHALL return an answer, matched clauses, standard names, versions, clause numbers, page numbers, retrieval scores, and retrieval mode
+
+#### Scenario: Answer generation uses retrieved context
+- **WHEN** retrieved clauses meet the answer threshold
+- **THEN** the chat model prompt SHALL include the user question, retrieved source chunks, and grounding instructions
+- **AND** the answer SHALL cite source clauses or be degraded/refused when citations cannot be verified
 
 #### Scenario: Query without matching clauses
 - **WHEN** no retrieved clause meets the configured relevance threshold

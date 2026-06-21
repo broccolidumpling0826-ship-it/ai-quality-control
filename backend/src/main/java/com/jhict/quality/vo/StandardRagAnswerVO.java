@@ -25,5 +25,11 @@ public class StandardRagAnswerVO {
 
     private Boolean cacheHit;
 
+    private Boolean embeddingUsed;
+
+    private String retrievalMode;
+
+    private Integer chatPromptSourceCount;
+
     private List<StandardRagSourceVO> sources;
 }

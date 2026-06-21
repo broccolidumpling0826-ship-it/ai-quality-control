@@ -33,13 +33,31 @@ Backend runtime:
 | `ES_STANDARD_INDEX` | Clause vector index | `quality-standard-clauses` |
 | `ES_TIMEOUT_MILLIS` | Vector search timeout | `5000` |
 
+## RAG Ingestion Contract
+
+The current RAG requirement is a full ingestion pipeline, not only a prepared-clause demo:
+
+1. Register or upload a source document from PDF, Word, Excel, Markdown, or plain text.
+2. Extract text deterministically:
+   - PDF: Apache PDFBox.
+   - Word/Excel: Apache POI.
+   - Markdown/text: direct parser.
+3. Preserve citation anchors such as document id, standard code, version, page number when available, clause heading, and applicability metadata.
+4. Chunk text with code rules based on chapter, clause, paragraph, and natural boundaries. Optional lightweight NLP sentence segmentation may be used only as a fallback. The embedding model must not decide chunk boundaries.
+5. Generate embedding vectors for chunks before ES indexing.
+6. Store source text, embedding vector, citation metadata, applicability metadata, and parse/embedding/index status in DB/ES.
+7. For RAG query, execute `query text -> query embedding -> vector/keyword retrieval -> source-grounded chat answer`.
+
+Structured standard tables remain the judgment truth. Extracted PDF/Office/table text is retrieval evidence for citation and review only.
+
 ## External Checks Not Completed In This Local Run
 
 The following require live services or credentials and should be verified in the target demo environment:
 
 - MySQL end-to-end demo data load and API workflow.
 - Redis dashboard cache read/write behavior.
-- Elasticsearch 8.15.0 clause index creation, clause indexing, semantic retrieval, and raw retrieval fallback.
+- PDFBox/POI document extraction, deterministic chunk generation, embedding generation, ES clause vector indexing, semantic retrieval, and raw retrieval fallback.
+- Elasticsearch 8.15.0 clause index creation and vector dimension compatibility with the selected embedding model.
 - OpenAI-compatible chat model generation and timeout/degradation behavior.
 - OpenAI-compatible embedding generation and vector dimension alignment.
 - Browser/manual flow from inspection entry to judgment, explanation, concession risk, and certificate Q&A.

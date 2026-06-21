@@ -7,6 +7,9 @@ import com.jhict.quality.dto.AiDegradationRequest;
 import com.jhict.quality.dto.StandardClausePageQuery;
 import com.jhict.quality.dto.StandardRagQueryCmd;
 import com.jhict.quality.enums.AiDegradationSource;
+import com.jhict.quality.gateway.model.ModelEmbedding;
+import com.jhict.quality.gateway.model.ModelEmbeddingRequest;
+import com.jhict.quality.gateway.model.ModelEmbeddingResponse;
 import com.jhict.quality.gateway.model.ModelChatRequest;
 import com.jhict.quality.gateway.model.ModelChatResponse;
 import com.jhict.quality.gateway.model.ModelGateway;
@@ -23,6 +26,7 @@ import com.jhict.quality.vo.AiSourceReferenceVO;
 import com.jhict.quality.vo.StandardClauseVO;
 import com.jhict.quality.vo.StandardRagAnswerVO;
 import com.jhict.quality.vo.StandardRagSourceVO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -33,6 +37,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class StandardRagServiceImpl implements StandardRagService {
 
     private static final int DEFAULT_TOP_K = 5;
@@ -56,25 +61,26 @@ public class StandardRagServiceImpl implements StandardRagService {
     @Override
     public StandardRagAnswerVO query(StandardRagQueryCmd cmd) {
         validateQuery(cmd);
-        VectorSearchResponse vectorResponse = vectorStoreGateway.searchClauses(buildVectorSearchRequest(cmd));
+        List<Double> queryVector = buildQueryVector(cmd);
+        VectorSearchResponse vectorResponse = vectorStoreGateway.searchClauses(buildVectorSearchRequest(cmd, queryVector));
         List<StandardRagSourceVO> sources = toSources(vectorResponse);
         if (sources.isEmpty()) {
             sources = fallbackDbSearch(cmd);
         }
         if (sources.isEmpty()) {
-            return noEvidence(cmd, vectorResponse);
+            return noEvidence(cmd, vectorResponse, queryVector);
         }
         if (!hasAuthoritativeEvidence(sources)) {
-            return lowQualityReferences(cmd, sources);
+            return lowQualityReferences(cmd, sources, queryVector);
         }
         if (looksLikePromptInjection(cmd.getQuery())) {
-            return promptInjectionRawAnswer(cmd, sources);
+            return promptInjectionRawAnswer(cmd, sources, queryVector);
         }
 
         ModelChatResponse modelResponse = modelGateway.chat(buildChatRequest(cmd, sources));
         AiDegradationResultVO degradation = aiDegradationService.resolveAiOutput(buildDegradationRequest(
                 cmd, modelResponse, sources));
-        return buildAnswer(cmd, sources, degradation);
+        return buildAnswer(cmd, sources, degradation, queryVector);
     }
 
     private void validateQuery(StandardRagQueryCmd cmd) {
@@ -83,10 +89,30 @@ public class StandardRagServiceImpl implements StandardRagService {
         }
     }
 
-    private VectorSearchRequest buildVectorSearchRequest(StandardRagQueryCmd cmd) {
+    private List<Double> buildQueryVector(StandardRagQueryCmd cmd) {
+        ModelEmbeddingResponse response = modelGateway.embed(ModelEmbeddingRequest.builder()
+                .businessType("STANDARD_RAG_QUERY")
+                .businessId(cmd.getQuery())
+                .inputTexts(java.util.Collections.singletonList(cmd.getQuery()))
+                .build());
+        if (response == null || !response.isSuccess() || CollectionUtils.isEmpty(response.getEmbeddings())) {
+            log.warn("标准RAG问题向量化失败，query={}, error={}",
+                    cmd.getQuery(), response == null ? "empty response" : response.getErrorMessage());
+            return null;
+        }
+        ModelEmbedding embedding = response.getEmbeddings().get(0);
+        if (embedding == null || CollectionUtils.isEmpty(embedding.getVector())) {
+            log.warn("标准RAG问题向量化结果为空，query={}", cmd.getQuery());
+            return null;
+        }
+        return embedding.getVector();
+    }
+
+    private VectorSearchRequest buildVectorSearchRequest(StandardRagQueryCmd cmd, List<Double> queryVector) {
         return VectorSearchRequest.builder()
                 .businessType("STANDARD_RAG")
                 .queryText(cmd.getQuery())
+                .queryVector(queryVector)
                 .sourceTypes(cmd.getSourceTypes())
                 .customerId(cmd.getCustomerId())
                 .variety(cmd.getVariety())
@@ -113,6 +139,10 @@ public class StandardRagServiceImpl implements StandardRagService {
                     .append(nullToEmpty(source.getParagraphText()))
                     .append("\n");
         }
+        log.info("标准RAG调用Chat模型，sourceCount={}, promptChars={}, sourceIds={}",
+                sources.size(),
+                userPrompt.length(),
+                sources.stream().map(StandardRagSourceVO::getClauseId).collect(Collectors.toList()));
         return ModelChatRequest.builder()
                 .businessType("STANDARD_RAG")
                 .promptVersion(PROMPT_VERSION)
@@ -144,7 +174,7 @@ public class StandardRagServiceImpl implements StandardRagService {
     }
 
     private StandardRagAnswerVO buildAnswer(StandardRagQueryCmd cmd, List<StandardRagSourceVO> sources,
-                                            AiDegradationResultVO degradation) {
+                                            AiDegradationResultVO degradation, List<Double> queryVector) {
         StandardRagAnswerVO answer = new StandardRagAnswerVO();
         answer.setQuery(cmd.getQuery());
         answer.setAnswer(degradation.getOutputText());
@@ -154,11 +184,15 @@ public class StandardRagServiceImpl implements StandardRagService {
         answer.setDegradationSource(degradation.getDegradationSource());
         answer.setDegradationReason(degradation.getDegradationReason());
         answer.setCacheHit(AiDegradationSource.CACHE.getCode().equals(degradation.getDegradationSource()));
+        answer.setEmbeddingUsed(!CollectionUtils.isEmpty(queryVector));
+        answer.setRetrievalMode(!CollectionUtils.isEmpty(queryVector) ? "ES_VECTOR_SCRIPT_SCORE" : "ES_TEXT_OR_DB_FALLBACK");
+        answer.setChatPromptSourceCount(sources.size());
         answer.setSources(sources);
         return answer;
     }
 
-    private StandardRagAnswerVO noEvidence(StandardRagQueryCmd cmd, VectorSearchResponse vectorResponse) {
+    private StandardRagAnswerVO noEvidence(StandardRagQueryCmd cmd, VectorSearchResponse vectorResponse,
+                                           List<Double> queryVector) {
         StandardRagAnswerVO answer = new StandardRagAnswerVO();
         answer.setQuery(cmd.getQuery());
         answer.setAnswer("");
@@ -171,11 +205,15 @@ public class StandardRagServiceImpl implements StandardRagService {
         answer.setDegradationSource(AiDegradationSource.UNAVAILABLE.getCode());
         answer.setDegradationReason(answer.getRefusalReason());
         answer.setCacheHit(false);
+        answer.setEmbeddingUsed(!CollectionUtils.isEmpty(queryVector));
+        answer.setRetrievalMode(!CollectionUtils.isEmpty(queryVector) ? "ES_VECTOR_SCRIPT_SCORE" : "ES_TEXT_OR_DB_FALLBACK");
+        answer.setChatPromptSourceCount(0);
         answer.setSources(new ArrayList<>());
         return answer;
     }
 
-    private StandardRagAnswerVO lowQualityReferences(StandardRagQueryCmd cmd, List<StandardRagSourceVO> sources) {
+    private StandardRagAnswerVO lowQualityReferences(StandardRagQueryCmd cmd, List<StandardRagSourceVO> sources,
+                                                     List<Double> queryVector) {
         StandardRagAnswerVO answer = new StandardRagAnswerVO();
         answer.setQuery(cmd.getQuery());
         answer.setAnswer("");
@@ -186,11 +224,15 @@ public class StandardRagServiceImpl implements StandardRagService {
         answer.setDegradationSource(AiDegradationSource.RAW_RETRIEVAL.getCode());
         answer.setDegradationReason("来源条款未达到回答阈值");
         answer.setCacheHit(false);
+        answer.setEmbeddingUsed(!CollectionUtils.isEmpty(queryVector));
+        answer.setRetrievalMode(!CollectionUtils.isEmpty(queryVector) ? "ES_VECTOR_SCRIPT_SCORE" : "ES_TEXT_OR_DB_FALLBACK");
+        answer.setChatPromptSourceCount(0);
         answer.setSources(sources);
         return answer;
     }
 
-    private StandardRagAnswerVO promptInjectionRawAnswer(StandardRagQueryCmd cmd, List<StandardRagSourceVO> sources) {
+    private StandardRagAnswerVO promptInjectionRawAnswer(StandardRagQueryCmd cmd, List<StandardRagSourceVO> sources,
+                                                         List<Double> queryVector) {
         StandardRagAnswerVO answer = new StandardRagAnswerVO();
         answer.setQuery(cmd.getQuery());
         answer.setAnswer("检测到可能要求忽略标准、编造依据或泄露系统提示的指令。系统已忽略该指令，仅展示检索到的来源条款。");
@@ -200,6 +242,9 @@ public class StandardRagServiceImpl implements StandardRagService {
         answer.setDegradationSource(AiDegradationSource.RAW_RETRIEVAL.getCode());
         answer.setDegradationReason("提示注入安全保护，未调用模型生成");
         answer.setCacheHit(false);
+        answer.setEmbeddingUsed(!CollectionUtils.isEmpty(queryVector));
+        answer.setRetrievalMode(!CollectionUtils.isEmpty(queryVector) ? "ES_VECTOR_SCRIPT_SCORE" : "ES_TEXT_OR_DB_FALLBACK");
+        answer.setChatPromptSourceCount(0);
         answer.setSources(sources);
         return answer;
     }

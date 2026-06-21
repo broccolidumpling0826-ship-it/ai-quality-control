@@ -24,7 +24,7 @@ FE  = Vue page/component following frontend/DESIGN.md
 BE  = Spring Controller/Service following backend/AGENTS.md
 DB  = MySQL authoritative business persistence
 ES  = Elasticsearch retrieval/vector index
-LLM = ModelGateway provider, for example DeepSeek-compatible API
+LLM = ModelGateway provider, for example an OpenAI-compatible API
 AUD = Audit log or immutable AI assessment record
 ```
 
@@ -128,27 +128,71 @@ Data contract alignment:
 - BE response should include `selectedStandard`, `candidateStandards`, `suppressedStandards`, `conflicts`, and `warnings`.
 - FE must render selected, skipped, warning, and blocking states distinctly.
 
-## 6. Standard RAG Retrieval Flow
+## 6. Standard Document Ingestion And RAG Retrieval Flow
+
+### 6.1 Document Ingestion And Indexing Flow
+
+```mermaid
+flowchart TD
+    A[FE: 标准库上传/登记 PDF、Office、Markdown 或文本文件] --> B[BE: StandardDocumentController]
+    B --> C[BE: StandardDocumentService 保存文档元数据和原始文件信息]
+    C --> D{文件类型}
+    D -- PDF --> E[BE: Apache PDFBox 提取文本和页码]
+    D -- Word/Excel --> F[BE: Apache POI 提取文本/表格行文本]
+    D -- Markdown/Text --> G[BE: 直接读取文本]
+    E --> H[BE: 保存 parseStatus、解析错误和引用锚点]
+    F --> H
+    G --> H
+    H --> I[BE: ClauseChunker 按章节/条款/段落边界切片]
+    I --> J{切片是否过长或边界不清}
+    J -- 是 --> K[BE: 按段落/句子边界拆分，可选 jieba/spaCy 分句]
+    J -- 否 --> L[BE: 保持条款标题和完整段落为一片]
+    K --> M[BE: 生成 chunk metadata: documentId/页码/条款号/适用范围]
+    L --> M
+    M --> N[BE: ModelGateway.embed 对每个 chunk 向量化]
+    N --> O{embedding 是否成功}
+    O -- 否 --> P[DB: 标记 EMBEDDING_FAILED 并记录错误]
+    O -- 是 --> Q[BE: VectorStoreGateway 写入 ES 文本、向量和来源字段]
+    Q --> R{ES 写入是否成功}
+    R -- 否 --> S[DB: 标记 INDEX_FAILED 并记录错误]
+    R -- 是 --> T[DB: 标记 INDEXED，保存 clause 与 ES document key]
+    T --> U[FE: 标准库显示解析/切片/向量化/索引状态]
+    P --> U
+    S --> U
+```
+
+Ingestion rules:
+
+- Chunking is deterministic code behavior. The embedding model must not decide where the document is cut.
+- Clause headings and paragraph boundaries are preferred. Lightweight NLP sentence segmentation is only a fallback for unclear text boundaries.
+- PDF/Office/table extraction output is retrieval evidence only. It must not become structured judgment truth unless a human维护标准指标后写入结构化标准表.
+- Every indexed ES chunk must contain source text, embedding vector, document metadata, citation anchors, applicability metadata, and index status traceability.
+
+### 6.2 Standard RAG Retrieval Flow
 
 ```mermaid
 flowchart TD
     A[FE: 标准 RAG 检索页输入自然语言问题和过滤条件] --> B[BE: StandardRagController]
     B --> C[BE: StandardRagService 校验 query 和过滤条件]
-    C --> D[BE: VectorStoreGateway 检索条款]
-    D --> E{是否有达到回答阈值的条款}
-    E -- 否 --> F[BE: 返回 no-evidence refusal]
-    E -- 是 --> G[BE: PromptBuilder 仅注入检索条款和系统规则]
-    G --> H{LLM 是否可用}
-    H -- 是 --> I[BE: ModelGateway 生成引用式回答]
-    H -- 否 --> J[BE: 返回 raw retrieval fallback]
-    I --> K[BE: 校验回答是否含无引用声明]
-    K --> L{校验通过}
-    L -- 是 --> M[DB/AUD: 可选持久化 AI assessment]
-    L -- 否 --> N[BE: 降级为拒答或原始条款]
-    F --> O[FE: 展示未找到依据]
-    J --> P[FE: 展示 AI 不可用和原始条款]
-    M --> Q[FE: 展示答案/来源/分数/置信度]
-    N --> R[FE: 展示拒答或降级原因]
+    C --> D[BE: ModelGateway.embed 对 query 向量化]
+    D --> E{query embedding 是否可用}
+    E -- 否 --> F[BE: 降级为 keyword retrieval 或返回 embedding unavailable]
+    E -- 是 --> G[BE: VectorStoreGateway 按 queryVector + filters 检索 ES chunks]
+    F --> G
+    G --> H{是否有达到回答阈值的条款}
+    H -- 否 --> I[BE: 返回 no-evidence refusal，禁止模型凭记忆回答]
+    H -- 是 --> J[BE: PromptBuilder 仅注入检索 chunks、来源编号和系统规则]
+    J --> K{Chat LLM 是否可用}
+    K -- 是 --> L[BE: ModelGateway.chat 生成引用式回答]
+    K -- 否 --> M[BE: 返回 raw retrieval fallback]
+    L --> N[BE: 校验回答是否只引用已检索来源]
+    N --> O{校验通过}
+    O -- 是 --> P[DB/AUD: 可选持久化 AI assessment 和 prompt/source 快照]
+    O -- 否 --> Q[BE: 降级为拒答或原始条款]
+    I --> R[FE: 展示未找到依据]
+    M --> S[FE: 展示 AI 不可用和原始条款]
+    P --> T[FE: 展示答案/来源/分数/置信度/检索模式]
+    Q --> U[FE: 展示拒答或降级原因]
 ```
 
 Security rules:
@@ -156,6 +200,8 @@ Security rules:
 - FE renders model output and source paragraphs as escaped text.
 - BE treats user query and retrieved clauses as untrusted input.
 - LLM must not answer from memory when retrieval evidence is missing.
+- Chat prompt must include only retrieved chunks plus grounding rules; it must not include hidden unverified standard limits.
+- Retrieval responses should expose whether embedding retrieval was used, whether keyword fallback was used, and how many chunks were sent to chat.
 
 ## 7. AI Judgment Explanation And Degradation Flow
 

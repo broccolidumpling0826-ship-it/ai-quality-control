@@ -5,7 +5,7 @@ The system SHALL route external model calls through a model gateway abstraction 
 
 #### Scenario: Business service calls model gateway
 - **WHEN** a business service needs a generated explanation or recommendation
-- **THEN** it SHALL call the model gateway interface and SHALL NOT depend on DeepSeek-specific API details
+- **THEN** it SHALL call the model gateway interface and SHALL NOT depend on provider-specific API details
 
 #### Scenario: Model provider configuration is environment-backed
 - **WHEN** the application starts in dev profile

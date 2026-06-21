@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
+import java.util.List;
 
 /**
  * Clause document mirrored from qc_standard_clause to the vector store.
@@ -59,6 +60,8 @@ public class VectorClauseDocument {
     private String expiryDate;
 
     private String retrievalKeywords;
+
+    private List<Double> embedding;
 
     private Map<String, Object> metadata;
 }

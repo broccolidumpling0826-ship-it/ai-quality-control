@@ -203,6 +203,9 @@ public class ElasticsearchVectorStoreGateway implements VectorStoreGateway {
         body.put("effectiveDate", clause.getEffectiveDate());
         body.put("expiryDate", clause.getExpiryDate());
         body.put("retrievalKeywords", clause.getRetrievalKeywords());
+        if (!CollectionUtils.isEmpty(clause.getEmbedding())) {
+            body.put("embedding", clause.getEmbedding());
+        }
         body.put("metadata", clause.getMetadata());
         return body;
     }
@@ -236,7 +239,7 @@ public class ElasticsearchVectorStoreGateway implements VectorStoreGateway {
 
         if (request != null && !CollectionUtils.isEmpty(request.getQueryVector())) {
             Map<String, Object> script = new LinkedHashMap<>();
-            script.put("source", "cosineSimilarity(params.query_vector, 'embedding') + 1.0");
+            script.put("source", "doc['embedding'].size() == 0 ? 0.0 : cosineSimilarity(params.query_vector, 'embedding') + 1.0");
             script.put("params", Collections.singletonMap("query_vector", request.getQueryVector()));
             Map<String, Object> scriptScore = new LinkedHashMap<>();
             scriptScore.put("query", boolWrapper);

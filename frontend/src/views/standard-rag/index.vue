@@ -45,6 +45,10 @@
                 {{ answer.confidenceLabel || 'UNKNOWN' }}
               </el-tag>
               <el-tag size="small" type="info">{{ answer.degradationSource || 'N/A' }}</el-tag>
+              <el-tag size="small" :type="answer.embeddingUsed ? 'success' : 'warning'">
+                {{ answer.embeddingUsed ? 'EMBEDDING' : 'NO_EMBEDDING' }}
+              </el-tag>
+              <el-tag size="small" type="info">{{ answer.retrievalMode || 'N/A' }}</el-tag>
               <el-tag v-if="answer.cacheHit" size="small" type="warning">CACHE</el-tag>
             </div>
           </div>

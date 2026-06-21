@@ -10,7 +10,7 @@
 ## 2. P0 AI And Vector Gateways
 
 - [x] 2.1 Add `ModelGateway` interfaces and provider-neutral request/response models
-- [x] 2.2 Add DeepSeek-compatible model gateway implementation with environment-backed configuration and timeout handling
+- [x] 2.2 Add OpenAI-compatible model gateway implementation with environment-backed configuration and timeout handling
 - [x] 2.3 Add `VectorStoreGateway` interfaces for clause indexing and search
 - [x] 2.4 Add Elasticsearch 8.15.0 vector gateway implementation with environment-backed configuration
 - [x] 2.5 Add layered degradation service supporting cache, rule template, raw ES retrieval, and unavailable responses
@@ -25,6 +25,11 @@
 - [x] 3.5 Add raw-clause response when ES search succeeds but model generation is unavailable
 - [x] 3.6 Add prompt-injection safety checks that keep answers grounded in retrieved clauses
 - [x] 3.7 Verify P0 RAG scenarios for normal query, low-score query, no-evidence refusal, and prompt injection
+- [x] 3.8 Add production document parser path for PDF/Office/Markdown/text using Apache PDFBox, Apache POI, and direct text parser
+- [x] 3.9 Add deterministic clause-aware chunker that prefers chapter/clause/paragraph boundaries and optionally uses jieba/spaCy-style sentence segmentation only as a fallback
+- [x] 3.10 Generate embeddings for indexed chunks before ES storage and persist per-chunk parse/embedding/index status and errors
+- [x] 3.11 Update/verify RAG query path as `query text -> query embedding -> vector/keyword retrieval -> source-grounded chat answer`
+- [ ] 3.12 Add an end-to-end RAG ingest smoke case proving one uploaded source document becomes visible ES chunks with embedding vectors and the retrieved chunks are included in the chat prompt
 
 ## 4. P0 Deterministic Judgment And Conflict
 
@@ -102,7 +107,7 @@
 
 ## 11. P2 Optional Expansion
 
-- [ ] 11.1 Add advanced PDF/table extraction experiments for standards without using extraction as judgment truth
+- [ ] 11.1 Add advanced OCR/layout reconstruction experiments for scanned standards without using extraction as judgment truth
 - [ ] 11.2 Add real customer complaint table integration path while preserving document/RAG simulation
 - [ ] 11.3 Add real inventory or MES/WMS adapter behind alternative resource service
 - [ ] 11.4 Add production-style certificate layout features such as template selection, signature area, and QR verification if required later
@@ -118,3 +123,4 @@
 - [ ] 12.6 Manually verify AI degradation: cache, rule template, raw ES retrieval, and unavailable state
 - [x] 12.7 Run evaluation report and confirm all expected fields are reported
 - [x] 12.8 Document unavailable external-service checks and required environment variables for handoff
+- [ ] 12.9 Manually verify document ingestion chain: PDF/Office/Markdown source → extracted text → clause chunks → embedding vectors → ES documents → RAG answer citations

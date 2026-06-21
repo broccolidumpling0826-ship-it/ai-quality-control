@@ -7,26 +7,41 @@ import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.common.exception.ServiceException;
 import com.jhict.quality.dto.PreparedClauseIndexCmd;
 import com.jhict.quality.dto.StandardClausePageQuery;
+import com.jhict.quality.dto.StandardDocumentIngestCmd;
 import com.jhict.quality.dto.StandardDocumentPageQuery;
 import com.jhict.quality.entity.QcStandardClause;
 import com.jhict.quality.entity.QcStandardDocument;
+import com.jhict.quality.gateway.model.ModelEmbedding;
+import com.jhict.quality.gateway.model.ModelEmbeddingRequest;
+import com.jhict.quality.gateway.model.ModelEmbeddingResponse;
+import com.jhict.quality.gateway.model.ModelGateway;
 import com.jhict.quality.gateway.vector.VectorClauseDocument;
+import com.jhict.quality.gateway.vector.VectorDeleteRequest;
 import com.jhict.quality.gateway.vector.VectorIndexRequest;
 import com.jhict.quality.gateway.vector.VectorIndexResponse;
 import com.jhict.quality.gateway.vector.VectorStoreGateway;
 import com.jhict.quality.mapper.QcStandardClauseMapper;
 import com.jhict.quality.mapper.QcStandardDocumentMapper;
 import com.jhict.quality.service.api.StandardDocumentService;
+import com.jhict.quality.service.support.rag.ExtractedStandardDocument;
+import com.jhict.quality.service.support.rag.StandardClauseChunk;
+import com.jhict.quality.service.support.rag.StandardClauseChunker;
+import com.jhict.quality.service.support.rag.StandardDocumentTextExtractor;
 import com.jhict.quality.vo.StandardClauseVO;
+import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardDocumentVO;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -41,6 +56,15 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
 
     @Resource
     private VectorStoreGateway vectorStoreGateway;
+
+    @Resource
+    private ModelGateway modelGateway;
+
+    @Resource
+    private StandardDocumentTextExtractor standardDocumentTextExtractor;
+
+    @Resource
+    private StandardClauseChunker standardClauseChunker;
 
     @Override
     public IPage<StandardDocumentVO> pageDocuments(StandardDocumentPageQuery query) {
@@ -111,17 +135,98 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
                     .failedClauseIds(Collections.emptyList())
                     .build();
         }
+        ModelEmbeddingResponse embeddingResponse = modelGateway.embed(ModelEmbeddingRequest.builder()
+                .businessType("STANDARD_CLAUSE_INDEX")
+                .businessId(safeCmd.getDocumentId())
+                .inputTexts(clauses.stream().map(this::embeddingText).collect(Collectors.toList()))
+                .build());
+        if (embeddingResponse == null || !embeddingResponse.isSuccess()
+                || CollectionUtils.isEmpty(embeddingResponse.getEmbeddings())) {
+            updateEmbeddingFailed(clauses);
+            return VectorIndexResponse.builder()
+                    .success(false)
+                    .provider(vectorStoreGateway.provider())
+                    .indexName(safeCmd.getIndexName())
+                    .indexedCount(0)
+                    .failedClauseIds(clauses.stream().map(QcStandardClause::getId).collect(Collectors.toList()))
+                    .errorCategory(embeddingResponse == null ? "EMBEDDING_ERROR" : embeddingResponse.getErrorCategory())
+                    .errorMessage(embeddingResponse == null ? "向量模型未返回结果" : embeddingResponse.getErrorMessage())
+                    .build();
+        }
+        Map<Integer, List<Double>> embeddingByIndex = embeddingByIndex(embeddingResponse.getEmbeddings());
+        if (!hasAllEmbeddings(clauses, embeddingByIndex)) {
+            updateEmbeddingFailed(clauses);
+            return VectorIndexResponse.builder()
+                    .success(false)
+                    .provider(vectorStoreGateway.provider())
+                    .indexName(safeCmd.getIndexName())
+                    .indexedCount(0)
+                    .failedClauseIds(clauses.stream().map(QcStandardClause::getId).collect(Collectors.toList()))
+                    .errorCategory("EMBEDDING_MISMATCH")
+                    .errorMessage("向量模型返回数量与待索引条款不一致")
+                    .build();
+        }
+
         VectorIndexRequest request = VectorIndexRequest.builder()
                 .businessType("STANDARD_CLAUSE")
                 .businessId(safeCmd.getDocumentId())
                 .indexName(safeCmd.getIndexName())
-                .clauses(clauses.stream().map(this::toVectorClauseDocument).collect(Collectors.toList()))
+                .clauses(toVectorClauseDocuments(clauses, embeddingByIndex))
                 .build();
         VectorIndexResponse response = vectorStoreGateway.indexClauses(request);
         if (response.isSuccess() || !CollectionUtils.isEmpty(response.getFailedClauseIds())) {
             updateEmbeddingStatus(clauses, response.getFailedClauseIds());
         }
         return response;
+    }
+
+    @Override
+    public StandardDocumentIngestVO ingestAndIndexDocument(StandardDocumentIngestCmd cmd) {
+        StandardDocumentIngestCmd safeCmd = cmd == null ? new StandardDocumentIngestCmd() : cmd;
+        if (!StringUtils.hasText(safeCmd.getDocumentId())) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "源文档ID不能为空");
+        }
+        QcStandardDocument document = standardDocumentMapper.selectById(safeCmd.getDocumentId());
+        if (document == null) {
+            throw new ServiceException(ApiResult.CODE_NOT_FOUND, "标准源文档不存在");
+        }
+        try {
+            if (Boolean.TRUE.equals(safeCmd.getReindexExisting())) {
+                deleteExistingClauses(document.getId(), safeCmd.getIndexName());
+            }
+            ExtractedStandardDocument extracted = standardDocumentTextExtractor.extract(
+                    document.getSourceFileName(), document.getSourceFilePath());
+            List<StandardClauseChunk> chunks = standardClauseChunker.chunk(extracted, safeCmd.getMaxChunkChars());
+            if (CollectionUtils.isEmpty(chunks)) {
+                updateDocumentStatus(document.getId(), "FAILED", "FAILED", "未从源文档提取到可索引文本");
+                return buildIngestVO(document.getId(), "FAILED", "FAILED", extracted.getSegments().size(),
+                        0, null, "PARSE_EMPTY", "未从源文档提取到可索引文本");
+            }
+            List<QcStandardClause> clauses = insertChunks(document, chunks);
+            updateDocumentStatus(document.getId(), "PARSED", "PENDING", null);
+
+            PreparedClauseIndexCmd indexCmd = new PreparedClauseIndexCmd();
+            indexCmd.setDocumentId(document.getId());
+            indexCmd.setIndexName(safeCmd.getIndexName());
+            indexCmd.setOnlyPending(Boolean.TRUE);
+            VectorIndexResponse indexResponse = indexPreparedClauses(indexCmd);
+            boolean success = indexResponse != null && indexResponse.isSuccess();
+            updateDocumentStatus(document.getId(), "PARSED", success ? "INDEXED" : "FAILED",
+                    success ? null : safeErrorMessage(indexResponse));
+
+            StandardDocumentIngestVO vo = buildIngestVO(document.getId(), "PARSED",
+                    success ? "INDEXED" : "FAILED", extracted.getSegments().size(), clauses.size(),
+                    indexResponse, success ? null : safeErrorCategory(indexResponse),
+                    success ? null : safeErrorMessage(indexResponse));
+            vo.setRetrievalMode("EMBEDDING_VECTOR");
+            return vo;
+        } catch (ServiceException ex) {
+            updateDocumentStatus(document.getId(), "FAILED", "FAILED", ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            updateDocumentStatus(document.getId(), "FAILED", "FAILED", ex.getMessage());
+            throw new ServiceException(ApiResult.CODE_SERVER_ERROR, "标准文档入库失败: " + ex.getMessage());
+        }
     }
 
     private LambdaQueryWrapper<QcStandardDocument> buildDocumentWrapper(StandardDocumentPageQuery query) {
@@ -142,6 +247,96 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
                     .or().like(QcStandardDocument::getStandardName, query.getKeyword()));
         }
         return wrapper;
+    }
+
+    private void deleteExistingClauses(String documentId, String indexName) {
+        List<QcStandardClause> existingClauses = standardClauseMapper.selectList(
+                new LambdaQueryWrapper<QcStandardClause>().eq(QcStandardClause::getDocumentId, documentId));
+        for (QcStandardClause clause : existingClauses) {
+            vectorStoreGateway.deleteClause(VectorDeleteRequest.builder()
+                    .indexName(indexName)
+                    .clauseId(clause.getId())
+                    .esDocumentKey(clause.getEsDocumentKey())
+                    .build());
+        }
+        if (!existingClauses.isEmpty()) {
+            standardClauseMapper.delete(new LambdaQueryWrapper<QcStandardClause>()
+                    .eq(QcStandardClause::getDocumentId, documentId));
+        }
+    }
+
+    private List<QcStandardClause> insertChunks(QcStandardDocument document, List<StandardClauseChunk> chunks) {
+        List<QcStandardClause> clauses = new ArrayList<>();
+        for (int i = 0; i < chunks.size(); i++) {
+            StandardClauseChunk chunk = chunks.get(i);
+            QcStandardClause clause = new QcStandardClause();
+            clause.setDocumentId(document.getId());
+            clause.setStandardId(document.getStandardId());
+            clause.setClauseKey(document.getId() + ":" + chunk.getClauseNo() + ":" + (i + 1));
+            clause.setClauseNo(chunk.getClauseNo());
+            clause.setPageNo(chunk.getPageNo());
+            clause.setParagraphText(chunk.getParagraphText());
+            clause.setSourceType(StringUtils.hasText(document.getStandardType())
+                    ? document.getStandardType() : document.getDocumentType());
+            clause.setStandardType(document.getStandardType());
+            clause.setStandardCode(document.getStandardCode());
+            clause.setStandardName(document.getStandardName());
+            clause.setVersionNo(document.getVersionNo());
+            clause.setCustomerId(document.getCustomerId());
+            clause.setVariety(document.getVariety());
+            clause.setGrade(document.getGrade());
+            clause.setSpecRange(document.getSpecRange());
+            clause.setUsageScope(document.getUsageScope());
+            clause.setEffectiveDate(document.getEffectiveDate());
+            clause.setExpiryDate(document.getExpiryDate());
+            clause.setRetrievalKeywords(chunk.getRetrievalKeywords());
+            clause.setEmbeddingStatus("PENDING");
+            clause.setRelevanceGroup("INGESTED");
+            clause.setStatus("ACTIVE");
+            standardClauseMapper.insert(clause);
+            clauses.add(clause);
+        }
+        return clauses;
+    }
+
+    private void updateDocumentStatus(String documentId, String parseStatus, String indexStatus, String errorMessage) {
+        QcStandardDocument update = new QcStandardDocument();
+        update.setId(documentId);
+        update.setParseStatus(parseStatus);
+        update.setIndexStatus(indexStatus);
+        update.setParseErrorMessage(errorMessage);
+        if ("INDEXED".equals(indexStatus)) {
+            update.setIndexedAt(LocalDateTime.now());
+        }
+        standardDocumentMapper.updateById(update);
+    }
+
+    private StandardDocumentIngestVO buildIngestVO(String documentId, String parseStatus, String indexStatus,
+                                                   int pageCount, int chunkCount, VectorIndexResponse response,
+                                                   String errorCategory, String errorMessage) {
+        StandardDocumentIngestVO vo = new StandardDocumentIngestVO();
+        vo.setDocumentId(documentId);
+        vo.setParseStatus(parseStatus);
+        vo.setIndexStatus(indexStatus);
+        vo.setExtractedPageCount(pageCount);
+        vo.setChunkCount(chunkCount);
+        vo.setIndexedCount(response == null || response.getIndexedCount() == null ? 0 : response.getIndexedCount());
+        vo.setFailedClauseIds(response == null || response.getFailedClauseIds() == null
+                ? Collections.emptyList() : response.getFailedClauseIds());
+        vo.setErrorCategory(errorCategory);
+        vo.setErrorMessage(errorMessage);
+        return vo;
+    }
+
+    private String safeErrorCategory(VectorIndexResponse response) {
+        return response == null ? "INDEX_ERROR" : response.getErrorCategory();
+    }
+
+    private String safeErrorMessage(VectorIndexResponse response) {
+        if (response == null) {
+            return "向量索引未返回结果";
+        }
+        return response.getErrorMessage();
     }
 
     private LambdaQueryWrapper<QcStandardClause> buildClauseWrapper(StandardClausePageQuery query) {
@@ -180,7 +375,47 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
         return wrapper;
     }
 
-    private VectorClauseDocument toVectorClauseDocument(QcStandardClause clause) {
+    private List<VectorClauseDocument> toVectorClauseDocuments(List<QcStandardClause> clauses,
+                                                               Map<Integer, List<Double>> embeddingByIndex) {
+        return java.util.stream.IntStream.range(0, clauses.size())
+                .mapToObj(i -> toVectorClauseDocument(clauses.get(i), embeddingByIndex.get(i)))
+                .collect(Collectors.toList());
+    }
+
+    private Map<Integer, List<Double>> embeddingByIndex(List<ModelEmbedding> embeddings) {
+        Map<Integer, List<Double>> result = new HashMap<>();
+        for (int i = 0; i < embeddings.size(); i++) {
+            ModelEmbedding embedding = embeddings.get(i);
+            if (embedding != null && !CollectionUtils.isEmpty(embedding.getVector())) {
+                result.put(embedding.getIndex() == null ? i : embedding.getIndex(), embedding.getVector());
+            }
+        }
+        return result;
+    }
+
+    private boolean hasAllEmbeddings(List<QcStandardClause> clauses, Map<Integer, List<Double>> embeddingByIndex) {
+        if (clauses == null || embeddingByIndex == null || clauses.size() != embeddingByIndex.size()) {
+            return false;
+        }
+        for (int i = 0; i < clauses.size(); i++) {
+            if (CollectionUtils.isEmpty(embeddingByIndex.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private String embeddingText(QcStandardClause clause) {
+        return String.join("\n",
+                nullToEmpty(clause.getStandardCode()),
+                nullToEmpty(clause.getStandardName()),
+                nullToEmpty(clause.getClauseNo()),
+                nullToEmpty(clause.getIndicatorName()),
+                nullToEmpty(clause.getRetrievalKeywords()),
+                nullToEmpty(clause.getParagraphText()));
+    }
+
+    private VectorClauseDocument toVectorClauseDocument(QcStandardClause clause, List<Double> embedding) {
         return VectorClauseDocument.builder()
                 .clauseId(clause.getId())
                 .documentId(clause.getDocumentId())
@@ -204,7 +439,12 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
                 .effectiveDate(clause.getEffectiveDate() == null ? null : clause.getEffectiveDate().toString())
                 .expiryDate(clause.getExpiryDate() == null ? null : clause.getExpiryDate().toString())
                 .retrievalKeywords(clause.getRetrievalKeywords())
+                .embedding(embedding)
                 .build();
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private void updateEmbeddingStatus(List<QcStandardClause> clauses, List<String> failedClauseIds) {
@@ -215,6 +455,15 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
             QcStandardClause update = new QcStandardClause();
             update.setId(clause.getId());
             update.setEmbeddingStatus(failedSet.contains(clause.getId()) ? "FAILED" : "INDEXED");
+            standardClauseMapper.updateById(update);
+        }
+    }
+
+    private void updateEmbeddingFailed(List<QcStandardClause> clauses) {
+        for (QcStandardClause clause : clauses) {
+            QcStandardClause update = new QcStandardClause();
+            update.setId(clause.getId());
+            update.setEmbeddingStatus("FAILED");
             standardClauseMapper.updateById(update);
         }
     }

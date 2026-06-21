@@ -5,10 +5,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.PreparedClauseIndexCmd;
 import com.jhict.quality.dto.StandardClausePageQuery;
+import com.jhict.quality.dto.StandardDocumentIngestCmd;
 import com.jhict.quality.dto.StandardDocumentPageQuery;
 import com.jhict.quality.gateway.vector.VectorIndexResponse;
 import com.jhict.quality.service.api.StandardDocumentService;
 import com.jhict.quality.vo.StandardClauseVO;
+import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardDocumentVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -68,5 +70,12 @@ public class StandardDocumentController {
     @SaCheckPermission("standard:manage")
     public ApiResult<VectorIndexResponse> indexPreparedClauses(@RequestBody PreparedClauseIndexCmd cmd) {
         return ApiResult.success(standardDocumentService.indexPreparedClauses(cmd));
+    }
+
+    @PostMapping("/ingest-index")
+    @ApiOperation(value = "解析标准源文档并切片向量化入ES")
+    @SaCheckPermission("standard:manage")
+    public ApiResult<StandardDocumentIngestVO> ingestAndIndexDocument(@RequestBody StandardDocumentIngestCmd cmd) {
+        return ApiResult.success(standardDocumentService.ingestAndIndexDocument(cmd));
     }
 }

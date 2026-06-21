@@ -19,7 +19,8 @@ Key constraints:
 **Goals:**
 
 - Introduce a document-to-clause RAG layer over standard/agreement/case documents using Elasticsearch 8.15.0 behind a vector gateway abstraction.
-- Introduce a model gateway abstraction for DeepSeek-compatible chat/embedding calls and future provider replacement.
+- Introduce a model gateway abstraction for OpenAI-compatible chat/embedding calls and future provider replacement.
+- Add a production-oriented document ingestion path for PDF/Office/Markdown/text files: extract text, chunk by standard clause/paragraph rules, embed chunks, store vectors in ES, then generate answers from retrieved chunks.
 - Extend the standard domain with original documents, indexed clauses, structured-rule consistency checks, and source citations.
 - Extend the judgment flow with standard conflict detection, a `STANDARD_CONFLICT` result, conflict records, human裁决, and re-judgment after裁决.
 - Persist AI assessment outputs and input snapshots for explanation, concession risk, reinspection advice, rejudgment advice, and certificate explanation.
@@ -29,7 +30,7 @@ Key constraints:
 
 **Non-Goals:**
 
-- Do not implement full automatic PDF/table extraction as the source of structured judgment rules in the first version.
+- Do not use PDF/table extraction as the source of structured judgment rules in the first version.
 - Do not let AI decide final judgment, release, concession approval, reinspection, or rejudgment.
 - Do not use RAG-extracted numeric values to override structured standard indicators.
 - Do not integrate real WMS/MES/APS/ERP/customer complaint systems in this version.
@@ -39,6 +40,9 @@ Key constraints:
 
 P0 is the final competition MVP and MUST be implemented first:
 
+- Standard document parsing for PDF/Office/Markdown/text inputs using deterministic parsers and visible parse/index status.
+- Clause-aware document chunking based on chapter, clause, paragraph, and natural boundaries.
+- Text embedding for every indexed chunk and ES vector storage before retrieval.
 - Standard RAG retrieval with citations and no-evidence refusal.
 - Inspection entry to deterministic judgment using structured standards.
 - AI/rule judgment explanation with citations, conflict warnings, confidence label, and fallback behavior.
@@ -53,7 +57,7 @@ P1 extends the platform after the MVP is stable:
 
 P2 is explicitly optional for this change:
 
-- Advanced PDF/table parsing, external inventory/complaint system integration, production-grade certificate layout, and full analytics dashboards.
+- Advanced OCR/layout reconstruction for scanned standards, external inventory/complaint system integration, production-grade certificate layout, and full analytics dashboards.
 
 ## Decisions
 
@@ -74,13 +78,16 @@ Alternatives considered:
 
 ### 2. Add Gateway Abstractions For AI And Vector Stores
 
-Add `ModelGateway` and `VectorStoreGateway`-style interfaces. Implement first providers using DeepSeek-compatible APIs and Elasticsearch 8.15.0.
+Add `ModelGateway` and `VectorStoreGateway`-style interfaces. Implement first providers using an OpenAI-compatible model platform and Elasticsearch 8.15.0.
 
 Configuration uses environment-backed properties in `application-dev.yml` / `application.yml`, such as:
 
-- `DEEPSEEK_API_KEY`
-- `DEEPSEEK_BASE_URL`
-- `DEEPSEEK_MODEL`
+- `AI_MODEL_API_KEY`
+- `AI_MODEL_BASE_URL`
+- `AI_MODEL_CHAT_MODEL`
+- `EMBEDDING_API_KEY`
+- `EMBEDDING_BASE_URL`
+- `EMBEDDING_MODEL`
 - `ES_HOST`
 - `ES_USERNAME`
 - `ES_PASSWORD`
@@ -88,12 +95,12 @@ Configuration uses environment-backed properties in `application-dev.yml` / `app
 
 Rationale:
 
-- The user expects DeepSeek and ES now, but future provider replacement should not affect business services.
+- The user expects a SiliconFlow/OpenAI-compatible model platform and ES now, but future provider replacement should not affect business services.
 - Gateway interfaces isolate timeout, retry, caching, prompt policy, and query details.
 
 Alternatives considered:
 
-- Directly call DeepSeek/ES from service implementations. Rejected due to coupling and test difficulty.
+- Directly call a concrete model vendor or ES from service implementations. Rejected due to coupling and test difficulty.
 - Build a separate AI microservice now. Rejected as too heavy for the current monolith and competition timeline.
 
 ### 3. Store Documents And Clauses Separately From Structured Rules
@@ -110,6 +117,33 @@ Rationale:
 - The database remains the audit system of record.
 - ES remains optimized for semantic and keyword retrieval.
 - Clause IDs can be stored in AI outputs and judgment evidence citations.
+
+### 3A. Document Ingestion Uses Parser And Rule-Based Chunking
+
+The RAG ingestion pipeline is:
+
+1. Upload/register source document.
+2. Extract text using deterministic parsers:
+   - PDF: Apache PDFBox.
+   - Word/Excel: Apache POI.
+   - Markdown/text: direct text parser.
+3. Preserve citation anchors such as document id, standard code, version, page number when available, and clause heading.
+4. Chunk extracted text using standard-aware code rules:
+   - Prefer chapter/clause headings such as `7.3 力学性能`.
+   - Keep a heading and its complete paragraph/table text together where possible.
+   - Split oversized chunks on paragraph or sentence boundaries.
+   - Optionally use lightweight sentence segmentation such as jieba or spaCy when paragraph boundaries are unclear.
+5. Send chunk text plus compact metadata context to the embedding model.
+6. Store chunk text, embedding vector, citation metadata, applicability metadata, and parse/index status.
+
+Embedding models are not used for document chunking. They only convert already-chunked text into vectors. A separate semantic completeness model is not required for the default path because steel standards usually have explicit clause and paragraph structure.
+
+Rationale:
+
+- Standard documents already expose strong natural boundaries through clause numbers and paragraphs.
+- Rule-based chunking is deterministic, cheap, auditable, and easier to reproduce.
+- Lightweight NLP sentence segmentation can improve fallback splitting without introducing a new model dependency.
+- RAG chunks remain evidence for retrieval and explanation; structured standard tables remain the judgment truth.
 
 ### 4. Implement Consistency Checks Without Blocking All Workflows
 
@@ -312,7 +346,7 @@ AI is used to organize evidence and wording, not to override blocking rules.
 
 ## Risks / Trade-offs
 
-- [Risk] DeepSeek API unavailable, slow, or rate-limited during demo → Mitigation: timeout controls, pre-generated cache, rule templates, raw ES retrieval, and clear unavailable UI.
+- [Risk] Model API unavailable, slow, or rate-limited during demo → Mitigation: timeout controls, pre-generated cache, rule templates, raw ES retrieval, and clear unavailable UI.
 - [Risk] Elasticsearch connection/configuration fails in a system that has not used ES before → Mitigation: health checks, gateway abstraction, startup-safe optional behavior, and fallback to structured/rule display.
 - [Risk] Large scope across many modules delays delivery → Mitigation: implement vertical demo slices first, then broaden list/detail/statistics coverage.
 - [Risk] Structured rules and source documents diverge → Mitigation: consistency checks, runtime warnings, maintenance records, and structured-rule precedence.

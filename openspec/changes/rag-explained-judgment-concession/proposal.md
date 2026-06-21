@@ -7,8 +7,9 @@ This change upgrades the system from “判定结果可见” to “判定依据
 ## What Changes
 
 - Add standard RAG retrieval over national standards, enterprise standards, customer agreements, and complaint/case documents, with source clauses returned for every generated answer.
-- Add model and vector-store gateway abstractions so business code is not coupled to DeepSeek or Elasticsearch.
-- Store original standard documents and indexed clauses alongside existing structured standard rules.
+- Add a real document ingestion path for PDF, Office, Markdown, and text sources: extract text, chunk by clause/paragraph rules, generate embeddings, and store vectors in Elasticsearch before retrieval.
+- Add model and vector-store gateway abstractions so business code is not coupled to a concrete model vendor or Elasticsearch implementation details.
+- Store original standard documents, parser status, indexed chunks, embedding/index status, and citation metadata alongside existing structured standard rules.
 - Extend judgment explanation with cited clauses, confidence labels, conflict warnings, and AI/rule fallback behavior.
 - Add standard conflict detection for cross-priority and same-priority conflicts, including a new `STANDARD_CONFLICT` judgment result and human裁决 flow.
 - Add persisted AI assessment records for judgment explanation, concession risk, reinspection advice, rejudgment advice, and certificate explanation outputs.
@@ -24,8 +25,8 @@ This change upgrades the system from “判定结果可见” to “判定依据
 
 ### New Capabilities
 
-- `standard-rag-retrieval`: Standard/agreement/case document ingestion, clause indexing, natural-language retrieval, cited answers, and no-evidence refusal.
-- `ai-gateway-degradation`: Model gateway, vector-store gateway, DeepSeek/Elasticsearch configuration, and layered AI fallback behavior.
+- `standard-rag-retrieval`: Standard/agreement/case document ingestion from PDF/Office/Markdown/text files, deterministic clause-aware chunking, embedding-based vector indexing, natural-language retrieval, cited answers, and no-evidence refusal.
+- `ai-gateway-degradation`: Model gateway, vector-store gateway, OpenAI-compatible model configuration, Elasticsearch configuration, and layered AI fallback behavior.
 - `ai-judgment-explanation`: Source-cited judgment explanations with limits, deviations, trigger rules, confidence, and fallback text.
 - `standard-conflict-detection`: Multi-standard conflict detection, `STANDARD_CONFLICT`, conflict records, human裁决, and re-judgment after裁决.
 - `concession-risk-assessment`: Persisted AI concession risk assessment based on usage, deviation, complaints/cases, alternative stock, and confidence gating.
@@ -41,8 +42,8 @@ This change upgrades the system from “判定结果可见” to “判定依据
 
 ## Impact
 
-- Backend: new services for AI gateway, vector gateway, document indexing, RAG retrieval, certificate Q&A, AI assessments, standard conflicts, confidence config, and controlled certificate output; updates to judgment, concession, reinspection, rejudgment, certificate, dashboard, audit, and menu/RBAC flows.
+- Backend: new services for AI gateway, vector gateway, document parsing, deterministic chunking, embedding/indexing, RAG retrieval, certificate Q&A, AI assessments, standard conflicts, confidence config, and controlled certificate output; updates to judgment, concession, reinspection, rejudgment, certificate, dashboard, audit, and menu/RBAC flows.
 - Frontend: P0 pages/enhancements for standard RAG retrieval, judgment explanation, concession risk, certificate Q&A, conflict handling, and demo scripts; P1 pages for AI assessment records, confidence configuration, PDF output, and broader workflow polish.
 - Database: new tables for standard documents/clauses, standard conflicts, AI assessments/cache, confidence config, alternative stock, and evaluation cases; new migrations and seed scripts.
-- Dependencies/systems: DeepSeek-compatible model API via gateway; Elasticsearch 8.15.0 via vector-store gateway; PDF generation support; environment-based configuration for external services.
+- Dependencies/systems: OpenAI-compatible chat and embedding APIs via gateway; Elasticsearch 8.15.0 via vector-store gateway; Apache PDFBox/Apache POI for document text extraction; PDF generation support; environment-based configuration for external services.
 - Data: repeatable demo/evaluation initialization for competition scenarios and AI fallback cache.

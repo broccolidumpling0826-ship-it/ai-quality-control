@@ -69,7 +69,7 @@ Every case must define:
 
 ## Current External-Service Notes
 
-- DeepSeek/model calls are optional for P0 acceptance because cache and rule-template degradation are implemented.
+- Live model calls are optional for P0 acceptance because cache and rule-template degradation are implemented.
 - Elasticsearch retrieval should be validated separately when ES credentials are available.
 - MySQL/Redis availability is required for live end-to-end API verification.
 - If model/vector services are unavailable, the expected P0 degradation path is `CACHE -> RULE_TEMPLATE -> RAW_RETRIEVAL -> UNAVAILABLE`.

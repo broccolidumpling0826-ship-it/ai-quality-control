@@ -31,21 +31,21 @@ app:
     base-path: /tmp/quality-control/uploads
   ai:
     model:
-      provider: ${AI_MODEL_PROVIDER:SILICONFLOW}
-      enabled: ${AI_MODEL_ENABLED:false}
-      base-url: ${AI_MODEL_BASE_URL:https://api.siliconflow.cn/v1}
-      api-key: ${AI_MODEL_API_KEY:}
-      chat-model: ${AI_MODEL_CHAT_MODEL:deepseek-ai/DeepSeek-V3.2}
-      thinking-enabled: ${AI_MODEL_THINKING_ENABLED:false}
-      reasoning-effort: ${AI_MODEL_REASONING_EFFORT:high}
-      timeout-millis: ${AI_MODEL_TIMEOUT_MILLIS:15000}
+      provider: SILICONFLOW
+      enabled: true
+      base-url: https://api.siliconflow.cn/v1
+      api-key: ${AI_MODEL_API_KEY:sk-kfedpjxaawzkfdwiqseddiwiydyyrycbyfacsqfjsyqlfntl}
+      chat-model: deepseek-ai/DeepSeek-V3.2
+      thinking-enabled: false
+      reasoning-effort: high
+      timeout-millis: 15000
     embedding:
-      enabled: ${EMBEDDING_ENABLED:false}
-      base-url: ${EMBEDDING_BASE_URL:https://api.siliconflow.cn/v1}
-      api-key: ${EMBEDDING_API_KEY:}
-      model: ${EMBEDDING_MODEL:BAAI/bge-m3}
-      provider: ${EMBEDDING_PROVIDER:SILICONFLOW}
-      timeout-millis: ${EMBEDDING_TIMEOUT_MILLIS:15000}
+      enabled: true
+      base-url: https://api.siliconflow.cn/v1
+      api-key: ${EMBEDDING_API_KEY:sk-vbbwrwhjxaqekhnketstevzmrxbutsctwvyzqospojwoevtg}
+      model: BAAI/bge-m3
+      provider: SILICONFLOW
+      timeout-millis: 15000
     vector:
       enabled: ${ES_VECTOR_ENABLED:false}
       host: ${ES_HOST:http://localhost:9200}

@@ -3,9 +3,11 @@ package com.jhict.quality.service.api;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.dto.PreparedClauseIndexCmd;
 import com.jhict.quality.dto.StandardClausePageQuery;
+import com.jhict.quality.dto.StandardDocumentIngestCmd;
 import com.jhict.quality.dto.StandardDocumentPageQuery;
 import com.jhict.quality.gateway.vector.VectorIndexResponse;
 import com.jhict.quality.vo.StandardClauseVO;
+import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardDocumentVO;
 
 import java.util.List;
@@ -62,4 +64,12 @@ public interface StandardDocumentService {
      * @return vector indexing response
      */
     VectorIndexResponse indexPreparedClauses(PreparedClauseIndexCmd cmd);
+
+    /**
+     * Extract, chunk, embed, and index one source document.
+     *
+     * @param cmd ingestion command
+     * @return ingestion summary
+     */
+    StandardDocumentIngestVO ingestAndIndexDocument(StandardDocumentIngestCmd cmd);
 }
