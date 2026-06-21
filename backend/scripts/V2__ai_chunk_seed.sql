@@ -1,6 +1,7 @@
 -- ============================================================
 -- RAG Chunk 演示种子数据（使用真实 standard ID）
 -- 真实 ID：STD001=2055929409755439106  STD003=2056005473819181057
+-- 执行：mysql -h 127.0.0.1 -P 3307 -u user -p --default-character-set=utf8mb4 ai_quality_control < backend/scripts/V2__ai_chunk_seed.sql
 -- ============================================================
 SET NAMES utf8mb4;
 USE ai_quality_control;

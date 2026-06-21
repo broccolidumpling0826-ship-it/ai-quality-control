@@ -18,7 +18,14 @@
           </el-select>
         </el-form-item>
         <el-form-item label="品种">
-          <el-input v-model="searchForm.variety" placeholder="品种" clearable style="width:130px" />
+          <el-select v-model="searchForm.variety" placeholder="全部" clearable style="width:130px">
+            <el-option
+              v-for="item in dictStore.getItems('PRODUCT_VARIETY')"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="牌号">
           <el-input v-model="searchForm.grade" placeholder="牌号" clearable style="width:130px" />
@@ -42,7 +49,11 @@
             style="width:100%"
             @row-click="handleRowClick"
           >
-            <el-table-column prop="variety" label="品种" width="90" show-overflow-tooltip />
+            <el-table-column prop="variety" label="品种" width="90" show-overflow-tooltip>
+              <template #default="{ row }">
+                {{ dictStore.getLabel('PRODUCT_VARIETY', row.variety) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="grade" label="牌号" width="90" show-overflow-tooltip />
             <el-table-column prop="indicatorName" label="指标" min-width="100" show-overflow-tooltip />
             <el-table-column label="状态" width="100" align="center">
@@ -69,16 +80,18 @@
 
       <el-col :xs="24" :lg="14">
         <el-card v-loading="detailLoading" shadow="never" class="detail-card">
-          <template v-if="currentDetail">
-            <template #header>
-              <div class="detail-header">
-                <span style="font-weight:600">冲突对比</span>
-                <el-tag v-if="currentDetail.demoFlag === 1" type="info" size="small">演示样例</el-tag>
-              </div>
-            </template>
+          <template #header>
+            <div v-if="currentDetail" class="detail-header">
+              <span style="font-weight:600">冲突对比</span>
+              <el-tag v-if="currentDetail.demoFlag === 1" type="info" size="small">演示样例</el-tag>
+            </div>
+          </template>
 
+          <template v-if="currentDetail">
             <el-descriptions :column="2" border size="small" style="margin-bottom:16px">
-              <el-descriptions-item label="品种">{{ currentDetail.variety }}</el-descriptions-item>
+              <el-descriptions-item label="品种">
+                {{ dictStore.getLabel('PRODUCT_VARIETY', currentDetail.variety) }}
+              </el-descriptions-item>
               <el-descriptions-item label="牌号">{{ currentDetail.grade }}</el-descriptions-item>
               <el-descriptions-item label="冲突指标" :span="2">
                 {{ currentDetail.indicatorName || currentDetail.indicatorId }}
@@ -156,6 +169,9 @@ import {
   type StandardConflictDetail,
   type StandardConflictItem
 } from '@/api/standard-conflict'
+import { useDictStore } from '@/store/dict'
+
+const dictStore = useDictStore()
 
 const searchForm = reactive({ status: 'PENDING', variety: '', grade: '' })
 const pageNum = ref(1)
@@ -254,7 +270,10 @@ async function submitResolve() {
   }
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await dictStore.loadAll()
+  loadData()
+})
 </script>
 
 <style scoped>

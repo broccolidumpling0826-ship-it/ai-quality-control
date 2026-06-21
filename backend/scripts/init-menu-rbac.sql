@@ -148,7 +148,8 @@ VALUES
   ('menu010', '0',       'DIR',    '标准库',     NULL,                     NULL,                        NULL,                     NULL,           NULL,              1, 20,  1, '2026-06-03 00:00:00'),
   ('menu011', 'menu010', 'MENU',   '标准维护',   'standard-lib',           'standard-lib/index',        'standard-lib',           'Document',     'menu:standard',   1, 21,  1, '2026-06-03 00:00:00'),
   ('menu012', 'menu010', 'MENU',   '指标项目',   'standard-lib/indicators', 'indicator/index',           'standard-lib-indicators','TrendCharts',  'menu:standard',   1, 22,  1, '2026-06-03 00:00:00'),
-  ('menu013', 'menu010', 'MENU',   '覆盖缺口',   'standard-lib/gaps',      'standard-lib/gaps',         'standard-lib-gaps',      'Warning',      'menu:standard',   1, 23,  1, '2026-06-03 00:00:00'),
+  ('menu013', 'menu010', 'MENU',   '覆盖缺口',   'standard-lib/gaps',      'standard-lib/gaps',         'standard-lib-gaps',      'Warning',       'menu:standard',   1, 23,  1, '2026-06-03 00:00:00'),
+  ('menu034', 'menu010', 'MENU',   '标准冲突检测', 'standard-lib/conflicts', 'standard-lib/conflicts',    'standard-lib-conflicts', 'WarningFilled', 'menu:standard',   1, 24,  1, '2026-06-03 00:00:00'),
   ('menu020', '0',       'DIR',    '检验与判定', NULL,                     NULL,                        NULL,                     NULL,           NULL,              1, 30,  1, '2026-06-03 00:00:00'),
   ('menu021', 'menu020', 'MENU',   '检验录入',   'inspection',             'inspection/index',          'inspection',             'EditPen',      'menu:inspection', 1, 31,  1, '2026-06-03 00:00:00'),
   ('menu022', 'menu020', 'MENU',   '判定解释',   'judgment',               'judgment/index',            'judgment',               'Stamp',        'menu:judgment',   1, 32,  1, '2026-06-03 00:00:00'),
@@ -172,7 +173,13 @@ VALUES
   ('menu105', '0',       'HIDDEN', '发起让步',   'concession/apply',       'concession/form',           'concession-apply',       'Check',        'menu:concession', 0, 105, 1, '2026-06-03 00:00:00'),
   ('menu106', '0',       'HIDDEN', '让步详情',   'concession/detail',      'concession/detail',         'concession-detail',      'Check',        'menu:concession', 0, 106, 1, '2026-06-03 00:00:00'),
   ('menu107', '0',       'HIDDEN', '内嵌页面',   'iframe/:id',             'iframe/index',              'iframe-page',            'Link',         NULL,              0, 107, 1, '2026-06-03 00:00:00')
-ON DUPLICATE KEY UPDATE menu_name = VALUES(menu_name);
+ON DUPLICATE KEY UPDATE
+  menu_name  = VALUES(menu_name),
+  path       = VALUES(path),
+  component  = VALUES(component),
+  route_name = VALUES(route_name),
+  parent_id  = VALUES(parent_id),
+  sort_order = VALUES(sort_order);
 
 -- ────────────────────────────────────────────────────────────
 -- 5. Seed：角色-权限默认映射

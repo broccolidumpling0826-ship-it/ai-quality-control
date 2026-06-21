@@ -1,9 +1,10 @@
 -- ============================================================
 -- 002 AI 演示数据 seed — MySQL 5.7.43
 -- 依赖：init-schema.sql、init-test-data.sql、V2__ai_schema.sql
--- 执行：mysql -h 127.0.0.1 -P 3307 -u user -p ai_quality_control < backend/scripts/V2__ai_demo_data.sql
+-- 执行：mysql -h 127.0.0.1 -P 3307 -u user -p --default-character-set=utf8mb4 ai_quality_control < backend/scripts/V2__ai_demo_data.sql
 -- ============================================================
 USE ai_quality_control;
+SET NAMES utf8mb4;
 
 SET @ts = '2026-06-20 10:00:00';
 
