@@ -14,13 +14,17 @@ public class DeepSeekModelProperties {
 
     private boolean enabled = false;
 
-    private String baseUrl = "https://api.deepseek.com/v1";
+    private String baseUrl = "https://api.deepseek.com";
 
     private String apiKey;
 
-    private String chatModel = "deepseek-chat";
+    private String chatModel = "deepseek-v4-flash";
 
     private String embeddingModel = "text-embedding-v1";
+
+    private boolean thinkingEnabled = false;
+
+    private String reasoningEffort = "high";
 
     private Integer timeoutMillis = 15000;
 }

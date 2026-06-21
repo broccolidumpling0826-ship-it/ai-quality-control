@@ -117,7 +117,17 @@ public class DeepSeekModelGateway implements ModelGateway {
         if (request != null && request.getMaxTokens() != null) {
             body.put("max_tokens", request.getMaxTokens());
         }
+        body.put("thinking", buildThinkingConfig());
+        if (properties.isThinkingEnabled() && StringUtils.hasText(properties.getReasoningEffort())) {
+            body.put("reasoning_effort", properties.getReasoningEffort());
+        }
         return body;
+    }
+
+    private Map<String, String> buildThinkingConfig() {
+        Map<String, String> thinking = new LinkedHashMap<>();
+        thinking.put("type", properties.isThinkingEnabled() ? "enabled" : "disabled");
+        return thinking;
     }
 
     private List<Map<String, String>> buildMessages(ModelChatRequest request) {
@@ -294,7 +304,7 @@ public class DeepSeekModelGateway implements ModelGateway {
     }
 
     private String normalizedBaseUrl() {
-        String baseUrl = choose(properties.getBaseUrl(), "https://api.deepseek.com/v1");
+        String baseUrl = choose(properties.getBaseUrl(), "https://api.deepseek.com");
         while (baseUrl.endsWith("/")) {
             baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         }

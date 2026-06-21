@@ -1,0 +1,307 @@
+// Elasticsearch Dev Tools initialization script for quality-control standard RAG.
+// Target ES version: 8.15.x
+//
+// Usage:
+// 1. Open Kibana Dev Tools, or any Elasticsearch Console-compatible tool.
+// 2. Paste this whole file and run.
+// 3. Keep backend env ES_STANDARD_INDEX=quality-standard-clauses.
+//
+// Notes:
+// - This script is non-destructive. It does NOT delete an existing index.
+// - If the index already exists, the first PUT will return resource_already_exists_exception.
+// - The backend currently works with text retrieval even when embedding is absent.
+// - The dense_vector dims below MUST match the embedding provider output dimension
+//   before true vector retrieval is enabled end-to-end.
+
+GET /_cluster/health
+
+PUT /quality-standard-clauses
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "normalizer": {
+        "lowercase_normalizer": {
+          "type": "custom",
+          "filter": [
+            "lowercase",
+            "asciifolding"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": true,
+    "properties": {
+      "clauseId": {
+        "type": "keyword"
+      },
+      "documentId": {
+        "type": "keyword"
+      },
+      "clauseKey": {
+        "type": "keyword"
+      },
+      "clauseNo": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "pageNo": {
+        "type": "integer"
+      },
+      "paragraphText": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 512
+          }
+        }
+      },
+      "sourceType": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 64,
+            "normalizer": "lowercase_normalizer"
+          }
+        }
+      },
+      "standardType": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 64,
+            "normalizer": "lowercase_normalizer"
+          }
+        }
+      },
+      "standardCode": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 128
+          }
+        }
+      },
+      "standardName": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "versionNo": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 128
+          }
+        }
+      },
+      "customerId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 128
+          }
+        }
+      },
+      "variety": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 128
+          }
+        }
+      },
+      "grade": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 128
+          }
+        }
+      },
+      "specRange": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 128
+          }
+        }
+      },
+      "usageScope": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "indicatorId": {
+        "type": "keyword"
+      },
+      "indicatorCode": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 128
+          }
+        }
+      },
+      "indicatorName": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "effectiveDate": {
+        "type": "date",
+        "format": "yyyy-MM-dd||yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+      },
+      "expiryDate": {
+        "type": "date",
+        "format": "yyyy-MM-dd||yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+      },
+      "retrievalKeywords": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 512
+          }
+        }
+      },
+      "metadata": {
+        "type": "object",
+        "enabled": true
+      },
+      "embedding": {
+        "type": "dense_vector",
+        "dims": 1024,
+        "index": true,
+        "similarity": "cosine"
+      },
+      "createdAt": {
+        "type": "date",
+        "format": "yyyy-MM-dd||yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+      },
+      "updatedAt": {
+        "type": "date",
+        "format": "yyyy-MM-dd||yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+      }
+    }
+  }
+}
+
+GET /quality-standard-clauses/_mapping
+
+GET /quality-standard-clauses/_search
+{
+  "size": 1,
+  "query": {
+    "match_all": {}
+  }
+}
+
+// Optional smoke test for backend-compatible text retrieval.
+// Run this after standard clauses have been indexed by the backend.
+GET /quality-standard-clauses/_search
+{
+  "size": 5,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "multi_match": {
+            "query": "屈服强度 Q235B",
+            "fields": [
+              "paragraphText^4",
+              "retrievalKeywords^3",
+              "standardName^2",
+              "indicatorName^2",
+              "standardCode"
+            ]
+          }
+        }
+      ],
+      "filter": []
+    }
+  },
+  "highlight": {
+    "fields": {
+      "paragraphText": {
+        "number_of_fragments": 1,
+        "fragment_size": 180
+      }
+    }
+  }
+}
+
+// Optional smoke test for vector retrieval.
+// Only run after documents have an embedding field and replace the query_vector
+// with a real vector whose length equals the mapping dims above.
+//
+// GET /quality-standard-clauses/_search
+// {
+//   "size": 5,
+//   "query": {
+//     "script_score": {
+//       "query": {
+//         "bool": {
+//           "must": [
+//             {
+//               "multi_match": {
+//                 "query": "屈服强度 Q235B",
+//                 "fields": [
+//                   "paragraphText^4",
+//                   "retrievalKeywords^3",
+//                   "standardName^2",
+//                   "indicatorName^2",
+//                   "standardCode"
+//                 ]
+//               }
+//             }
+//           ],
+//           "filter": []
+//         }
+//       },
+//       "script": {
+//         "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+//         "params": {
+//           "query_vector": [
+//             0.0
+//           ]
+//         }
+//       }
+//     }
+//   }
+// }
