@@ -139,7 +139,7 @@ export EMBEDDING_API_KEY="你的 SiliconFlow Embedding API Key"
 export AI_MODEL_PROVIDER="SILICONFLOW"
 export AI_MODEL_ENABLED=true
 export AI_MODEL_BASE_URL="https://api.siliconflow.cn/v1"
-export AI_MODEL_CHAT_MODEL="Pro/zai-org/GLM-4.7"
+export AI_MODEL_CHAT_MODEL="deepseek-ai/DeepSeek-V3.2"
 
 export EMBEDDING_PROVIDER="SILICONFLOW"
 export EMBEDDING_ENABLED=true

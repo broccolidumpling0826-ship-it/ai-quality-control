@@ -113,7 +113,8 @@ public class OpenAiCompatibleModelGateway implements ModelGateway {
 
     private Map<String, Object> buildChatBody(ModelChatRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", choose(request == null ? null : request.getModelName(), properties.getChatModel()));
+        String modelName = choose(request == null ? null : request.getModelName(), properties.getChatModel());
+        body.put("model", modelName);
         body.put("messages", buildMessages(request));
         if (request != null && request.getTemperature() != null) {
             body.put("temperature", request.getTemperature());
@@ -122,10 +123,15 @@ public class OpenAiCompatibleModelGateway implements ModelGateway {
             body.put("max_tokens", request.getMaxTokens());
         }
         body.put("enable_thinking", properties.isThinkingEnabled());
-        if (properties.isThinkingEnabled() && StringUtils.hasText(properties.getReasoningEffort())) {
+        if (properties.isThinkingEnabled() && supportsReasoningEffort(modelName)
+                && StringUtils.hasText(properties.getReasoningEffort())) {
             body.put("reasoning_effort", properties.getReasoningEffort());
         }
         return body;
+    }
+
+    private boolean supportsReasoningEffort(String modelName) {
+        return StringUtils.hasText(modelName) && modelName.contains("DeepSeek-V4-Flash");
     }
 
     private List<Map<String, String>> buildMessages(ModelChatRequest request) {

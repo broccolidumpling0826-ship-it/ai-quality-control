@@ -16,7 +16,7 @@ Backend runtime:
 | `AI_MODEL_ENABLED` | Enable chat model gateway calls | `false` |
 | `AI_MODEL_BASE_URL` | OpenAI-compatible chat API base URL | `https://api.siliconflow.cn/v1` |
 | `AI_MODEL_API_KEY` | Chat model API key | empty |
-| `AI_MODEL_CHAT_MODEL` | Chat model name | `Pro/zai-org/GLM-4.7` |
+| `AI_MODEL_CHAT_MODEL` | Chat model name | `deepseek-ai/DeepSeek-V3.2` |
 | `AI_MODEL_THINKING_ENABLED` | Enable provider reasoning/thinking mode when supported | `false` |
 | `AI_MODEL_REASONING_EFFORT` | Provider reasoning effort when supported | `high` |
 | `AI_MODEL_TIMEOUT_MILLIS` | Chat model timeout | `15000` |

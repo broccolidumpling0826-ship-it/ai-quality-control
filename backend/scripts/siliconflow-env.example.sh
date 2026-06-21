@@ -9,7 +9,7 @@ export AI_MODEL_PROVIDER="SILICONFLOW"
 export AI_MODEL_ENABLED=true
 export AI_MODEL_BASE_URL="https://api.siliconflow.cn/v1"
 export AI_MODEL_API_KEY="sk-your-siliconflow-chat-api-key"
-export AI_MODEL_CHAT_MODEL="Pro/zai-org/GLM-4.7"
+export AI_MODEL_CHAT_MODEL="deepseek-ai/DeepSeek-V3.2"
 
 # SiliconFlow supports provider-specific thinking parameters on supported models.
 # Keep disabled for grounded RAG/explanation output unless you explicitly need it.

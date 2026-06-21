@@ -9,7 +9,7 @@ export AI_MODEL_PROVIDER="SILICONFLOW"
 export AI_MODEL_ENABLED=true
 export AI_MODEL_BASE_URL="https://api.siliconflow.cn/v1"
 export AI_MODEL_API_KEY="sk-your-model-api-key"
-export AI_MODEL_CHAT_MODEL="Pro/zai-org/GLM-4.7"
+export AI_MODEL_CHAT_MODEL="deepseek-ai/DeepSeek-V3.2"
 
 # Provider-specific optional knobs. Keep disabled unless the selected provider
 # supports them and the current feature needs reasoning-mode output.
