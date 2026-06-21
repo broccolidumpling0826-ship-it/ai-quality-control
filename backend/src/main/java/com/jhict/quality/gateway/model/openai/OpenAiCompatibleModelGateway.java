@@ -423,7 +423,6 @@ public class OpenAiCompatibleModelGateway implements ModelGateway {
         String modelName = choose(request.getModelName(), visionProperties.getModel());
         body.put("model", modelName);
         body.put("messages", buildVisionMessages(request));
-        body.put("enable_thinking", false);
         return body;
     }
 
