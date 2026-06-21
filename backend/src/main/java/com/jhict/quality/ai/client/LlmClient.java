@@ -111,13 +111,20 @@ public class LlmClient {
         headers.setBearerAuth(aiProperties.getApiKey());
 
         Map<String, Object> body = new HashMap<>();
-        body.put("model", aiProperties.getModel());
+        body.put("model", aiProperties.getChatModelName());
         JSONArray messages = new JSONArray();
         if (StringUtils.hasText(request.getSystemPrompt())) {
             messages.add(message("system", request.getSystemPrompt()));
         }
         messages.add(message("user", promptSanitizer.wrapUserContent(request.getUserPrompt())));
         body.put("messages", messages);
+        // DeepSeek / 支持 thinking 的模型扩展参数
+        if (aiProperties.isThinkingEnabled()) {
+            body.put("enable_thinking", true);
+            if (StringUtils.hasText(aiProperties.getReasoningEffort())) {
+                body.put("thinking", Map.of("type", "enabled", "budget_tokens", 8192));
+            }
+        }
 
         String url = trimTrailingSlash(aiProperties.getBaseUrl()) + "/chat/completions";
         ResponseEntity<String> entity = aiRestTemplate.postForEntity(

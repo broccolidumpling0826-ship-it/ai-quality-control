@@ -64,15 +64,33 @@ app:
     # 让步催促提醒阈值（天数，FR-009）：confirm_status=PENDING 超过此天数自动提醒
     remind-days: 7
   ai:
-    enabled: ${AI_ENABLED:true}
-    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
-    api-key: ${AI_API_KEY:}
-    model: ${AI_MODEL:gpt-4o-mini}
-    timeout-ms: 5000
-    max-retries-on-429: 1
-    circuit-breaker-threshold: 3
-    circuit-breaker-open-ms: 60000
-    mock-failure: ${AI_MOCK_FAILURE:}
+    enabled: ${AI_ENABLED:false}
+    model:
+      provider: SILICONFLOW
+      base-url: ${AI_BASE_URL:https://api.siliconflow.cn/v1}
+      api-key: ${AI_MODEL_API_KEY:}
+      chat-model: ${AI_MODEL:deepseek-ai/DeepSeek-V3}
+      thinking-enabled: false
+      reasoning-effort: high
+      timeout-millis: 15000
+      max-retries-on429: 1
+      circuit-breaker-threshold: 3
+      circuit-breaker-open-ms: 60000
+      mock-failure: ${AI_MOCK_FAILURE:}
+    embedding:
+      enabled: false
+      base-url: ${AI_BASE_URL:https://api.siliconflow.cn/v1}
+      api-key: ${EMBEDDING_API_KEY:}
+      model: BAAI/bge-m3
+      provider: SILICONFLOW
+      timeout-millis: 15000
+    vector:
+      enabled: false
+      host: ${ES_HOST:http://localhost:9200}
+      username: ${ES_USERNAME:elastic}
+      password: ${ES_PASSWORD:}
+      standard-index: ${ES_STANDARD_INDEX:quality-standard-clauses}
+      timeout-millis: ${ES_TIMEOUT_MILLIS:5000}
 
 logging:
   level:

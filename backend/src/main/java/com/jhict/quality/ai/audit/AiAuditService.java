@@ -37,7 +37,7 @@ public class AiAuditService {
         logEntity.setCallSource(request.getCallSource().getCode());
         logEntity.setPromptKey(request.getPromptKey());
         logEntity.setPromptVersion(promptRegistry.resolveActiveVersion(request.getPromptKey()));
-        logEntity.setModelName(aiProperties.getModel());
+        logEntity.setModelName(aiProperties.getChatModelName());
         logEntity.setInputSummary(buildInputSummary(request));
         logEntity.setOutputSummary(buildOutputSummary(response));
         logEntity.setCitationIds(request.getCitationIdsJson());

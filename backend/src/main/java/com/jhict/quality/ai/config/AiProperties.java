@@ -7,22 +7,90 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.ai")
 public class AiProperties {
 
-    private boolean enabled = true;
+    /** 直接绑定 app.ai.enabled，避免嵌套歧义 */
+    private boolean enabled = false;
 
-    private String baseUrl = "https://api.openai.com/v1";
+    private ModelConfig model = new ModelConfig();
+    private EmbeddingConfig embedding = new EmbeddingConfig();
+    private VectorConfig vector = new VectorConfig();
 
-    private String apiKey = "";
+    // ── 便捷方法（供 LlmClient / AiConfig 使用，无需改调用方）─────────────
 
-    private String model = "gpt-4o-mini";
+    public String getApiKey() {
+        return model.getApiKey();
+    }
 
-    private int timeoutMs = 5000;
+    /** chat 模型名（如 deepseek-ai/DeepSeek-V3），避免与 Lombok 生成的 getModel() 冲突 */
+    public String getChatModelName() {
+        return model.getChatModel();
+    }
 
-    private int maxRetriesOn429 = 1;
+    public String getBaseUrl() {
+        return model.getBaseUrl();
+    }
 
-    private int circuitBreakerThreshold = 3;
+    public int getTimeoutMs() {
+        return (int) model.getTimeoutMillis();
+    }
 
-    private long circuitBreakerOpenMs = 60000L;
+    public int getMaxRetriesOn429() {
+        return model.getMaxRetriesOn429();
+    }
 
-    /** 测试用：TIMEOUT / RATE_LIMIT / UNAVAILABLE */
-    private String mockFailure = "";
+    public int getCircuitBreakerThreshold() {
+        return model.getCircuitBreakerThreshold();
+    }
+
+    public long getCircuitBreakerOpenMs() {
+        return model.getCircuitBreakerOpenMs();
+    }
+
+    public String getMockFailure() {
+        return model.getMockFailure();
+    }
+
+    public boolean isThinkingEnabled() {
+        return model.isThinkingEnabled();
+    }
+
+    public String getReasoningEffort() {
+        return model.getReasoningEffort();
+    }
+
+    // ── 子配置类 ──────────────────────────────────────────────────────────
+
+    @Data
+    public static class ModelConfig {
+        private String provider = "SILICONFLOW";
+        private String baseUrl = "https://api.siliconflow.cn/v1";
+        private String apiKey = "";
+        private String chatModel = "deepseek-ai/DeepSeek-V3";
+        private boolean thinkingEnabled = false;
+        private String reasoningEffort = "high";
+        private long timeoutMillis = 15000;
+        private int maxRetriesOn429 = 1;
+        private int circuitBreakerThreshold = 3;
+        private long circuitBreakerOpenMs = 60000L;
+        private String mockFailure = "";
+    }
+
+    @Data
+    public static class EmbeddingConfig {
+        private boolean enabled = false;
+        private String baseUrl = "https://api.siliconflow.cn/v1";
+        private String apiKey = "";
+        private String model = "BAAI/bge-m3";
+        private String provider = "SILICONFLOW";
+        private long timeoutMillis = 15000;
+    }
+
+    @Data
+    public static class VectorConfig {
+        private boolean enabled = false;
+        private String host = "http://localhost:9200";
+        private String username = "elastic";
+        private String password = "";
+        private String standardIndex = "quality-standard-clauses";
+        private long timeoutMillis = 5000;
+    }
 }

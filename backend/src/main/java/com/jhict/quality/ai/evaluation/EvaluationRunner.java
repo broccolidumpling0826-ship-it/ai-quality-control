@@ -58,7 +58,7 @@ public class EvaluationRunner {
         QcEvaluationRun run = new QcEvaluationRun();
         run.setRunNo(runNo);
         run.setPromptVersion(StringUtils.hasText(promptVersion) ? promptVersion : "v1.0.0");
-        run.setModelName(aiProperties.getModel());
+        run.setModelName(aiProperties.getChatModelName());
         run.setStatus(EvaluationRunStatus.RUNNING.getCode());
         run.setCreateDateTime(now);
         run.setUpdateDateTime(now);

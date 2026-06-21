@@ -30,9 +30,30 @@ app:
   upload:
     base-path: /tmp/quality-control/uploads
   ai:
-    enabled: ${AI_ENABLED:false}
-    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
-    api-key: ${AI_API_KEY:}
-    model: ${AI_MODEL:gpt-4o-mini}
-    timeout-ms: 5000
-    mock-failure: ${AI_MOCK_FAILURE:}
+    enabled: true
+    model:
+      provider: SILICONFLOW
+      base-url: https://api.siliconflow.cn/v1
+      api-key: ${AI_MODEL_API_KEY:sk-kfedpjxaawzkfdwiqseddiwiydyyrycbyfacsqfjsyqlfntl}
+      chat-model: deepseek-ai/DeepSeek-V3
+      thinking-enabled: false
+      reasoning-effort: high
+      timeout-millis: 15000
+      max-retries-on429: 1
+      circuit-breaker-threshold: 3
+      circuit-breaker-open-ms: 60000
+      mock-failure: ${AI_MOCK_FAILURE:}
+    embedding:
+      enabled: true
+      base-url: https://api.siliconflow.cn/v1
+      api-key: ${EMBEDDING_API_KEY:sk-vbbwrwhjxaqekhnketstevzmrxbutsctwvyzqospojwoevtg}
+      model: BAAI/bge-m3
+      provider: SILICONFLOW
+      timeout-millis: 15000
+    vector:
+      enabled: false
+      host: ${ES_HOST:http://localhost:9200}
+      username: ${ES_USERNAME:elastic}
+      password: ${ES_PASSWORD:sisHuNo.1}
+      standard-index: ${ES_STANDARD_INDEX:quality-standard-clauses}
+      timeout-millis: ${ES_TIMEOUT_MILLIS:5000}
