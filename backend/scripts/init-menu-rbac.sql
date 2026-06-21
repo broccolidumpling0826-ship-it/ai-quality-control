@@ -135,7 +135,17 @@ VALUES
   ('perm021', 'admin:user:manage',       '用户管理',       'API',    1, '2026-06-03 00:00:00'),
   ('perm022', 'admin:menu:manage',       '菜单管理',       'API',    1, '2026-06-03 00:00:00'),
   ('perm023', 'admin:role:manage',       '角色管理',       'API',    1, '2026-06-03 00:00:00'),
-  ('perm024', 'admin:dict:manage',       '字典管理',       'API',    1, '2026-06-03 00:00:00')
+  ('perm024', 'admin:dict:manage',       '字典管理',       'API',    1, '2026-06-03 00:00:00'),
+  ('perm025', 'menu:standard-rag',        '标准RAG检索',    'MENU',   1, '2026-06-21 00:00:00'),
+  ('perm026', 'standard-rag:query',       '标准RAG查询',    'API',    1, '2026-06-21 00:00:00'),
+  ('perm027', 'menu:standard-conflict',   '标准冲突检测',   'MENU',   1, '2026-06-21 00:00:00'),
+  ('perm028', 'standard-conflict:resolve','标准冲突裁决',   'API',    1, '2026-06-21 00:00:00'),
+  ('perm029', 'menu:cert-qa',             '质保书问答',     'MENU',   1, '2026-06-21 00:00:00'),
+  ('perm030', 'cert:qa',                  '质保书问答接口', 'API',    1, '2026-06-21 00:00:00'),
+  ('perm031', 'menu:ai-assessment',       'AI评估审计',     'MENU',   1, '2026-06-21 00:00:00'),
+  ('perm032', 'ai-assessment:review',     'AI评估审阅',     'API',    1, '2026-06-21 00:00:00'),
+  ('perm033', 'menu:ai-confidence',       'AI置信度配置',   'MENU',   1, '2026-06-21 00:00:00'),
+  ('perm034', 'ai-confidence:manage',     'AI置信度管理',   'API',    1, '2026-06-21 00:00:00')
 ON DUPLICATE KEY UPDATE perm_name = VALUES(perm_name);
 
 -- ────────────────────────────────────────────────────────────
@@ -149,6 +159,7 @@ VALUES
   ('menu011', 'menu010', 'MENU',   '标准维护',   'standard-lib',           'standard-lib/index',        'standard-lib',           'Document',     'menu:standard',   1, 21,  1, '2026-06-03 00:00:00'),
   ('menu012', 'menu010', 'MENU',   '指标项目',   'standard-lib/indicators', 'indicator/index',           'standard-lib-indicators','TrendCharts',  'menu:standard',   1, 22,  1, '2026-06-03 00:00:00'),
   ('menu013', 'menu010', 'MENU',   '覆盖缺口',   'standard-lib/gaps',      'standard-lib/gaps',         'standard-lib-gaps',      'Warning',      'menu:standard',   1, 23,  1, '2026-06-03 00:00:00'),
+  ('menu014', 'menu010', 'MENU',   '标准RAG检索','standard-rag',           'standard-rag/index',        'standard-rag',           'Document',     'menu:standard-rag',1,24,  1, '2026-06-21 00:00:00'),
   ('menu020', '0',       'DIR',    '检验与判定', NULL,                     NULL,                        NULL,                     NULL,           NULL,              1, 30,  1, '2026-06-03 00:00:00'),
   ('menu021', 'menu020', 'MENU',   '检验录入',   'inspection',             'inspection/index',          'inspection',             'EditPen',      'menu:inspection', 1, 31,  1, '2026-06-03 00:00:00'),
   ('menu022', 'menu020', 'MENU',   '判定解释',   'judgment',               'judgment/index',            'judgment',               'Stamp',        'menu:judgment',   1, 32,  1, '2026-06-03 00:00:00'),
@@ -156,22 +167,28 @@ VALUES
   ('menu031', 'menu030', 'MENU',   '复检管理',   'reinspection',           'reinspection/index',        'reinspection',           'RefreshRight', 'menu:reinspection',1,41, 1, '2026-06-03 00:00:00'),
   ('menu032', 'menu030', 'MENU',   '改判管理',   're-judgment',            're-judgment/index',         're-judgment',            'Edit',         'menu:rejudgment', 1, 42,  1, '2026-06-03 00:00:00'),
   ('menu033', 'menu030', 'MENU',   '让步接收',   'concession',             'concession/index',          'concession',             'Check',        'menu:concession', 1, 43,  1, '2026-06-03 00:00:00'),
+  ('menu034', 'menu030', 'MENU',   '标准冲突检测','standard-conflicts',     'standard-conflicts/index',  'standard-conflicts',     'Warning',      'menu:standard-conflict',1,44,1,'2026-06-21 00:00:00'),
   ('menu040', '0',       'DIR',    '数据汇总',   NULL,                     NULL,                        NULL,                     NULL,           NULL,              1, 50,  1, '2026-06-03 00:00:00'),
   ('menu041', 'menu040', 'MENU',   '质保书数据', 'cert-data',              'cert-data/index',           'cert-data',              'Tickets',      'menu:cert-data',  1, 51,  1, '2026-06-03 00:00:00'),
-  ('menu042', 'menu040', 'MENU',   '质量统计',   'statistics',             'statistics/index',          'statistics',             'PieChart',     'menu:statistics', 1, 52,  1, '2026-06-03 00:00:00'),
+  ('menu043', 'menu040', 'MENU',   '质保书问答', 'cert-data/qa',           'cert-data/qa',              'cert-data-qa',           'Tickets',      'menu:cert-qa',    1, 52,  1, '2026-06-21 00:00:00'),
+  ('menu042', 'menu040', 'MENU',   '质量统计',   'statistics',             'statistics/index',          'statistics',             'PieChart',     'menu:statistics', 1, 53,  1, '2026-06-03 00:00:00'),
   ('menu050', '0',       'MENU',   '权限审计',   'audit',                  'audit/index',               'audit',                  'Lock',         'menu:audit',      1, 60,  1, '2026-06-03 00:00:00'),
   ('menu060', '0',       'DIR',    '管理员',     NULL,                     NULL,                        NULL,                     NULL,           NULL,              1, 70,  1, '2026-06-03 00:00:00'),
   ('menu061', 'menu060', 'MENU',   '账号管理',   'admin/users',            'admin/users/index',         'admin-users',            'User',         'menu:admin:users',1, 71,  1, '2026-06-03 00:00:00'),
   ('menu062', 'menu060', 'MENU',   '数据字典',   'admin/dict',             'admin/dict/index',          'admin-dict',             'List',         'menu:admin:dict', 1, 72,  1, '2026-06-03 00:00:00'),
   ('menu063', 'menu060', 'MENU',   '菜单管理',   'admin/menus',            'admin/menus/index',         'admin-menus',            'Menu',         'menu:admin:menus',1, 73,  1, '2026-06-03 00:00:00'),
   ('menu064', 'menu060', 'MENU',   '角色管理',   'admin/roles',            'admin/roles/index',         'admin-roles',            'Avatar',       'menu:admin:roles',1, 74,  1, '2026-06-03 00:00:00'),
+  ('menu065', 'menu060', 'MENU',   'AI评估审计','ai-assessments',         'ai-assessments/index',      'ai-assessments',         'Tickets',      'menu:ai-assessment',1,75,1,'2026-06-21 00:00:00'),
+  ('menu066', 'menu060', 'MENU',   'AI置信度配置','admin/ai-confidence',   'admin/ai-confidence/index', 'admin-ai-confidence',    'Setting',      'menu:ai-confidence',1,76,1,'2026-06-21 00:00:00'),
   ('menu101', '0',       'HIDDEN', '新建检验',   'inspection/form',        'inspection/form',           'inspection-form',        'EditPen',      'menu:inspection', 0, 101, 1, '2026-06-03 00:00:00'),
   ('menu102', '0',       'HIDDEN', '判定详情',   'judgment/explanation',   'judgment/explanation',      'judgment-explanation',   'Stamp',        'menu:judgment',   0, 102, 1, '2026-06-03 00:00:00'),
   ('menu103', '0',       'HIDDEN', '发起改判',   're-judgment/form',       're-judgment/form',          're-judgment-form',       'Edit',         'menu:rejudgment', 0, 103, 1, '2026-06-03 00:00:00'),
   ('menu104', '0',       'HIDDEN', '改判详情',   're-judgment/detail',     're-judgment/detail',        're-judgment-detail',     'Edit',         'menu:rejudgment', 0, 104, 1, '2026-06-03 00:00:00'),
   ('menu105', '0',       'HIDDEN', '发起让步',   'concession/apply',       'concession/form',           'concession-apply',       'Check',        'menu:concession', 0, 105, 1, '2026-06-03 00:00:00'),
   ('menu106', '0',       'HIDDEN', '让步详情',   'concession/detail',      'concession/detail',         'concession-detail',      'Check',        'menu:concession', 0, 106, 1, '2026-06-03 00:00:00'),
-  ('menu107', '0',       'HIDDEN', '内嵌页面',   'iframe/:id',             'iframe/index',              'iframe-page',            'Link',         NULL,              0, 107, 1, '2026-06-03 00:00:00')
+  ('menu107', '0',       'HIDDEN', '内嵌页面',   'iframe/:id',             'iframe/index',              'iframe-page',            'Link',         NULL,              0, 107, 1, '2026-06-03 00:00:00'),
+  ('menu108', '0',       'HIDDEN', '标准冲突详情','standard-conflicts/detail','standard-conflicts/detail', 'standard-conflicts-detail','Warning',    'menu:standard-conflict',0,108,1,'2026-06-21 00:00:00'),
+  ('menu109', '0',       'HIDDEN', '标准冲突裁决','standard-conflicts/resolve','standard-conflicts/detail','standard-conflicts-resolve','Warning',   'menu:standard-conflict',0,109,1,'2026-06-21 00:00:00')
 ON DUPLICATE KEY UPDATE menu_name = VALUES(menu_name);
 
 -- ────────────────────────────────────────────────────────────
@@ -203,12 +220,33 @@ VALUES
   ('rp071', 'role005', 'perm022'), ('rp072', 'role005', 'perm023'), ('rp073', 'role005', 'perm024')
 ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
+INSERT IGNORE INTO `sys_role_permission` (`id`, `role_id`, `permission_id`)
+VALUES
+  ('rp_ai_001', 'role001', 'perm025'), ('rp_ai_002', 'role001', 'perm026'),
+  ('rp_ai_003', 'role001', 'perm027'), ('rp_ai_004', 'role001', 'perm029'),
+  ('rp_ai_005', 'role001', 'perm030'),
+  ('rp_ai_011', 'role002', 'perm025'), ('rp_ai_012', 'role002', 'perm026'),
+  ('rp_ai_013', 'role002', 'perm027'), ('rp_ai_014', 'role002', 'perm029'),
+  ('rp_ai_015', 'role002', 'perm030'),
+  ('rp_ai_021', 'role003', 'perm025'), ('rp_ai_022', 'role003', 'perm026'),
+  ('rp_ai_023', 'role003', 'perm027'), ('rp_ai_024', 'role003', 'perm028'),
+  ('rp_ai_025', 'role003', 'perm029'), ('rp_ai_026', 'role003', 'perm030'),
+  ('rp_ai_027', 'role003', 'perm031'), ('rp_ai_028', 'role003', 'perm032'),
+  ('rp_ai_031', 'role004', 'perm025'), ('rp_ai_032', 'role004', 'perm026'),
+  ('rp_ai_033', 'role004', 'perm027'), ('rp_ai_034', 'role004', 'perm029'),
+  ('rp_ai_035', 'role004', 'perm030'),
+  ('rp_ai_041', 'role005', 'perm025'), ('rp_ai_042', 'role005', 'perm026'),
+  ('rp_ai_043', 'role005', 'perm027'), ('rp_ai_044', 'role005', 'perm028'),
+  ('rp_ai_045', 'role005', 'perm029'), ('rp_ai_046', 'role005', 'perm030'),
+  ('rp_ai_047', 'role005', 'perm031'), ('rp_ai_048', 'role005', 'perm032'),
+  ('rp_ai_049', 'role005', 'perm033'), ('rp_ai_050', 'role005', 'perm034');
+
 -- ────────────────────────────────────────────────────────────
 -- 6. Seed：角色-菜单分配（业务角色全部业务菜单，ADMIN 含管理菜单）
 -- ────────────────────────────────────────────────────────────
 
 -- 业务菜单 IDs（不含 admin 目录及子项）
--- menu001-050, menu101-106
+-- menu001-050, menu101-109
 
 -- 业务角色 × 业务菜单（用子查询包裹，避免 MySQL 5.7 将 ON DUPLICATE 误判为 JOIN 条件）
 INSERT IGNORE INTO `sys_role_menu` (`id`, `role_id`, `menu_id`)
@@ -219,11 +257,13 @@ SELECT `id`, `role_id`, `menu_id` FROM (
   ) r
   CROSS JOIN (
     SELECT 'menu001' AS menu_id UNION SELECT 'menu010' UNION SELECT 'menu011' UNION SELECT 'menu012'
-    UNION SELECT 'menu013' UNION SELECT 'menu020' UNION SELECT 'menu021' UNION SELECT 'menu022'
-    UNION SELECT 'menu030' UNION SELECT 'menu031' UNION SELECT 'menu032' UNION SELECT 'menu033'
-    UNION SELECT 'menu040' UNION SELECT 'menu041' UNION SELECT 'menu042' UNION SELECT 'menu050'
+    UNION SELECT 'menu013' UNION SELECT 'menu014' UNION SELECT 'menu020' UNION SELECT 'menu021'
+    UNION SELECT 'menu022' UNION SELECT 'menu030' UNION SELECT 'menu031' UNION SELECT 'menu032'
+    UNION SELECT 'menu033' UNION SELECT 'menu034' UNION SELECT 'menu040' UNION SELECT 'menu041'
+    UNION SELECT 'menu042' UNION SELECT 'menu043' UNION SELECT 'menu050'
     UNION SELECT 'menu060' UNION SELECT 'menu101' UNION SELECT 'menu102' UNION SELECT 'menu103'
     UNION SELECT 'menu104' UNION SELECT 'menu105' UNION SELECT 'menu106' UNION SELECT 'menu107'
+    UNION SELECT 'menu108' UNION SELECT 'menu109'
   ) m
 ) AS seed_role_menu;
 

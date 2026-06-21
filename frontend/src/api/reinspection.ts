@@ -1,5 +1,24 @@
-import { post, put } from '@/utils/request'
+import { get, post, put } from '@/utils/request'
 import type { PageResult } from '@/types'
+
+export interface WorkflowAdvice {
+  assessmentId?: string
+  adviceType?: string
+  judgmentId?: string
+  recordId?: string
+  recommendedAction?: string
+  withheld?: boolean
+  mustManualReview?: boolean
+  targetJudgmentType?: string
+  suggestedReason?: string
+  affectedScope?: string
+  evidenceSummary?: string
+  confidenceLabel?: string
+  confidenceScore?: number
+  missingInfo?: string[]
+  triggerIndicators?: string[]
+  evidenceRefs?: Array<{ clauseId?: string; standardCode?: string; clauseNo?: string; paragraphText?: string }>
+}
 
 export interface InspectionRecordCandidate {
   id: string
@@ -36,6 +55,9 @@ export const initiateReinspection = (data: {
   reinspectionReason: string
   responsibleNo?: string
 }) => post('/reinspections', data)
+
+export const getReinspectionAdvice = (judgmentId: string) =>
+  get<WorkflowAdvice>(`/reinspections/advice/${judgmentId}`)
 
 export const completeReinspection = (id: string, newRecordId: string) =>
   put(`/reinspections/${id}/complete`, { newRecordId })

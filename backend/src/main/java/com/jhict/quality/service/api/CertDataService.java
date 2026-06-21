@@ -30,4 +30,12 @@ public interface CertDataService {
      */
     IPage<QcQualityCertDataVO> page(int pageNum, int pageSize, String coilNo, String batchNo,
                                     String startTime, String endTime);
+
+    /**
+     * 导出正式质保书 PDF。
+     *
+     * @param id 质保书数据ID
+     * @return PDF字节
+     */
+    byte[] exportPdf(String id);
 }

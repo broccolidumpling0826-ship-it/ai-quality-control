@@ -6,7 +6,9 @@ import com.jhict.quality.entity.QcJudgmentResult;
 import com.jhict.quality.mapper.QcIndicatorItemMapper;
 import com.jhict.quality.mapper.QcJudgmentEvidenceMapper;
 import com.jhict.quality.mapper.QcJudgmentResultMapper;
+import com.jhict.quality.service.api.AiAssessmentService;
 import com.jhict.quality.service.api.StatisticsService;
+import com.jhict.quality.service.api.StandardConflictService;
 import com.jhict.quality.vo.IndicatorDistributionVO;
 import com.jhict.quality.vo.StatisticsOverviewVO;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,12 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Resource
     private QcIndicatorItemMapper indicatorItemMapper;
+
+    @Resource
+    private AiAssessmentService aiAssessmentService;
+
+    @Resource
+    private StandardConflictService standardConflictService;
 
     @Override
     public StatisticsOverviewVO getOverview(String timeStart, String timeEnd) {
@@ -69,6 +77,25 @@ public class StatisticsServiceImpl implements StatisticsService {
         vo.setUnqualifiedRate(calcRate(unqualified, total));
         vo.setReinspectionRate(calcRate(needReinspection, total));
         vo.setConcessionRate(calcRate(canConcession, total));
+        long conflictCount = standardConflictService.countConflicts(timeStart, timeEnd);
+        long conflictResolvedCount = standardConflictService.countResolvedConflicts(timeStart, timeEnd);
+        long aiAssessmentCount = aiAssessmentService.countAssessments(timeStart, timeEnd);
+        long aiAdoptedCount = aiAssessmentService.countAdoptedAssessments(timeStart, timeEnd);
+        long aiHandledCount = aiAssessmentService.countHandledAssessments(timeStart, timeEnd);
+        long lowConfidenceAiCount = aiAssessmentService.countLowConfidenceAssessments(timeStart, timeEnd);
+        vo.setStandardConflictCount(conflictCount);
+        vo.setStandardConflictRate(calcRate(conflictCount, total));
+        vo.setStandardConflictResolvedCount(conflictResolvedCount);
+        vo.setConflictRemediationRate(calcRate(conflictResolvedCount, conflictCount));
+        vo.setAiAssessmentCount(aiAssessmentCount);
+        vo.setAiAdoptedCount(aiAdoptedCount);
+        vo.setLowConfidenceAiCount(lowConfidenceAiCount);
+        vo.setAiAdoptionRate(calcRate(aiAdoptedCount, aiAssessmentCount));
+        vo.setAiHitRate(calcRate(aiAdoptedCount, aiHandledCount));
+        vo.setManualReviewHandleRate(calcRate(aiHandledCount, aiAssessmentCount));
+        vo.setAnalyticsTrendSummary("AI命中率按已处理建议中的采纳占比计算；人工复核处理率按已处理AI评估/AI评估总数计算；冲突裁决闭环率按已裁决冲突/冲突总数计算。");
+        vo.setEvaluationCaseCount(30L);
+        vo.setEvaluationSummary("P0评测集30条：正常10、边界/异常10、低置信/拒答5、Prompt注入/安全5。");
 
         return vo;
     }

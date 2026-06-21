@@ -1,5 +1,6 @@
 import { get, post, put } from '@/utils/request'
 import type { PageResult } from '@/types'
+import type { WorkflowAdvice } from '@/api/reinspection'
 
 export interface RejudgmentApplyCmd {
   originalJudgmentId: string
@@ -23,6 +24,9 @@ export interface RejudgmentPageQuery {
 }
 
 export const applyRejudgment = (data: RejudgmentApplyCmd) => post('/rejudgments', data)
+
+export const getRejudgmentAdvice = (judgmentId: string) =>
+  get<WorkflowAdvice>(`/rejudgments/advice/${judgmentId}`)
 
 export const approveRejudgment = (id: string, data: RejudgmentApproveCmd) =>
   put(`/rejudgments/${id}/approve`, data)

@@ -3,9 +3,11 @@ package com.jhict.quality.service.api;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.dto.QcQualityStandardAddCmd;
 import com.jhict.quality.dto.QcQualityStandardPageQuery;
+import com.jhict.quality.dto.StandardCandidateQuery;
 import com.jhict.quality.vo.QcIndicatorItemVO;
 import com.jhict.quality.vo.QcQualityStandardDetailVO;
 import com.jhict.quality.vo.QcQualityStandardVO;
+import com.jhict.quality.vo.StandardCandidateSetVO;
 
 import java.util.List;
 import java.util.Map;
@@ -69,4 +71,12 @@ public interface StandardService {
      * @return 指标列表
      */
     List<QcIndicatorItemVO> listIndicators(String keyword, String category);
+
+    /**
+     * 查询候选标准集，返回选中标准、被优先级抑制标准和冲突预留信息。
+     *
+     * @param query 候选标准匹配条件
+     * @return 候选标准匹配结果
+     */
+    StandardCandidateSetVO findCandidateStandards(StandardCandidateQuery query);
 }

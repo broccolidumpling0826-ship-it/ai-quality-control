@@ -37,6 +37,24 @@
       </el-col>
     </el-row>
 
+    <el-alert
+      v-if="overviewData.evaluationSummary"
+      type="info"
+      :closable="false"
+      show-icon
+      style="margin-bottom:16px"
+      :title="String(overviewData.evaluationSummary)"
+    />
+
+    <el-alert
+      v-if="overviewData.analyticsTrendSummary"
+      type="success"
+      :closable="false"
+      show-icon
+      style="margin-bottom:16px"
+      :title="String(overviewData.analyticsTrendSummary)"
+    />
+
     <!-- 图表区域 -->
     <el-row :gutter="16">
       <el-col :span="24">
@@ -67,6 +85,13 @@ const summaryCards = [
   { key: 'unqualifiedRate', label: '不合格率', unit: '%', colorClass: 'card-danger' },
   { key: 'reinspectionRate', label: '复检率', unit: '%', colorClass: 'card-warning' },
   { key: 'concessionRate', label: '让步率', unit: '%', colorClass: 'card-info' },
+  { key: 'standardConflictRate', label: '标准冲突率', unit: '%', colorClass: 'card-danger' },
+  { key: 'conflictRemediationRate', label: '冲突闭环率', unit: '%', colorClass: 'card-info' },
+  { key: 'lowConfidenceAiCount', label: '低置信AI', unit: '条', colorClass: 'card-warning' },
+  { key: 'aiAdoptionRate', label: 'AI采纳率', unit: '%', colorClass: 'card-info' },
+  { key: 'aiHitRate', label: 'AI命中率', unit: '%', colorClass: 'card-success' },
+  { key: 'manualReviewHandleRate', label: '复核处理率', unit: '%', colorClass: 'card-warning' },
+  { key: 'evaluationCaseCount', label: '评测样例', unit: '条', colorClass: 'card-success' },
   { key: 'totalInspection', label: '检验总数', unit: '批', colorClass: 'card-success' }
 ]
 
@@ -127,6 +152,15 @@ async function loadOverview() {
     unqualifiedRate: res.unqualifiedRate ?? '-',
     reinspectionRate: res.reinspectionRate ?? '-',
     concessionRate: res.concessionRate ?? '-',
+    standardConflictRate: res.standardConflictRate ?? '-',
+    conflictRemediationRate: res.conflictRemediationRate ?? '-',
+    lowConfidenceAiCount: res.lowConfidenceAiCount ?? 0,
+    aiAdoptionRate: res.aiAdoptionRate ?? '-',
+    aiHitRate: res.aiHitRate ?? '-',
+    manualReviewHandleRate: res.manualReviewHandleRate ?? '-',
+    evaluationCaseCount: res.evaluationCaseCount ?? 0,
+    evaluationSummary: res.evaluationSummary ?? '',
+    analyticsTrendSummary: res.analyticsTrendSummary ?? '',
     totalInspection: res.totalInspection ?? 0
   }
 }

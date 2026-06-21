@@ -3,12 +3,19 @@ package com.jhict.quality.controller;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
+import com.jhict.quality.dto.CertQaQueryCmd;
 import com.jhict.quality.dto.QcQualityCertGenerateCmd;
 import com.jhict.quality.service.api.CertDataService;
+import com.jhict.quality.service.api.CertQaService;
+import com.jhict.quality.vo.CertQaAnswerVO;
 import com.jhict.quality.vo.QcQualityCertDataVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +30,9 @@ public class CertDataController {
     @Resource
     private CertDataService certDataService;
 
+    @Resource
+    private CertQaService certQaService;
+
     @PostMapping("/generate")
     @ApiOperation(value = "生成质保书数据")
     public ApiResult<QcQualityCertDataVO> generate(@Validated @RequestBody QcQualityCertGenerateCmd cmd) {
@@ -36,6 +46,17 @@ public class CertDataController {
         return ApiResult.success(certDataService.getById(id));
     }
 
+    @GetMapping("/{id}/pdf")
+    @ApiOperation(value = "导出正式质保书PDF")
+    public ResponseEntity<byte[]> exportPdf(
+            @ApiParam(value = "质保书数据ID", required = true) @PathVariable String id) {
+        byte[] data = certDataService.exportPdf(id);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.attachment().filename("quality-cert-" + id + ".pdf").build());
+        return ResponseEntity.ok().headers(headers).body(data);
+    }
+
     @PostMapping("/page")
     @ApiOperation(value = "分页查询质保书数据")
     public ApiResult<IPage<QcQualityCertDataVO>> page(
@@ -46,5 +67,11 @@ public class CertDataController {
             @ApiParam(value = "生成时间起 YYYY-MM-DD") @RequestParam(required = false) String startTime,
             @ApiParam(value = "生成时间止 YYYY-MM-DD") @RequestParam(required = false) String endTime) {
         return ApiResult.success(certDataService.page(pageNum, pageSize, coilNo, batchNo, startTime, endTime));
+    }
+
+    @PostMapping("/qa")
+    @ApiOperation(value = "质保书问答")
+    public ApiResult<CertQaAnswerVO> qa(@Validated @RequestBody CertQaQueryCmd cmd) {
+        return ApiResult.success(certQaService.answer(cmd));
     }
 }

@@ -55,3 +55,32 @@ export const pageConcessions = (params: ConcessionPageQuery & { concessionStatus
   })
 
 export const getConcessionById = (id: string) => get(`/concessions/${id}`)
+
+export interface ConcessionRiskAssessCmd {
+  judgmentId: string
+  concessionId?: string
+  customerUsage?: string
+  usageRiskCategory?: string
+  deliveryWindowDays?: number
+}
+
+export interface ConcessionRiskAssessment {
+  judgmentId?: string
+  riskLevel?: string
+  mustReview?: boolean
+  missingInfo?: string[]
+  suggestedConditions?: string[]
+  blockingReasons?: string[]
+  evidenceRefs?: unknown[]
+  alternativeStocks?: unknown[]
+  customerUsage?: string
+  usageRiskCategory?: string
+  confidenceLabel?: string
+  confidenceScore?: number
+  degradationSource?: string
+  narrativeExplanation?: string
+  assessmentId?: string
+}
+
+export const assessConcessionRisk = (data: ConcessionRiskAssessCmd) =>
+  post<ConcessionRiskAssessment>('/concessions/risk-assessment', data)

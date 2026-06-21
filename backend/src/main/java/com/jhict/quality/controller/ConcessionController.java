@@ -5,9 +5,12 @@ import com.jhict.quality.common.util.AuthUtils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.ConcessionConfirmCmd;
+import com.jhict.quality.dto.ConcessionRiskAssessCmd;
 import com.jhict.quality.dto.QcConcessionAddCmd;
 import com.jhict.quality.dto.QcConcessionPageQuery;
+import com.jhict.quality.service.api.ConcessionRiskService;
 import com.jhict.quality.service.api.ConcessionService;
+import com.jhict.quality.vo.ConcessionRiskAssessmentVO;
 import com.jhict.quality.vo.QcConcessionVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -26,6 +29,9 @@ public class ConcessionController {
 
     @Resource
     private ConcessionService concessionService;
+
+    @Resource
+    private ConcessionRiskService concessionRiskService;
 
     @PostMapping
     @ApiOperation(value = "发起让步接收申请")
@@ -66,6 +72,12 @@ public class ConcessionController {
     @ApiOperation(value = "分页查询让步接收申请")
     public ApiResult<IPage<QcConcessionVO>> page(@ModelAttribute QcConcessionPageQuery query) {
         return ApiResult.success(concessionService.page(query));
+    }
+
+    @PostMapping("/risk-assessment")
+    @ApiOperation(value = "AI让步风险评估")
+    public ApiResult<ConcessionRiskAssessmentVO> assessRisk(@Validated @RequestBody ConcessionRiskAssessCmd cmd) {
+        return ApiResult.success(concessionRiskService.assess(cmd));
     }
 
     @GetMapping("/{id}")

@@ -55,7 +55,7 @@
             <el-form-item label="目标结论" prop="targetJudgmentType">
               <el-select v-model="formData.targetJudgmentType" placeholder="请选择目标结论" style="width:100%" @change="checkReverse">
                 <el-option
-                  v-for="item in dictStore.getItems('JUDGMENT_TYPE')"
+                  v-for="item in rejudgmentTargetOptions"
                   :key="item.value"
                   :label="item.label"
                   :value="item.value"
@@ -256,9 +256,9 @@ const fileList = ref<UploadFile[]>([])
 
 const formData = reactive({
   judgmentId: (route.query.judgmentId as string) || (route.query.id as string) || '',
-  targetJudgmentType: '',
-  reason: '',
-  impactScope: '',
+  targetJudgmentType: (route.query.targetJudgmentType as string) || '',
+  reason: (route.query.reason as string) || '',
+  impactScope: (route.query.impactScope as string) || '',
   evidenceSource: '',
   evidenceFile: null as File | null
 })
@@ -283,9 +283,13 @@ const pickerSearch = reactive({
   timeRange: null as [string, string] | null
 })
 
+const rejudgmentTargetOptions = computed(() =>
+  dictStore.getItems('JUDGMENT_TYPE').filter((item) => item.value !== 'STANDARD_CONFLICT')
+)
+
 // 逆向改判类型：合格/让步 → 不合格/需复检
-const POSITIVE_TYPES = ['QUALIFIED', 'CONCESSION']
-const NEGATIVE_TYPES = ['UNQUALIFIED', 'REINSPECTION']
+const POSITIVE_TYPES = ['QUALIFIED', 'CAN_CONCESSION', 'CONCESSION']
+const NEGATIVE_TYPES = ['UNQUALIFIED', 'NEED_REINSPECTION', 'REINSPECTION']
 
 const isReverse = computed(() => {
   if (!originalJudgment.value || !formData.targetJudgmentType) return false

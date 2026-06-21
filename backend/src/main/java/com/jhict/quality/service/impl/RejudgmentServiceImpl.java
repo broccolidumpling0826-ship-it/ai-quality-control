@@ -16,6 +16,7 @@ import com.jhict.quality.entity.QcJudgmentResult;
 import com.jhict.quality.entity.QcRejudgmentApproval;
 import com.jhict.quality.entity.QcRejudgmentRequest;
 import com.jhict.quality.entity.SysUser;
+import com.jhict.quality.enums.JudgmentType;
 import com.jhict.quality.mapper.QcConcessionAcceptanceMapper;
 import com.jhict.quality.mapper.QcInspectionRecordMapper;
 import com.jhict.quality.mapper.QcJudgmentEvidenceMapper;
@@ -47,6 +48,7 @@ public class RejudgmentServiceImpl implements RejudgmentService {
     /** 逆向改判：原结论为合格/可让步，改为不合格/需复检 */
     private static final List<String> POSITIVE_TYPES = Arrays.asList("QUALIFIED", "CAN_CONCESSION");
     private static final List<String> NEGATIVE_TYPES = Arrays.asList("UNQUALIFIED", "NEED_REINSPECTION");
+    private static final String STANDARD_CONFLICT = JudgmentType.STANDARD_CONFLICT.getCode();
 
     @Resource
     private QcRejudgmentRequestMapper rejudgmentRequestMapper;
@@ -87,6 +89,12 @@ public class RejudgmentServiceImpl implements RejudgmentService {
         // 2. 自动判断是否逆向改判
         String originalType = original.getJudgmentType();
         String targetType = cmd.getTargetJudgmentType();
+        if (STANDARD_CONFLICT.equals(targetType)) {
+            throw new ServiceException("标准冲突只能由系统判定生成，不能作为人工改判目标");
+        }
+        if (STANDARD_CONFLICT.equals(originalType)) {
+            throw new ServiceException("当前判定为标准冲突，必须先完成标准冲突裁决后再重新判定");
+        }
         int isReverse = (POSITIVE_TYPES.contains(originalType) && NEGATIVE_TYPES.contains(targetType)) ? 1 : 0;
 
         // 3. 逆向改判必须提供新证据

@@ -2,13 +2,13 @@ package com.jhict.quality.engine;
 
 import com.jhict.quality.engine.model.JudgmentInput;
 import com.jhict.quality.engine.model.JudgmentOutput;
-import com.jhict.quality.entity.QcIndicatorItem;
-import com.jhict.quality.entity.QcQualityStandard;
-import com.jhict.quality.entity.QcStandardIndicator;
+import com.jhict.quality.dto.StandardCandidateQuery;
 import com.jhict.quality.enums.JudgmentType;
-import com.jhict.quality.mapper.QcIndicatorItemMapper;
-import com.jhict.quality.mapper.QcQualityStandardMapper;
-import com.jhict.quality.mapper.QcStandardIndicatorMapper;
+import com.jhict.quality.service.api.StandardService;
+import com.jhict.quality.vo.QcQualityStandardDetailVO;
+import com.jhict.quality.vo.StandardCandidateSetVO;
+import com.jhict.quality.vo.StandardCandidateVO;
+import com.jhict.quality.vo.StandardConflictDraftVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -31,13 +31,7 @@ import java.util.stream.Collectors;
 public class JudgmentEngine {
 
     @Resource
-    private QcQualityStandardMapper qualityStandardMapper;
-
-    @Resource
-    private QcStandardIndicatorMapper standardIndicatorMapper;
-
-    @Resource
-    private QcIndicatorItemMapper indicatorItemMapper;
+    private StandardService standardService;
 
     /**
      * 执行质量判定
@@ -54,8 +48,36 @@ public class JudgmentEngine {
         String grade = input.getProductGrade();
         String customerId = input.getCustomerId();
 
-        // Step 1: 三级优先级查找适用标准（MySQL 5.7兼容，不使用CTE）
-        QcQualityStandard matchedStandard = findApplicableStandard(customerId, variety, grade, testDate);
+        List<String> allIndicatorIds = input.getValues().stream()
+                .map(JudgmentInput.InspectionValueItem::getIndicatorId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Step 1: 查询候选标准集，先处理同优先级阻断冲突。
+        StandardCandidateQuery candidateQuery = new StandardCandidateQuery();
+        candidateQuery.setCustomerId(customerId);
+        candidateQuery.setVariety(variety);
+        candidateQuery.setGrade(grade);
+        candidateQuery.setProductSpec(input.getProductSpec());
+        candidateQuery.setTestDate(testDate);
+        candidateQuery.setIndicatorIds(allIndicatorIds);
+        StandardCandidateSetVO candidateSet = standardService.findCandidateStandards(candidateQuery);
+        List<JudgmentOutput.StandardConflictItem> conflictItems = toOutputConflicts(candidateSet.getConflicts());
+        boolean hasBlockingConflict = conflictItems.stream()
+                .anyMatch(conflict -> "BLOCKING".equals(conflict.getConflictLevel()));
+
+        if (hasBlockingConflict) {
+            log.warn("发现阻断标准冲突，recordId={}, variety={}, grade={}", input.getRecordId(), variety, grade);
+            return JudgmentOutput.builder()
+                    .judgmentType(JudgmentType.STANDARD_CONFLICT)
+                    .evidences(new ArrayList<>())
+                    .gaps(new ArrayList<>())
+                    .matchedStandardIds(collectConflictStandardIds(conflictItems))
+                    .conflicts(conflictItems)
+                    .build();
+        }
+
+        StandardCandidateVO matchedStandard = candidateSet.getSelectedStandard();
 
         List<String> matchedStandardIds = new ArrayList<>();
         List<JudgmentOutput.EvidenceItem> evidences = new ArrayList<>();
@@ -76,28 +98,41 @@ public class JudgmentEngine {
                     .evidences(evidences)
                     .gaps(gaps)
                     .matchedStandardIds(matchedStandardIds)
+                    .conflicts(conflictItems)
                     .build();
         }
 
-        matchedStandardIds.add(matchedStandard.getId());
+        return judgeAgainstStandard(input, matchedStandard.getId(), conflictItems);
+    }
 
-        // Step 2: 查询该标准下所有指标配置，建立 indicatorId -> StandardIndicator 映射
-        List<QcStandardIndicator> standardIndicators = standardIndicatorMapper.findByStandardId(matchedStandard.getId());
-        Map<String, QcStandardIndicator> siMap = standardIndicators.stream()
-                .collect(Collectors.toMap(QcStandardIndicator::getIndicatorId, si -> si));
+    /**
+     * 按人工裁决后的控制标准重新执行规则判定。
+     *
+     * @param input      判定输入
+     * @param standardId 裁决控制标准ID
+     * @return 判定结果
+     */
+    public JudgmentOutput judgeWithStandard(JudgmentInput input, String standardId) {
+        log.info("按指定标准重新执行质量判定，recordId={}, standardId={}", input.getRecordId(), standardId);
+        return judgeAgainstStandard(input, standardId, new ArrayList<>());
+    }
 
-        // Step 3: 查询所有涉及指标的元信息
-        List<String> allIndicatorIds = input.getValues().stream()
-                .map(JudgmentInput.InspectionValueItem::getIndicatorId)
-                .distinct()
-                .collect(Collectors.toList());
-        Map<String, QcIndicatorItem> indicatorMap = new HashMap<>();
-        if (!allIndicatorIds.isEmpty()) {
-            indicatorItemMapper.selectBatchIds(allIndicatorIds)
-                    .forEach(item -> indicatorMap.put(item.getId(), item));
-        }
+    private JudgmentOutput judgeAgainstStandard(JudgmentInput input,
+                                                String standardId,
+                                                List<JudgmentOutput.StandardConflictItem> conflictItems) {
+        String variety = input.getProductVariety();
+        String grade = input.getProductGrade();
+        List<String> matchedStandardIds = new ArrayList<>();
+        List<JudgmentOutput.EvidenceItem> evidences = new ArrayList<>();
+        List<JudgmentOutput.StandardGapItem> gaps = new ArrayList<>();
+        matchedStandardIds.add(standardId);
 
-        // Step 4: 逐指标比较，计算偏差，收集evidence和gap
+        // 查询该标准下所有指标配置，建立 indicatorId -> StandardIndicatorDetail 映射
+        QcQualityStandardDetailVO standardDetail = standardService.getById(standardId);
+        Map<String, QcQualityStandardDetailVO.StandardIndicatorDetail> siMap = standardDetail.getIndicators().stream()
+                .collect(Collectors.toMap(QcQualityStandardDetailVO.StandardIndicatorDetail::getIndicatorId, si -> si));
+
+        // 逐指标比较，计算偏差，收集evidence和gap
         // 四段优先级：UNQUALIFIED > NEED_REINSPECTION > CAN_CONCESSION > QUALIFIED（D-015）
         boolean hasUnqualified = false;
         boolean hasReinspection = false;
@@ -107,7 +142,7 @@ public class JudgmentEngine {
             String indicatorId = valueItem.getIndicatorId();
             BigDecimal testValue = valueItem.getTestValue();
 
-            QcStandardIndicator si = siMap.get(indicatorId);
+            QcQualityStandardDetailVO.StandardIndicatorDetail si = siMap.get(indicatorId);
             if (si == null) {
                 // 该指标在标准中无配置 -> 记为缺口
                 gaps.add(JudgmentOutput.StandardGapItem.builder()
@@ -115,14 +150,14 @@ public class JudgmentEngine {
                         .variety(variety)
                         .grade(grade)
                         .build());
-                log.debug("指标 {} 在标准 {} 中无配置，记录为缺口", indicatorId, matchedStandard.getId());
+                log.debug("指标 {} 在标准 {} 中无配置，记录为缺口", indicatorId, standardId);
                 continue;
             }
 
             // 文本型指标（testValue为null），仅记录为通过（文本型无法数值比较）
             if (testValue == null) {
                 evidences.add(JudgmentOutput.EvidenceItem.builder()
-                        .standardId(matchedStandard.getId())
+                        .standardId(standardId)
                         .indicatorId(indicatorId)
                         .testValue(null)
                         .upperLimit(si.getUpperLimit())
@@ -145,7 +180,7 @@ public class JudgmentEngine {
             if (withinNormal) {
                 // 正常通过
                 evidences.add(JudgmentOutput.EvidenceItem.builder()
-                        .standardId(matchedStandard.getId())
+                        .standardId(standardId)
                         .indicatorId(indicatorId)
                         .testValue(testValue)
                         .upperLimit(upperLimit)
@@ -175,7 +210,7 @@ public class JudgmentEngine {
                     // ② 在让步范围内 → CAN_CONCESSION
                     hasConcession = true;
                     evidences.add(JudgmentOutput.EvidenceItem.builder()
-                            .standardId(matchedStandard.getId())
+                            .standardId(standardId)
                             .indicatorId(indicatorId)
                             .testValue(testValue)
                             .upperLimit(upperLimit)
@@ -188,7 +223,7 @@ public class JudgmentEngine {
                     // ③ 超出合格限且违规方向未配置让步范围 → NEED_REINSPECTION
                     hasReinspection = true;
                     evidences.add(JudgmentOutput.EvidenceItem.builder()
-                            .standardId(matchedStandard.getId())
+                            .standardId(standardId)
                             .indicatorId(indicatorId)
                             .testValue(testValue)
                             .upperLimit(upperLimit)
@@ -201,7 +236,7 @@ public class JudgmentEngine {
                     // ④ 超出合格限且超出让步范围 → UNQUALIFIED
                     hasUnqualified = true;
                     evidences.add(JudgmentOutput.EvidenceItem.builder()
-                            .standardId(matchedStandard.getId())
+                            .standardId(standardId)
                             .indicatorId(indicatorId)
                             .testValue(testValue)
                             .upperLimit(upperLimit)
@@ -234,41 +269,8 @@ public class JudgmentEngine {
                 .evidences(evidences)
                 .gaps(gaps)
                 .matchedStandardIds(matchedStandardIds)
+                .conflicts(conflictItems)
                 .build();
-    }
-
-    /**
-     * 三级优先级查找适用标准
-     * 第一优先级：客户协议标准（需customerId不为空）
-     * 第二优先级：企业标准
-     * 第三优先级：国家标准
-     */
-    private QcQualityStandard findApplicableStandard(String customerId, String variety, String grade, LocalDate testDate) {
-        // 第一优先级：客户协议标准
-        if (customerId != null && !customerId.isEmpty()) {
-            QcQualityStandard customerStd = qualityStandardMapper.findCustomerStandard(
-                    customerId, variety, grade, testDate);
-            if (customerStd != null) {
-                log.debug("命中客户协议标准，standardId={}", customerStd.getId());
-                return customerStd;
-            }
-        }
-
-        // 第二优先级：企业标准
-        QcQualityStandard enterpriseStd = qualityStandardMapper.findEnterpriseStandard(variety, grade, testDate);
-        if (enterpriseStd != null) {
-            log.debug("命中企业标准，standardId={}", enterpriseStd.getId());
-            return enterpriseStd;
-        }
-
-        // 第三优先级：国家标准
-        QcQualityStandard nationalStd = qualityStandardMapper.findNationalStandard(variety, grade, testDate);
-        if (nationalStd != null) {
-            log.debug("命中国家标准，standardId={}", nationalStd.getId());
-            return nationalStd;
-        }
-
-        return null;
     }
 
     /**
@@ -365,5 +367,39 @@ public class JudgmentEngine {
             sb.append("，上限=").append(upperLimit.stripTrailingZeros().toPlainString());
         }
         return sb.toString();
+    }
+
+    private List<JudgmentOutput.StandardConflictItem> toOutputConflicts(List<StandardConflictDraftVO> drafts) {
+        if (drafts == null || drafts.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return drafts.stream().map(draft -> JudgmentOutput.StandardConflictItem.builder()
+                .conflictType(draft.getConflictType())
+                .conflictLevel(draft.getConflictLevel())
+                .status(draft.getStatus())
+                .indicatorId(draft.getIndicatorId())
+                .indicatorName(draft.getIndicatorName())
+                .unit(draft.getUnit())
+                .customerId(draft.getCustomerId())
+                .variety(draft.getVariety())
+                .grade(draft.getGrade())
+                .productSpec(draft.getProductSpec())
+                .inspectionDate(draft.getInspectionDate())
+                .selectedStandardId(draft.getSelectedStandardId())
+                .involvedStandardIds(draft.getInvolvedStandardIds())
+                .conflictDetail(draft.getConflictDetail())
+                .selectedPriority(draft.getSelectedPriority())
+                .build()).collect(Collectors.toList());
+    }
+
+    private List<String> collectConflictStandardIds(List<JudgmentOutput.StandardConflictItem> conflicts) {
+        if (conflicts == null || conflicts.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return conflicts.stream()
+                .filter(conflict -> conflict.getInvolvedStandardIds() != null)
+                .flatMap(conflict -> conflict.getInvolvedStandardIds().stream())
+                .distinct()
+                .collect(Collectors.toList());
     }
 }

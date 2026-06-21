@@ -63,6 +63,21 @@ app:
   concession:
     # 让步催促提醒阈值（天数，FR-009）：confirm_status=PENDING 超过此天数自动提醒
     remind-days: 7
+  ai:
+    model:
+      enabled: ${DEEPSEEK_ENABLED:false}
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
+      api-key: ${DEEPSEEK_API_KEY:}
+      chat-model: ${DEEPSEEK_MODEL:deepseek-chat}
+      embedding-model: ${DEEPSEEK_EMBEDDING_MODEL:text-embedding-v1}
+      timeout-millis: ${DEEPSEEK_TIMEOUT_MILLIS:15000}
+    vector:
+      enabled: ${ES_VECTOR_ENABLED:false}
+      host: ${ES_HOST:http://localhost:9200}
+      username: ${ES_USERNAME:}
+      password: ${ES_PASSWORD:}
+      standard-index: ${ES_STANDARD_INDEX:quality-standard-clauses}
+      timeout-millis: ${ES_TIMEOUT_MILLIS:5000}
 
 logging:
   level:

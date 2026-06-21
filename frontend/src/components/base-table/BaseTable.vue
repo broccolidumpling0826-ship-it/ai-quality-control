@@ -81,11 +81,11 @@
           <template #default="scope">
             <el-tag
               v-if="getCellValue(scope.row, col.prop) !== null && getCellValue(scope.row, col.prop) !== undefined && getCellValue(scope.row, col.prop) !== ''"
-              :type="(dictStore.getColorTag(col.dictCode || '', getCellValue(scope.row, col.prop)) as any)"
+              :type="(dictStore.getColorTag(col.dictCode || '', dictValue(scope.row, col.prop)) as any)"
               size="small"
               effect="light"
             >
-              {{ dictStore.getLabel(col.dictCode || '', getCellValue(scope.row, col.prop)) }}
+              {{ dictStore.getLabel(col.dictCode || '', dictValue(scope.row, col.prop)) }}
             </el-tag>
             <span v-else class="cell-empty">-</span>
           </template>
@@ -118,7 +118,7 @@
           :show-overflow-tooltip="col.showOverflowTooltip !== false"
         >
           <template #default="scope">
-            {{ dictStore.getLabel(col.dictCode || '', getCellValue(scope.row, col.prop)) }}
+            {{ dictStore.getLabel(col.dictCode || '', dictValue(scope.row, col.prop)) }}
           </template>
           <template v-if="col.headerSearch" #header>
             <div class="header-search">
@@ -308,6 +308,14 @@ function getCellValue(row: Record<string, unknown>, prop: string): unknown {
     }
     return undefined
   }, row)
+}
+
+function dictValue(row: Record<string, unknown>, prop: string): string | number | null | undefined {
+  const value = getCellValue(row, prop)
+  if (typeof value === 'string' || typeof value === 'number' || value === null || value === undefined) {
+    return value
+  }
+  return String(value)
 }
 
 function formatDate(val: unknown, fmt?: string): string {

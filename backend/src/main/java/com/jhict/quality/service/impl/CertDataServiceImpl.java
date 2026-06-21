@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jhict.quality.common.annotation.AuditLog;
 import com.jhict.quality.common.constant.JudgmentExplainConstants;
 import com.jhict.quality.common.exception.ServiceException;
 import com.jhict.quality.dto.QcQualityCertGenerateCmd;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -89,6 +91,7 @@ public class CertDataServiceImpl implements CertDataService {
         Map<String, QcJudgmentResult> finalJudgmentMap = loadFinalJudgmentsMap(recordIds);
         Set<String> approvedJudgmentIds = loadApprovedConcessionJudgmentIds(
                 finalJudgmentMap.values().stream().map(QcJudgmentResult::getId).collect(Collectors.toSet()));
+        validateGenerateGates(records, finalJudgmentMap, approvedJudgmentIds);
 
         Map<String, List<QcInspectionValue>> valuesByRecordId = loadValuesByRecordIds(recordIds);
         Map<String, List<QcJudgmentResult>> judgmentsByRecordId = loadJudgmentsByRecordIds(recordIds);
@@ -136,6 +139,9 @@ public class CertDataServiceImpl implements CertDataService {
                 snap.setFinalJudgmentType(finalJudgmentType);
                 snapshots.add(snap);
             }
+        }
+        if (snapshots.isEmpty()) {
+            throw new ServiceException("缺少可纳入质保书的关键检验指标，禁止生成正式质保书数据");
         }
 
         String snapshotJson;
@@ -198,6 +204,141 @@ public class CertDataServiceImpl implements CertDataService {
         Page<QcQualityCertDataVO> voPage = new Page<>(pageResult.getCurrent(), pageResult.getSize(), pageResult.getTotal());
         voPage.setRecords(voList);
         return voPage;
+    }
+
+    @Override
+    @AuditLog(operationType = "EXPORT_CERT_PDF", targetEntity = "QcQualityCertData")
+    public byte[] exportPdf(String id) {
+        QcQualityCertDataVO vo = getById(id);
+        validateFormalExportGate(vo);
+        return buildSimplePdf(vo);
+    }
+
+    private void validateGenerateGates(List<QcInspectionRecord> records,
+                                       Map<String, QcJudgmentResult> finalJudgmentMap,
+                                       Set<String> approvedJudgmentIds) {
+        for (QcInspectionRecord record : records) {
+            QcJudgmentResult judgment = finalJudgmentMap.get(record.getId());
+            if (judgment == null) {
+                throw new ServiceException("检验记录 " + record.getId() + " 尚无最终判定，禁止生成正式质保书数据");
+            }
+            validateJudgmentReleasable(judgment, approvedJudgmentIds);
+        }
+    }
+
+    private void validateJudgmentReleasable(QcJudgmentResult judgment, Set<String> approvedJudgmentIds) {
+        String type = judgment.getJudgmentType();
+        if ("QUALIFIED".equals(type)) {
+            return;
+        }
+        if ("CAN_CONCESSION".equals(type) || "CONCESSION".equals(type)) {
+            if (approvedJudgmentIds.contains(judgment.getId())) {
+                return;
+            }
+            throw new ServiceException("可让步判定尚未完成让步审批和客户确认，禁止生成正式质保书");
+        }
+        if ("STANDARD_CONFLICT".equals(type)) {
+            throw new ServiceException("存在未解决标准冲突，禁止生成正式质保书");
+        }
+        if ("NEED_REINSPECTION".equals(type) || "REINSPECTION".equals(type)) {
+            throw new ServiceException("判定需要复检，复检完成前禁止生成正式质保书");
+        }
+        if ("UNQUALIFIED".equals(type)) {
+            throw new ServiceException("最终判定不合格，禁止生成正式质保书");
+        }
+        throw new ServiceException("未知或不可放行判定类型：" + type);
+    }
+
+    private void validateFormalExportGate(QcQualityCertDataVO vo) {
+        if (!"SUCCESS".equals(vo.getStatus()) || vo.getIndicators() == null || vo.getIndicators().isEmpty()) {
+            throw new ServiceException("质保书快照不完整，禁止导出正式PDF");
+        }
+        QcInspectionRecord record = resolvePrimaryInspectionRecordForCert(vo.getCoilNo(), vo.getBatchNo());
+        if (record == null) {
+            throw new ServiceException("未找到质保书对应检验记录，禁止导出正式PDF");
+        }
+        QcJudgmentResult judgment = loadFinalJudgmentsMap(Collections.singletonList(record.getId())).get(record.getId());
+        if (judgment == null) {
+            throw new ServiceException("未找到最终判定，禁止导出正式PDF");
+        }
+        validateJudgmentReleasable(judgment, loadApprovedConcessionJudgmentIds(Collections.singleton(judgment.getId())));
+        boolean hasBlockingIndicator = vo.getIndicators().stream()
+                .anyMatch(i -> JudgmentExplainConstants.INDICATOR_RESULT_FAIL.equals(i.getIndicatorResult())
+                        || JudgmentExplainConstants.INDICATOR_RESULT_WARNING.equals(i.getIndicatorResult()));
+        if (hasBlockingIndicator) {
+            throw new ServiceException("质保书存在失败或缺失指标，禁止导出正式PDF");
+        }
+    }
+
+    private byte[] buildSimplePdf(QcQualityCertDataVO vo) {
+        List<String> lines = new ArrayList<>();
+        lines.add("QUALITY CERTIFICATE");
+        lines.add("Cert Data ID: " + nullToDash(vo.getId()));
+        lines.add("Coil No: " + nullToDash(vo.getCoilNo()));
+        lines.add("Batch No: " + nullToDash(vo.getBatchNo()));
+        lines.add("Heat No: " + nullToDash(vo.getHeatNo()));
+        lines.add("Product: " + nullToDash(vo.getProductVariety()) + " / " + nullToDash(vo.getProductGrade()));
+        lines.add("Final Judgment: " + nullToDash(vo.getFinalJudgmentType()));
+        lines.add("Generated At: " + (vo.getGenerateTime() == null ? "-" : vo.getGenerateTime()));
+        lines.add("Generated By: " + nullToDash(vo.getGeneratedBy()));
+        lines.add(" ");
+        lines.add("Indicators:");
+        for (QcQualityCertDataVO.IndicatorSnapshot item : vo.getIndicators()) {
+            lines.add(String.format(Locale.ROOT, "%s %s %s limit[%s,%s] result=%s",
+                    nullToDash(item.getIndicatorCode()),
+                    decimalToString(item.getTestValue()),
+                    nullToDash(item.getUnit()),
+                    decimalToString(item.getLowerLimit()),
+                    decimalToString(item.getUpperLimit()),
+                    nullToDash(item.getIndicatorResult())));
+        }
+
+        StringBuilder content = new StringBuilder();
+        content.append("BT\n/F1 11 Tf\n50 790 Td\n14 TL\n");
+        for (String line : lines) {
+            content.append("(").append(escapePdfAscii(line)).append(") Tj\nT*\n");
+        }
+        content.append("ET\n");
+
+        String contentStream = content.toString();
+        List<String> objects = new ArrayList<>();
+        objects.add("<< /Type /Catalog /Pages 2 0 R >>");
+        objects.add("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        objects.add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>");
+        objects.add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+        objects.add("<< /Length " + contentStream.getBytes(StandardCharsets.US_ASCII).length
+                + " >>\nstream\n" + contentStream + "endstream");
+
+        StringBuilder pdf = new StringBuilder("%PDF-1.4\n");
+        List<Integer> offsets = new ArrayList<>();
+        for (int i = 0; i < objects.size(); i++) {
+            offsets.add(pdf.toString().getBytes(StandardCharsets.US_ASCII).length);
+            pdf.append(i + 1).append(" 0 obj\n").append(objects.get(i)).append("\nendobj\n");
+        }
+        int xrefOffset = pdf.toString().getBytes(StandardCharsets.US_ASCII).length;
+        pdf.append("xref\n0 ").append(objects.size() + 1).append("\n");
+        pdf.append("0000000000 65535 f \n");
+        for (Integer offset : offsets) {
+            pdf.append(String.format(Locale.ROOT, "%010d 00000 n \n", offset));
+        }
+        pdf.append("trailer\n<< /Size ").append(objects.size() + 1).append(" /Root 1 0 R >>\n");
+        pdf.append("startxref\n").append(xrefOffset).append("\n%%EOF\n");
+        return pdf.toString().getBytes(StandardCharsets.US_ASCII);
+    }
+
+    private String escapePdfAscii(String value) {
+        String ascii = value == null ? "-" : value.replaceAll("[^\\x20-\\x7E]", "?");
+        return ascii.replace("\\", "\\\\")
+                .replace("(", "\\(")
+                .replace(")", "\\)");
+    }
+
+    private String decimalToString(java.math.BigDecimal value) {
+        return value == null ? "-" : value.stripTrailingZeros().toPlainString();
+    }
+
+    private String nullToDash(String value) {
+        return StringUtils.hasText(value) ? value : "-";
     }
 
     private void applyGenerateTimeRange(QueryWrapper<QcQualityCertData> wrapper,

@@ -6,8 +6,10 @@ import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.QcRejudgmentRequestAddCmd;
 import com.jhict.quality.dto.RejudgmentApproveCmd;
 import com.jhict.quality.service.api.RejudgmentService;
+import com.jhict.quality.service.api.WorkflowAdviceService;
 import com.jhict.quality.vo.QcRejudgmentListVO;
 import com.jhict.quality.vo.QcRejudgmentRequestVO;
+import com.jhict.quality.vo.WorkflowAdviceVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -24,6 +26,16 @@ public class RejudgmentController {
 
     @Resource
     private RejudgmentService rejudgmentService;
+
+    @Resource
+    private WorkflowAdviceService workflowAdviceService;
+
+    @GetMapping("/advice/{judgmentId}")
+    @ApiOperation(value = "生成AI改判建议（不自动创建改判记录）")
+    public ApiResult<WorkflowAdviceVO> advice(
+            @ApiParam(value = "判定ID", required = true) @PathVariable String judgmentId) {
+        return ApiResult.success(workflowAdviceService.adviseRejudgment(judgmentId));
+    }
 
     @PostMapping
     @ApiOperation(value = "申请改判")

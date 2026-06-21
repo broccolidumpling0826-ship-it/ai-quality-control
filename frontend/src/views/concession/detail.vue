@@ -52,6 +52,50 @@
         </el-card>
       </div>
 
+      <el-card shadow="never" class="risk-card">
+        <template #header>
+          <div class="risk-head">
+            <span style="font-weight:600">AI 让步风险评估</span>
+            <el-button size="small" type="primary" :loading="riskLoading" @click="handleAssessRisk">评估</el-button>
+          </div>
+        </template>
+        <el-form :model="riskForm" inline>
+          <el-form-item label="客户用途">
+            <el-input v-model="riskForm.customerUsage" clearable style="width: 260px" />
+          </el-form-item>
+          <el-form-item label="用途风险">
+            <el-select v-model="riskForm.usageRiskCategory" clearable style="width: 180px">
+              <el-option label="普通" value="NORMAL" />
+              <el-option label="高成形" value="HIGH_FORMING" />
+              <el-option label="安全关键" value="SAFETY_CRITICAL" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template v-if="riskResult">
+          <div class="risk-tags">
+            <el-tag :type="riskType(riskResult.riskLevel)" size="small">{{ riskResult.riskLevel }}</el-tag>
+            <el-tag :type="riskResult.mustReview ? 'warning' : 'success'" size="small">
+              {{ riskResult.mustReview ? '需人工复核' : '可按流程评审' }}
+            </el-tag>
+            <el-tag size="small" type="info">{{ riskResult.confidenceLabel }}</el-tag>
+            <el-tag size="small" type="info">{{ riskResult.degradationSource }}</el-tag>
+          </div>
+          <p class="risk-text">{{ riskResult.narrativeExplanation }}</p>
+          <el-alert
+            v-if="riskResult.blockingReasons?.length"
+            type="error"
+            show-icon
+            :closable="false"
+            :title="riskResult.blockingReasons.join('；')"
+          />
+          <div v-if="riskResult.suggestedConditions?.length" class="risk-list">
+            <el-tag v-for="item in riskResult.suggestedConditions" :key="item" type="warning" size="small">
+              {{ item }}
+            </el-tag>
+          </div>
+        </template>
+      </el-card>
+
       <!-- 客户确认附件区域 -->
       <el-card shadow="never" style="margin-bottom:12px">
         <template #header><span style="font-weight:600">客户确认附件</span></template>
@@ -156,7 +200,14 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance, UploadFile } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { useDictStore } from '@/store/dict'
-import { getConcessionById, confirmConcession, rejectConcession, approveConcession } from '@/api/concession'
+import {
+  getConcessionById,
+  confirmConcession,
+  rejectConcession,
+  approveConcession,
+  assessConcessionRisk,
+  type ConcessionRiskAssessment
+} from '@/api/concession'
 
 const route = useRoute()
 const router = useRouter()
@@ -168,6 +219,9 @@ const detail = ref<any>(null)
 const uploadFile = ref<File | null>(null)
 const uploadFileList = ref<UploadFile[]>([])
 const confirmSummary = ref('')
+const riskLoading = ref(false)
+const riskResult = ref<ConcessionRiskAssessment | null>(null)
+const riskForm = ref({ customerUsage: '', usageRiskCategory: '' })
 
 const rejectDialogVisible = ref(false)
 const rejectFormRef = ref<FormInstance>()
@@ -240,6 +294,32 @@ async function loadDetail() {
   }
 }
 
+async function handleAssessRisk() {
+  const judgmentId = detail.value?.judgmentId
+  if (!judgmentId) {
+    ElMessage.warning('当前让步记录缺少判定ID')
+    return
+  }
+  riskLoading.value = true
+  try {
+    riskResult.value = await assessConcessionRisk({
+      judgmentId,
+      concessionId: detail.value?.id,
+      customerUsage: riskForm.value.customerUsage || undefined,
+      usageRiskCategory: riskForm.value.usageRiskCategory || undefined,
+      deliveryWindowDays: 7
+    })
+  } finally {
+    riskLoading.value = false
+  }
+}
+
+function riskType(level?: string): any {
+  if (level === 'BLOCKED' || level === 'HIGH') return 'danger'
+  if (level === 'MEDIUM') return 'warning'
+  return 'success'
+}
+
 function handleFileChange(file: UploadFile) {
   uploadFile.value = file.raw || null
 }
@@ -256,7 +336,9 @@ async function handleConfirm() {
   actionLoading.value = true
   try {
     const fd = new FormData()
-    fd.append('file', uploadFile.value)
+    if (uploadFile.value) {
+      fd.append('file', uploadFile.value)
+    }
     if (confirmSummary.value.trim()) {
       fd.append('summary', confirmSummary.value.trim())
     }
@@ -318,6 +400,31 @@ onMounted(loadDetail)
 }
 .days-normal {
   color: #409eff;
+}
+.risk-card {
+  margin-bottom: 12px;
+  background: var(--bg-panel);
+  border-color: var(--border-color);
+}
+.risk-head,
+.risk-tags,
+.risk-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.risk-head {
+  justify-content: space-between;
+}
+.risk-tags,
+.risk-list {
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.risk-text {
+  margin: 8px 0;
+  line-height: 1.7;
+  color: var(--text-primary);
 }
 .bottom-bar {
   margin-top: 16px;

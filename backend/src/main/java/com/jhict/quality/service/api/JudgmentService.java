@@ -39,6 +39,14 @@ public interface JudgmentService {
     QcJudgmentResultVO getExplanation(String id);
 
     /**
+     * 查询判定解释快照，不持久化AI评估审计，供内部AI工作流复用。
+     *
+     * @param id 判定结论ID
+     * @return 判定结论详情VO
+     */
+    QcJudgmentResultVO getExplanationSnapshot(String id);
+
+    /**
      * 分页查询判定结论
      *
      * @param query 查询条件

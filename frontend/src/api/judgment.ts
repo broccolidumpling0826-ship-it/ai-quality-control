@@ -4,6 +4,7 @@ import type { PageResult } from '@/types'
 export interface JudgmentListItem {
   id: string
   recordId?: string
+  /** QUALIFIED / UNQUALIFIED / NEED_REINSPECTION / CAN_CONCESSION / STANDARD_CONFLICT */
   judgmentType?: string
   judgmentTime?: string
   coilNo?: string
@@ -21,6 +22,7 @@ export interface JudgmentPageQuery {
   pageSize: number
   coilNo?: string
   batchNo?: string
+  /** QUALIFIED / UNQUALIFIED / NEED_REINSPECTION / CAN_CONCESSION / STANDARD_CONFLICT */
   judgmentType?: string
   timeStart?: string
   timeEnd?: string

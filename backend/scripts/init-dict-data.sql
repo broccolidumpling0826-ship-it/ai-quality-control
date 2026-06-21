@@ -45,7 +45,8 @@ INSERT IGNORE INTO sys_dict_item (id, dict_code, item_value, item_label, color_t
 ('di031', 'JUDGMENT_TYPE', 'QUALIFIED',         '合格',   'success', 1, 1, 1, NOW(), NOW()),
 ('di032', 'JUDGMENT_TYPE', 'UNQUALIFIED',       '不合格', 'danger',  2, 1, 1, NOW(), NOW()),
 ('di033', 'JUDGMENT_TYPE', 'NEED_REINSPECTION', '需复检', 'warning', 3, 1, 1, NOW(), NOW()),
-('di034', 'JUDGMENT_TYPE', 'CAN_CONCESSION',    '可让步', 'primary', 4, 1, 1, NOW(), NOW());
+('di034', 'JUDGMENT_TYPE', 'CAN_CONCESSION',    '可让步', 'warning', 4, 1, 1, NOW(), NOW()),
+('di035', 'JUDGMENT_TYPE', 'STANDARD_CONFLICT', '标准冲突', 'danger', 5, 1, 1, NOW(), NOW());
 
 -- 标准状态
 INSERT IGNORE INTO sys_dict_item (id, dict_code, item_value, item_label, color_tag, sort_no, status, is_system, create_date_time, update_date_time) VALUES

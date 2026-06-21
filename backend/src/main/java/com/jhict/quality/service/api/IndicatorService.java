@@ -3,8 +3,10 @@ package com.jhict.quality.service.api;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.dto.QcIndicatorItemAddCmd;
 import com.jhict.quality.dto.QcIndicatorItemPageQuery;
+import com.jhict.quality.entity.QcIndicatorItem;
 import com.jhict.quality.vo.QcIndicatorItemVO;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -21,4 +23,6 @@ public interface IndicatorService {
     void updateStatus(String id, String status);
 
     List<QcIndicatorItemVO> listForSelect(String keyword, String category);
+
+    List<QcIndicatorItem> listEntitiesByIds(Collection<String> ids);
 }

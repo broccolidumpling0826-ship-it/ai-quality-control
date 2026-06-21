@@ -15,7 +15,7 @@ public class QcRejudgmentRequestAddCmd {
     private String originalJudgmentId;
 
     @NotBlank(message = "目标判定结论类型不能为空")
-    @ApiModelProperty(value = "目标判定结论类型", required = true)
+    @ApiModelProperty(value = "目标判定结论类型（不可选择 STANDARD_CONFLICT）", required = true)
     private String targetJudgmentType;
 
     @NotBlank(message = "改判原因不能为空")

@@ -6,10 +6,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.QcQualityStandardAddCmd;
 import com.jhict.quality.dto.QcQualityStandardPageQuery;
+import com.jhict.quality.dto.StandardCandidateQuery;
 import com.jhict.quality.service.api.StandardService;
 import com.jhict.quality.vo.QcIndicatorItemVO;
 import com.jhict.quality.vo.QcQualityStandardDetailVO;
 import com.jhict.quality.vo.QcQualityStandardVO;
+import com.jhict.quality.vo.StandardCandidateSetVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -77,6 +79,14 @@ public class StandardController {
     @ApiOperation(value = "分页查询质量标准")
     public ApiResult<IPage<QcQualityStandardVO>> page(@RequestBody QcQualityStandardPageQuery query) {
         return ApiResult.success(standardService.page(query));
+    }
+
+    @PostMapping("/candidates")
+    @ApiOperation(value = "查询候选适用标准集")
+    @SaCheckPermission("menu:standard")
+    public ApiResult<StandardCandidateSetVO> findCandidateStandards(
+            @Validated @RequestBody StandardCandidateQuery query) {
+        return ApiResult.success(standardService.findCandidateStandards(query));
     }
 
     @GetMapping("/{id}")

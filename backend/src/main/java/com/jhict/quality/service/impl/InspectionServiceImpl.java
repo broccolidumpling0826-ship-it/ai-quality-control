@@ -144,6 +144,44 @@ public class InspectionServiceImpl implements InspectionService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public QcJudgmentResult rejudgeWithStandard(String recordId, String decisionStandardId) {
+        QcInspectionRecord record = inspectionRecordMapper.selectById(recordId);
+        if (record == null) {
+            throw new ServiceException(ApiResult.CODE_NOT_FOUND, "检验记录不存在");
+        }
+        List<QcInspectionValue> values = inspectionValueMapper.findByRecordId(recordId);
+        if (values == null || values.isEmpty()) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "检验记录无检验值，无法重判");
+        }
+
+        JudgmentInput judgmentInput = JudgmentInput.builder()
+                .recordId(recordId)
+                .customerId(record.getCustomerId())
+                .productVariety(record.getProductVariety())
+                .productGrade(record.getProductGrade())
+                .productSpec(record.getProductSpec())
+                .testTime(record.getTestTime())
+                .values(values.stream()
+                        .map(v -> JudgmentInput.InspectionValueItem.builder()
+                                .indicatorId(v.getIndicatorId())
+                                .testValue(v.getTestValue())
+                                .valueText(v.getValueText())
+                                .build())
+                        .collect(Collectors.toList()))
+                .build();
+
+        JudgmentOutput output = judgmentEngine.judgeWithStandard(judgmentInput, decisionStandardId);
+        QcJudgmentResult result = judgmentService.saveJudgmentResult(recordId, output);
+        try {
+            stringRedisTemplate.delete("dashboard:summary:" + DEFAULT_COMPANY_ID);
+        } catch (Exception e) {
+            log.warn("删除看板缓存失败，不影响业务，error={}", e.getMessage());
+        }
+        return result;
+    }
+
+    @Override
     @AuditLog(operationType = "VOID_INSPECTION", targetEntity = "QcInspectionRecord")
     @Transactional(rollbackFor = Exception.class)
     public void voidRecord(String id, String reason) {

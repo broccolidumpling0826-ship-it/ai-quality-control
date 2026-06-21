@@ -8,7 +8,8 @@ public enum JudgmentType {
     QUALIFIED("QUALIFIED", "合格"),
     UNQUALIFIED("UNQUALIFIED", "不合格"),
     NEED_REINSPECTION("NEED_REINSPECTION", "需复检"),
-    CAN_CONCESSION("CAN_CONCESSION", "可让步");
+    CAN_CONCESSION("CAN_CONCESSION", "可让步"),
+    STANDARD_CONFLICT("STANDARD_CONFLICT", "标准冲突");
 
     private final String code;
     private final String label;

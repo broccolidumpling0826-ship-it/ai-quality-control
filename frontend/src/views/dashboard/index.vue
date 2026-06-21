@@ -94,6 +94,30 @@
       </el-col>
     </el-row>
 
+    <el-row :gutter="12" class="ai-alert-strip">
+      <el-col :xs="24" :md="8">
+        <button class="ai-alert-item ai-alert-item--danger" type="button" @click="router.push('/ai-assessments')">
+          <el-icon><WarningFilled /></el-icon>
+          <span class="ai-alert-label">AI 风险预警</span>
+          <span class="ai-alert-value">{{ summary.aiRiskWarning }}</span>
+        </button>
+      </el-col>
+      <el-col :xs="24" :md="8">
+        <button class="ai-alert-item ai-alert-item--warning" type="button" @click="router.push('/ai-assessments')">
+          <el-icon><InfoFilled /></el-icon>
+          <span class="ai-alert-label">低置信复核</span>
+          <span class="ai-alert-value">{{ summary.lowConfidenceReview }}</span>
+        </button>
+      </el-col>
+      <el-col :xs="24" :md="8">
+        <button class="ai-alert-item ai-alert-item--primary" type="button" @click="router.push('/standard-conflicts')">
+          <el-icon><CircleCloseFilled /></el-icon>
+          <span class="ai-alert-label">标准冲突待裁决</span>
+          <span class="ai-alert-value">{{ summary.pendingStandardConflict }}</span>
+        </button>
+      </el-col>
+    </el-row>
+
     <!-- 下方主内容区 -->
     <el-row :gutter="20" class="main-row">
       <!-- 待处理事项列表 -->
@@ -241,7 +265,10 @@ const summary = ref<DashboardSummary>({
   pendingJudgment: 0,
   unqualifiedBatch: 0,
   reinspectionTask: 0,
-  concessionApproval: 0
+  concessionApproval: 0,
+  aiRiskWarning: 0,
+  lowConfidenceReview: 0,
+  pendingStandardConflict: 0
 })
 
 async function loadSummary() {
@@ -252,14 +279,20 @@ async function loadSummary() {
       pendingJudgment: Number(data.pendingJudgmentCount ?? data.pendingJudgment ?? 0),
       unqualifiedBatch: Number(data.unqualifiedCount ?? data.unqualifiedBatch ?? 0),
       reinspectionTask: Number(data.pendingReinspectionCount ?? data.reinspectionTask ?? 0),
-      concessionApproval: Number(data.pendingConcessionApprovalCount ?? data.concessionApproval ?? 0)
+      concessionApproval: Number(data.pendingConcessionApprovalCount ?? data.concessionApproval ?? 0),
+      aiRiskWarning: Number(data.aiRiskWarningCount ?? data.aiRiskWarning ?? 0),
+      lowConfidenceReview: Number(data.lowConfidenceReviewCount ?? data.lowConfidenceReview ?? 0),
+      pendingStandardConflict: Number(data.pendingStandardConflictCount ?? data.pendingStandardConflict ?? 0)
     }
   } catch {
     summary.value = {
       pendingJudgment: 0,
       unqualifiedBatch: 0,
       reinspectionTask: 0,
-      concessionApproval: 0
+      concessionApproval: 0,
+      aiRiskWarning: 0,
+      lowConfidenceReview: 0,
+      pendingStandardConflict: 0
     }
   } finally {
     summaryLoading.value = false
@@ -507,6 +540,59 @@ onMounted(loadData)
 }
 
 .stat-link:hover {
+  color: var(--cyan);
+}
+
+.ai-alert-strip {
+  margin-bottom: 20px;
+}
+
+.ai-alert-item {
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.ai-alert-item:hover {
+  border-color: var(--cyan);
+  background-color: rgba(0, 212, 255, 0.08);
+}
+
+.ai-alert-label {
+  font-size: 13px;
+  color: var(--text-heading);
+}
+
+.ai-alert-value {
+  font-size: 24px;
+  line-height: 1;
+  font-family: var(--font-data);
+  font-weight: 800;
+}
+
+.ai-alert-item--danger .ai-alert-value,
+.ai-alert-item--danger .el-icon {
+  color: var(--red);
+}
+
+.ai-alert-item--warning .ai-alert-value,
+.ai-alert-item--warning .el-icon {
+  color: var(--orange);
+}
+
+.ai-alert-item--primary .ai-alert-value,
+.ai-alert-item--primary .el-icon {
   color: var(--cyan);
 }
 

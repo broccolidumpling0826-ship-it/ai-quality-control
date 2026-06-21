@@ -8,18 +8,37 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jhict.quality.common.constant.JudgmentExplainConstants;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.common.exception.ServiceException;
+import com.jhict.quality.dto.AiAssessmentCreateCmd;
+import com.jhict.quality.dto.StandardConflictCreateCmd;
+import com.jhict.quality.dto.StandardCandidateQuery;
+import com.jhict.quality.dto.StandardClausePageQuery;
+import com.jhict.quality.dto.StandardConflictPageQuery;
+import com.jhict.quality.enums.JudgmentType;
 import com.jhict.quality.enums.StandardType;
 import com.jhict.quality.dto.QcJudgmentPageQuery;
 import com.jhict.quality.engine.model.JudgmentOutput;
 import com.jhict.quality.entity.*;
+import com.jhict.quality.gateway.model.ModelChatRequest;
+import com.jhict.quality.gateway.model.ModelChatResponse;
+import com.jhict.quality.gateway.model.ModelGateway;
+import com.jhict.quality.gateway.model.ModelMessage;
 import com.jhict.quality.mapper.*;
+import com.jhict.quality.service.api.AiAssessmentService;
 import com.jhict.quality.service.api.JudgmentService;
 import com.jhict.quality.service.api.NotificationService;
+import com.jhict.quality.service.api.StandardDocumentService;
+import com.jhict.quality.service.api.StandardConflictService;
+import com.jhict.quality.service.api.StandardService;
 import com.jhict.quality.entity.SysUser;
 import com.jhict.quality.mapper.SysUserMapper;
 import com.jhict.quality.vo.DashboardSummaryVO;
 import com.jhict.quality.vo.QcJudgmentListVO;
 import com.jhict.quality.vo.QcJudgmentResultVO;
+import com.jhict.quality.vo.AiSourceReferenceVO;
+import com.jhict.quality.vo.StandardClauseVO;
+import com.jhict.quality.vo.StandardCandidateSetVO;
+import com.jhict.quality.vo.StandardCandidateVO;
+import com.jhict.quality.vo.StandardConflictVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -29,6 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -40,9 +60,10 @@ import java.util.stream.Collectors;
 public class JudgmentServiceImpl implements JudgmentService {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final String DASHBOARD_CACHE_KEY_PREFIX = "dashboard:summary:";
+    private static final String DASHBOARD_CACHE_KEY_PREFIX = "dashboard:summary:v2:";
     private static final String DEFAULT_COMPANY_ID = "DEFAULT";
     private static final long DASHBOARD_TTL_SECONDS = 60L;
+    private static final String EXPLANATION_PROMPT_VERSION = "judgment-explanation-v1";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -73,6 +94,21 @@ public class JudgmentServiceImpl implements JudgmentService {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Resource
+    private StandardConflictService standardConflictService;
+
+    @Resource
+    private StandardService standardService;
+
+    @Resource
+    private StandardDocumentService standardDocumentService;
+
+    @Resource
+    private ModelGateway modelGateway;
+
+    @Resource
+    private AiAssessmentService aiAssessmentService;
+
     /** 懒注入，避免循环依赖 */
     @Lazy
     @Autowired
@@ -82,6 +118,7 @@ public class JudgmentServiceImpl implements JudgmentService {
     @Transactional(rollbackFor = Exception.class)
     public QcJudgmentResult saveJudgmentResult(String recordId, JudgmentOutput output) {
         // Step 1: 保存JudgmentResult
+        judgmentResultMapper.clearFinalByRecordId(recordId);
         QcJudgmentResult judgmentResult = new QcJudgmentResult();
         judgmentResult.setRecordId(recordId);
         judgmentResult.setJudgmentType(output.getJudgmentType().getCode());
@@ -156,9 +193,35 @@ public class JudgmentServiceImpl implements JudgmentService {
             }
         }
 
+        // Step 4: 保存标准冲突记录。优先级可解冲突用于解释/风险提示，阻断冲突对应 STANDARD_CONFLICT。
+        if (output.getConflicts() != null && !output.getConflicts().isEmpty()) {
+            standardConflictService.saveDetectedConflicts(recordId, judgmentId,
+                    output.getConflicts().stream().map(this::toConflictCreateCmd).collect(Collectors.toList()));
+        }
+
         log.info("保存判定结论成功，judgmentId={}, recordId={}, type={}",
                 judgmentId, recordId, output.getJudgmentType());
         return judgmentResult;
+    }
+
+    private StandardConflictCreateCmd toConflictCreateCmd(JudgmentOutput.StandardConflictItem item) {
+        StandardConflictCreateCmd cmd = new StandardConflictCreateCmd();
+        cmd.setConflictType(item.getConflictType());
+        cmd.setConflictLevel(item.getConflictLevel());
+        cmd.setStatus(item.getStatus());
+        cmd.setIndicatorId(item.getIndicatorId());
+        cmd.setIndicatorName(item.getIndicatorName());
+        cmd.setUnit(item.getUnit());
+        cmd.setCustomerId(item.getCustomerId());
+        cmd.setVariety(item.getVariety());
+        cmd.setGrade(item.getGrade());
+        cmd.setProductSpec(item.getProductSpec());
+        cmd.setInspectionDate(item.getInspectionDate());
+        cmd.setSelectedStandardId(item.getSelectedStandardId());
+        cmd.setInvolvedStandardIds(item.getInvolvedStandardIds());
+        cmd.setConflictDetail(item.getConflictDetail());
+        cmd.setSelectedPriority(item.getSelectedPriority());
+        return cmd;
     }
 
     @Override
@@ -169,7 +232,7 @@ public class JudgmentServiceImpl implements JudgmentService {
         }
 
         QcInspectionRecord record = inspectionRecordMapper.selectById(recordId);
-        return buildJudgmentResultVO(result, record, true);
+        return buildJudgmentResultVO(result, record, true, false);
     }
 
     @Override
@@ -180,7 +243,18 @@ public class JudgmentServiceImpl implements JudgmentService {
         }
 
         QcInspectionRecord record = inspectionRecordMapper.selectById(result.getRecordId());
-        return buildJudgmentResultVO(result, record, true);
+        return buildJudgmentResultVO(result, record, true, true);
+    }
+
+    @Override
+    public QcJudgmentResultVO getExplanationSnapshot(String id) {
+        QcJudgmentResult result = judgmentResultMapper.selectById(id);
+        if (result == null) {
+            throw new ServiceException(ApiResult.CODE_NOT_FOUND, "判定结论不存在");
+        }
+
+        QcInspectionRecord record = inspectionRecordMapper.selectById(result.getRecordId());
+        return buildJudgmentResultVO(result, record, true, false);
     }
 
     @Override
@@ -224,6 +298,9 @@ public class JudgmentServiceImpl implements JudgmentService {
         summary.setUnqualifiedCount(inspectionRecordMapper.countUnqualified());
         summary.setPendingReinspectionCount(inspectionRecordMapper.countPendingReinspection());
         summary.setPendingConcessionApprovalCount(inspectionRecordMapper.countPendingConcessionApproval());
+        summary.setAiRiskWarningCount(aiAssessmentService.countPendingRiskWarnings());
+        summary.setLowConfidenceReviewCount(aiAssessmentService.countPendingLowConfidenceReviews());
+        summary.setPendingStandardConflictCount(standardConflictService.countPendingBlockingConflicts());
         summary.setCacheUpdatedAt(LocalDateTime.now().format(FORMATTER));
 
         // 写入Redis缓存，TTL=60s
@@ -240,13 +317,15 @@ public class JudgmentServiceImpl implements JudgmentService {
     /**
      * 构建判定解释 VO（检验信息、标准匹配、指标明细分步填充）
      */
-    private QcJudgmentResultVO buildJudgmentResultVO(QcJudgmentResult result, QcInspectionRecord record, boolean loadEvidences) {
+    private QcJudgmentResultVO buildJudgmentResultVO(QcJudgmentResult result, QcInspectionRecord record,
+                                                     boolean loadEvidences, boolean persistAiAssessment) {
         QcJudgmentResultVO vo = new QcJudgmentResultVO();
         vo.setJudgmentId(result.getId());
         vo.setRecordId(result.getRecordId());
         fillInspectionFieldsOnVo(vo, result, record);
         fillStandardFieldsOnVo(vo, result);
         fillEvidenceFieldsOnVo(vo, result, loadEvidences);
+        fillAiExplanationFieldsOnVo(vo, result, record, loadEvidences, persistAiAssessment);
         return vo;
     }
 
@@ -262,6 +341,7 @@ public class JudgmentServiceImpl implements JudgmentService {
         vo.setProductSpec(record.getProductSpec());
         vo.setSpecification(record.getProductSpec());
         vo.setTesterNo(record.getTesterNo());
+        vo.setCustomerId(record.getCustomerId());
         if (StringUtils.hasText(record.getTesterNo())) {
             Map<String, String> nameMap = loadUserNameMap(Collections.singleton(record.getTesterNo()));
             vo.setInspector(nameMap.getOrDefault(record.getTesterNo(), record.getTesterNo()));
@@ -294,6 +374,364 @@ public class JudgmentServiceImpl implements JudgmentService {
         vo.setEvidences(convertToEvidenceVoList(evidenceList, indicatorMap));
         Map<String, QcStandardIndicator> standardIndicatorMap = loadStandardIndicatorMap(evidenceList);
         vo.setIndicatorDetails(buildIndicatorDetails(evidenceList, indicatorMap, standardIndicatorMap));
+    }
+
+    private void fillAiExplanationFieldsOnVo(QcJudgmentResultVO vo, QcJudgmentResult result,
+                                             QcInspectionRecord record, boolean loadEvidences,
+                                             boolean persistAiAssessment) {
+        List<QcJudgmentEvidence> evidenceList = loadEvidences
+                ? judgmentEvidenceMapper.findByJudgmentId(result.getId())
+                : Collections.emptyList();
+        fillCandidateStandardFields(vo, record, evidenceList);
+        List<StandardConflictVO> conflicts = loadConflictsByJudgmentId(result.getId());
+        vo.setConflicts(conflicts);
+        vo.setConflictWarnings(buildConflictWarnings(result, conflicts));
+        List<AiSourceReferenceVO> citations = loadCitationReferences(result, vo.getEvidences());
+        vo.setCitations(citations);
+        vo.setCitationMissing(citations.isEmpty());
+        vo.setRuleExplanation(buildRuleTemplateExplanation(result, vo.getEvidences(), conflicts));
+        fillGeneratedExplanationIfPossible(vo, result, citations);
+        applyConfidenceAndDegradation(vo, result, conflicts);
+        if (persistAiAssessment) {
+            persistJudgmentExplanationAssessment(vo, result);
+        }
+    }
+
+    private void fillCandidateStandardFields(QcJudgmentResultVO vo, QcInspectionRecord record,
+                                             List<QcJudgmentEvidence> evidenceList) {
+        if (record == null) {
+            vo.setCandidateStandards(Collections.emptyList());
+            vo.setSuppressedStandards(Collections.emptyList());
+            return;
+        }
+        StandardCandidateQuery query = new StandardCandidateQuery();
+        query.setCustomerId(record.getCustomerId());
+        query.setVariety(record.getProductVariety());
+        query.setGrade(record.getProductGrade());
+        query.setProductSpec(record.getProductSpec());
+        query.setTestDate(record.getTestTime() == null ? null : record.getTestTime().toLocalDate());
+        query.setIndicatorIds(evidenceList.stream()
+                .map(QcJudgmentEvidence::getIndicatorId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList()));
+        try {
+            StandardCandidateSetVO candidateSet = standardService.findCandidateStandards(query);
+            vo.setSelectedStandard(candidateSet.getSelectedStandard());
+            vo.setCandidateStandards(candidateSet.getCandidateStandards());
+            vo.setSuppressedStandards(candidateSet.getSuppressedStandards());
+        } catch (Exception e) {
+            log.warn("填充候选标准失败，judgmentId={}, recordId={}, error={}",
+                    vo.getJudgmentId(), record.getId(), e.getMessage());
+            vo.setCandidateStandards(Collections.emptyList());
+            vo.setSuppressedStandards(Collections.emptyList());
+        }
+    }
+
+    private List<StandardConflictVO> loadConflictsByJudgmentId(String judgmentId) {
+        StandardConflictPageQuery query = new StandardConflictPageQuery();
+        query.setJudgmentId(judgmentId);
+        query.setPageNum(1);
+        query.setPageSize(100);
+        return standardConflictService.page(query).getRecords();
+    }
+
+    private List<String> buildConflictWarnings(QcJudgmentResult result, List<StandardConflictVO> conflicts) {
+        List<String> warnings = new ArrayList<>();
+        if (JudgmentType.STANDARD_CONFLICT.getCode().equals(result.getJudgmentType())) {
+            warnings.add("当前判定为标准冲突，必须完成标准冲突裁决后才能形成放行类结论");
+        }
+        for (StandardConflictVO conflict : conflicts) {
+            warnings.add(String.format("指标[%s]存在%s冲突，级别=%s，状态=%s",
+                    StringUtils.hasText(conflict.getIndicatorName()) ? conflict.getIndicatorName() : conflict.getIndicatorId(),
+                    conflict.getConflictType(), conflict.getConflictLevel(), conflict.getStatus()));
+        }
+        return warnings;
+    }
+
+    private String buildRuleTemplateExplanation(QcJudgmentResult result,
+                                                List<QcJudgmentResultVO.EvidenceVO> evidences,
+                                                List<StandardConflictVO> conflicts) {
+        if (JudgmentType.STANDARD_CONFLICT.getCode().equals(result.getJudgmentType())) {
+            return "当前记录触发同优先级标准冲突，系统已阻断合格/不合格/让步类结论，需人工裁决控制标准后重新判定。";
+        }
+        if (evidences == null || evidences.isEmpty()) {
+            return "未找到判定依据快照，无法生成完整规则解释，请人工复核检验记录和标准配置。";
+        }
+        long failedCount = evidences.stream().filter(e -> !Integer.valueOf(1).equals(e.getIsPassed())).count();
+        long concessionCount = evidences.stream()
+                .filter(e -> e.getTriggerRule() != null
+                        && e.getTriggerRule().contains(JudgmentExplainConstants.TRIGGER_RULE_CONCESSION_MARKER))
+                .count();
+        StringBuilder explanation = new StringBuilder();
+        explanation.append("系统按结构化标准完成规则判定，最终结论为 ")
+                .append(result.getJudgmentType())
+                .append("。共检查 ")
+                .append(evidences.size())
+                .append(" 个指标，未通过指标 ")
+                .append(failedCount)
+                .append(" 个");
+        if (concessionCount > 0) {
+            explanation.append("，其中 ").append(concessionCount).append(" 个指标落入让步范围");
+        }
+        if (conflicts != null && !conflicts.isEmpty()) {
+            explanation.append("，并记录 ").append(conflicts.size()).append(" 条标准差异提示");
+        }
+        explanation.append("。");
+        return explanation.toString();
+    }
+
+    private void applyConfidenceAndDegradation(QcJudgmentResultVO vo, QcJudgmentResult result,
+                                               List<StandardConflictVO> conflicts) {
+        List<String> factors = new ArrayList<>();
+        factors.add("已使用结构化判定依据生成规则解释");
+        if (Boolean.TRUE.equals(vo.getCitationMissing())) {
+            factors.add("来源段落引用尚未命中，禁止补写不存在的标准原文");
+        } else {
+            factors.add("已命中来源段落引用");
+        }
+        boolean hasBlockingConflict = conflicts != null && conflicts.stream()
+                .anyMatch(conflict -> "BLOCKING".equals(conflict.getConflictLevel())
+                        && "PENDING".equals(conflict.getStatus()));
+        boolean standardGap = parseMatchedStandardIds(result.getMatchedStandardIds()).isEmpty();
+        if (JudgmentType.STANDARD_CONFLICT.getCode().equals(result.getJudgmentType()) || hasBlockingConflict || standardGap) {
+            vo.setConfidenceLabel("LOW");
+            vo.setConfidenceScore(0.2D);
+            if (standardGap) {
+                factors.add("未命中结构化标准，存在标准覆盖缺口");
+            }
+            if (JudgmentType.STANDARD_CONFLICT.getCode().equals(result.getJudgmentType()) || hasBlockingConflict) {
+                factors.add("存在未裁决标准冲突");
+            }
+        } else if (!Boolean.TRUE.equals(vo.getCitationMissing()) && StringUtils.hasText(vo.getAiExplanation())) {
+            vo.setConfidenceLabel("HIGH");
+            vo.setConfidenceScore(0.85D);
+            factors.add("AI解释已通过来源编号校验");
+        } else if (!Boolean.TRUE.equals(vo.getCitationMissing())) {
+            vo.setConfidenceLabel("MEDIUM");
+            vo.setConfidenceScore(0.7D);
+            factors.add("来源段落已命中，但未生成可信AI解释");
+        } else {
+            vo.setConfidenceLabel("MEDIUM");
+            vo.setConfidenceScore(0.6D);
+            factors.add("结构化规则完整，但来源段落引用缺失");
+        }
+        vo.setConfidenceFactors(factors);
+        if (StringUtils.hasText(vo.getAiExplanation())) {
+            vo.setDegradationSource("GENERATED");
+            vo.setDegradationReason("AI解释已基于来源条款生成并通过引用校验");
+        } else if (!Boolean.TRUE.equals(vo.getCitationMissing())) {
+            vo.setDegradationSource("RAW_RETRIEVAL");
+            vo.setDegradationReason("已返回来源条款和规则模板，AI解释不可用或引用校验未通过");
+        } else {
+            vo.setDegradationSource("RULE_TEMPLATE");
+            vo.setDegradationReason("当前返回规则模板解释，来源段落尚未命中");
+        }
+    }
+
+    private List<AiSourceReferenceVO> loadCitationReferences(QcJudgmentResult result,
+                                                            List<QcJudgmentResultVO.EvidenceVO> evidences) {
+        List<String> standardIds = parseMatchedStandardIds(result.getMatchedStandardIds());
+        if (standardIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<String, AiSourceReferenceVO> references = new LinkedHashMap<>();
+        List<String> indicatorCodes = evidences == null ? Collections.emptyList() : evidences.stream()
+                .map(QcJudgmentResultVO.EvidenceVO::getIndicatorCode)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        for (String standardId : standardIds) {
+            if (indicatorCodes.isEmpty()) {
+                addClauseReferences(references, standardId, null, 3);
+            } else {
+                for (String indicatorCode : indicatorCodes) {
+                    addClauseReferences(references, standardId, indicatorCode, 3);
+                }
+                if (references.isEmpty()) {
+                    addClauseReferences(references, standardId, null, 3);
+                }
+            }
+            if (references.size() >= 8) {
+                break;
+            }
+        }
+        return references.values().stream().limit(8).collect(Collectors.toList());
+    }
+
+    private void addClauseReferences(Map<String, AiSourceReferenceVO> references,
+                                     String standardId,
+                                     String indicatorCode,
+                                     int pageSize) {
+        StandardClausePageQuery query = new StandardClausePageQuery();
+        query.setStandardId(standardId);
+        query.setIndicatorCode(indicatorCode);
+        query.setPageNum(1);
+        query.setPageSize(pageSize);
+        try {
+            for (StandardClauseVO clause : standardDocumentService.pageClauses(query).getRecords()) {
+                references.putIfAbsent(clause.getId(), toSourceReference(clause));
+            }
+        } catch (Exception e) {
+            log.warn("查询判定解释来源条款失败，standardId={}, indicatorCode={}, error={}",
+                    standardId, indicatorCode, e.getMessage());
+        }
+    }
+
+    private AiSourceReferenceVO toSourceReference(StandardClauseVO clause) {
+        AiSourceReferenceVO ref = new AiSourceReferenceVO();
+        ref.setClauseId(clause.getId());
+        ref.setDocumentId(clause.getDocumentId());
+        ref.setSourceType(clause.getSourceType());
+        ref.setStandardCode(clause.getStandardCode());
+        ref.setStandardName(clause.getStandardName());
+        ref.setVersionNo(clause.getVersionNo());
+        ref.setClauseNo(clause.getClauseNo());
+        ref.setPageNo(clause.getPageNo());
+        ref.setParagraphText(clause.getParagraphText());
+        ref.setScore(1.0D);
+        return ref;
+    }
+
+    private void fillGeneratedExplanationIfPossible(QcJudgmentResultVO vo,
+                                                    QcJudgmentResult result,
+                                                    List<AiSourceReferenceVO> citations) {
+        vo.setAiExplanation(null);
+        if (citations == null || citations.isEmpty() || !modelGateway.enabled()) {
+            return;
+        }
+        ModelChatResponse response = modelGateway.chat(buildExplanationChatRequest(vo, result, citations));
+        if (response != null && response.isSuccess() && isGroundedExplanation(response.getContent(), citations)) {
+            vo.setAiExplanation(response.getContent());
+        } else if (response != null && response.isSuccess()) {
+            log.warn("AI判定解释缺少来源标记，judgmentId={}", result.getId());
+        }
+    }
+
+    private ModelChatRequest buildExplanationChatRequest(QcJudgmentResultVO vo,
+                                                        QcJudgmentResult result,
+                                                        List<AiSourceReferenceVO> citations) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("判定结论：").append(result.getJudgmentType()).append("\n");
+        prompt.append("规则解释：").append(vo.getRuleExplanation()).append("\n\n");
+        prompt.append("指标依据：\n");
+        if (vo.getEvidences() != null) {
+            for (QcJudgmentResultVO.EvidenceVO evidence : vo.getEvidences()) {
+                prompt.append("- ")
+                        .append(nullToEmpty(evidence.getIndicatorName()))
+                        .append(" 实测=").append(evidence.getTestValue())
+                        .append(" 下限=").append(evidence.getLowerLimit())
+                        .append(" 上限=").append(evidence.getUpperLimit())
+                        .append(" 偏差=").append(evidence.getDeviation())
+                        .append(" 规则=").append(nullToEmpty(evidence.getTriggerRule()))
+                        .append("\n");
+            }
+        }
+        prompt.append("\n来源条款：\n");
+        for (int i = 0; i < citations.size(); i++) {
+            AiSourceReferenceVO ref = citations.get(i);
+            prompt.append("[").append(i + 1).append("] ")
+                    .append(nullToEmpty(ref.getStandardCode()))
+                    .append(" ")
+                    .append(nullToEmpty(ref.getClauseNo()))
+                    .append("：")
+                    .append(nullToEmpty(ref.getParagraphText()))
+                    .append("\n");
+        }
+        prompt.append("\n请只依据规则解释和来源条款说明判定原因，必须在关键句后标注来源编号如[1]。");
+        return ModelChatRequest.builder()
+                .businessType("JUDGMENT_EXPLANATION")
+                .businessId(result.getId())
+                .promptVersion(EXPLANATION_PROMPT_VERSION)
+                .systemPrompt("你是钢铁质量判定解释助手。不得使用来源条款之外的标准、限值或案例；缺少依据时必须说明引用缺失。")
+                .messages(Collections.singletonList(ModelMessage.builder()
+                        .role("user")
+                        .content(prompt.toString())
+                        .build()))
+                .temperature(0.1D)
+                .maxTokens(900)
+                .build();
+    }
+
+    private boolean isGroundedExplanation(String content, List<AiSourceReferenceVO> citations) {
+        if (!StringUtils.hasText(content)) {
+            return false;
+        }
+        for (int i = 0; i < citations.size(); i++) {
+            if (content.contains("[" + (i + 1) + "]")) {
+                return true;
+            }
+        }
+        for (AiSourceReferenceVO ref : citations) {
+            if (StringUtils.hasText(ref.getClauseNo()) && content.contains(ref.getClauseNo())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private void persistJudgmentExplanationAssessment(QcJudgmentResultVO vo, QcJudgmentResult result) {
+        try {
+            AiAssessmentCreateCmd cmd = new AiAssessmentCreateCmd();
+            cmd.setAssessmentType("JUDGMENT_EXPLANATION");
+            cmd.setBusinessType("QC_JUDGMENT_RESULT");
+            cmd.setBusinessId(result.getId());
+            cmd.setRelatedJudgmentId(result.getId());
+            cmd.setInputSnapshot(buildExplanationInputSnapshot(vo));
+            cmd.setReferencesJson(objectMapper.writeValueAsString(vo.getCitations()));
+            cmd.setModelProvider(StringUtils.hasText(vo.getAiExplanation()) ? modelGateway.provider() : null);
+            cmd.setPromptVersion(EXPLANATION_PROMPT_VERSION);
+            cmd.setRawOutput(StringUtils.hasText(vo.getAiExplanation()) ? vo.getAiExplanation() : vo.getRuleExplanation());
+            cmd.setStructuredOutput(buildExplanationStructuredOutput(vo));
+            cmd.setConfidenceLabel(vo.getConfidenceLabel());
+            cmd.setConfidenceScore(vo.getConfidenceScore() == null ? null : BigDecimal.valueOf(vo.getConfidenceScore()));
+            cmd.setConfidenceFactors(objectMapper.writeValueAsString(vo.getConfidenceFactors()));
+            cmd.setDegradationSource(vo.getDegradationSource());
+            cmd.setCacheHit(0);
+            aiAssessmentService.create(cmd);
+        } catch (Exception e) {
+            log.warn("保存AI判定解释审计失败，judgmentId={}, error={}", result.getId(), e.getMessage());
+        }
+    }
+
+    private String buildExplanationInputSnapshot(QcJudgmentResultVO vo) throws Exception {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("judgmentId", vo.getJudgmentId());
+        snapshot.put("recordId", vo.getRecordId());
+        snapshot.put("judgmentType", vo.getJudgmentType());
+        snapshot.put("coilNo", vo.getCoilNo());
+        snapshot.put("batchNo", vo.getBatchNo());
+        snapshot.put("productVariety", vo.getProductVariety());
+        snapshot.put("productGrade", vo.getProductGrade());
+        snapshot.put("productSpec", vo.getProductSpec());
+        snapshot.put("matchedStandardIds", vo.getMatchedStandards() == null ? Collections.emptyList()
+                : vo.getMatchedStandards().stream()
+                .map(QcJudgmentResultVO.MatchedStandardVO::getStandardId)
+                .collect(Collectors.toList()));
+        snapshot.put("candidateStandardIds", vo.getCandidateStandards() == null ? Collections.emptyList()
+                : vo.getCandidateStandards().stream()
+                .map(StandardCandidateVO::getId)
+                .collect(Collectors.toList()));
+        snapshot.put("evidenceCount", vo.getEvidences() == null ? 0 : vo.getEvidences().size());
+        snapshot.put("conflictCount", vo.getConflicts() == null ? 0 : vo.getConflicts().size());
+        return objectMapper.writeValueAsString(snapshot);
+    }
+
+    private String buildExplanationStructuredOutput(QcJudgmentResultVO vo) throws Exception {
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("ruleExplanation", vo.getRuleExplanation());
+        output.put("aiExplanation", vo.getAiExplanation());
+        output.put("confidenceLabel", vo.getConfidenceLabel());
+        output.put("confidenceScore", vo.getConfidenceScore());
+        output.put("degradationSource", vo.getDegradationSource());
+        output.put("degradationReason", vo.getDegradationReason());
+        output.put("citationMissing", vo.getCitationMissing());
+        output.put("conflictWarnings", vo.getConflictWarnings());
+        return objectMapper.writeValueAsString(output);
     }
 
     private List<QcJudgmentResultVO.MatchedStandardVO> convertToMatchedStandardVoList(List<QcQualityStandard> matchedList) {

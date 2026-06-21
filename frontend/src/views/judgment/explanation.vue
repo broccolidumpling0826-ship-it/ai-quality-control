@@ -66,6 +66,75 @@
       </template>
     </div>
 
+    <el-card shadow="never" class="ai-card" v-if="detail">
+      <template #header>
+        <div class="ai-head">
+          <span>AI 判定解释</span>
+          <div class="ai-tags">
+            <el-tag :type="confidenceType(detail.confidenceLabel)" size="small">
+              {{ detail.confidenceLabel || 'N/A' }}
+            </el-tag>
+            <el-tag type="info" size="small">{{ detail.degradationSource || 'N/A' }}</el-tag>
+            <el-tag v-if="detail.citationMissing" type="warning" size="small">引用缺失</el-tag>
+          </div>
+        </div>
+      </template>
+      <el-alert
+        v-if="detail.conflictWarnings?.length"
+        type="warning"
+        show-icon
+        :closable="false"
+        :title="detail.conflictWarnings.join('；')"
+      />
+      <p class="ai-text">{{ detail.aiExplanation || detail.ruleExplanation || '暂无解释' }}</p>
+      <div v-if="detail.confidenceFactors?.length" class="factor-row">
+        <el-tag v-for="item in detail.confidenceFactors" :key="item" size="small" type="info">{{ item }}</el-tag>
+      </div>
+    </el-card>
+
+    <el-card shadow="never" class="ai-card" v-if="detail?.candidateStandards?.length">
+      <template #header><span style="font-weight:600">候选标准</span></template>
+      <el-table :data="detail.candidateStandards" border size="small">
+        <el-table-column prop="standardCode" label="标准编号" min-width="150" />
+        <el-table-column prop="standardType" label="类型" width="110" />
+        <el-table-column prop="versionNo" label="版本" width="90" />
+        <el-table-column prop="specRange" label="规格范围" min-width="140" show-overflow-tooltip />
+        <el-table-column label="状态" width="150">
+          <template #default="{ row }">
+            <el-tag v-if="row.selected" type="success" size="small">选中</el-tag>
+            <el-tag v-else-if="row.conflict" type="danger" size="small">冲突</el-tag>
+            <el-tag v-else-if="row.suppressed" type="warning" size="small">被抑制</el-tag>
+            <el-tag v-else size="small">候选</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="reason" label="原因" min-width="220" show-overflow-tooltip />
+      </el-table>
+    </el-card>
+
+    <el-card shadow="never" class="ai-card" v-if="detail?.conflicts?.length || detail?.citations?.length">
+      <el-tabs>
+        <el-tab-pane label="标准冲突">
+          <el-table :data="detail.conflicts || []" border size="small">
+            <el-table-column prop="conflictType" label="类型" width="140" />
+            <el-table-column prop="conflictLevel" label="级别" width="160" />
+            <el-table-column prop="status" label="状态" width="110" />
+            <el-table-column prop="indicatorName" label="指标" min-width="120" />
+            <el-table-column prop="involvedStandardIds" label="涉及标准" min-width="220">
+              <template #default="{ row }">{{ row.involvedStandardIds?.join(' / ') }}</template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="来源引用">
+          <el-table :data="detail.citations || []" border size="small">
+            <el-table-column prop="standardCode" label="标准/协议" min-width="150" />
+            <el-table-column prop="clauseNo" label="条款" width="100" />
+            <el-table-column prop="pageNo" label="页码" width="80" />
+            <el-table-column prop="paragraphText" label="段落" min-width="360" show-overflow-tooltip />
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
+
     <!-- 指标明细 -->
     <el-card shadow="never" style="margin-top:12px" v-if="detail">
       <template #header><span style="font-weight:600">指标明细</span></template>
@@ -144,6 +213,8 @@
     <!-- 底部操作 -->
     <div class="bottom-bar" v-if="detail">
       <el-button @click="router.back()">返回</el-button>
+      <el-button type="warning" plain @click="openAdvice('reinspection')">AI复检建议</el-button>
+      <el-button type="primary" plain @click="openAdvice('rejudgment')">AI改判建议</el-button>
       <el-button
         v-if="canInitiateReinspection"
         type="warning"
@@ -176,6 +247,50 @@
         <el-button type="primary" :loading="actionLoading" @click="confirmReinspection">确认</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="adviceDialogVisible" :title="adviceTitle" width="760px" destroy-on-close>
+      <div v-loading="adviceLoading" v-if="advice">
+        <el-alert
+          v-if="advice.withheld"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="advice-alert"
+          :title="advice.suggestedReason"
+        />
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="建议动作">{{ advice.recommendedAction || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="置信度">
+            <el-tag :type="confidenceType(advice.confidenceLabel)" size="small">{{ advice.confidenceLabel }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="目标结论">{{ advice.targetJudgmentType || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="人工复核">{{ advice.mustManualReview ? '是' : '否' }}</el-descriptions-item>
+          <el-descriptions-item label="影响范围" :span="2">{{ advice.affectedScope || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="证据摘要" :span="2">{{ advice.evidenceSummary || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="建议原因" :span="2">{{ advice.suggestedReason || '-' }}</el-descriptions-item>
+        </el-descriptions>
+
+        <div v-if="advice.triggerIndicators?.length" class="advice-tags">
+          <span class="advice-tags-label">触发指标</span>
+          <el-tag v-for="item in advice.triggerIndicators" :key="item" type="warning" size="small">{{ item }}</el-tag>
+        </div>
+        <div v-if="advice.missingInfo?.length" class="advice-tags">
+          <span class="advice-tags-label">缺失信息</span>
+          <el-tag v-for="item in advice.missingInfo" :key="item" type="info" size="small">{{ item }}</el-tag>
+        </div>
+
+        <el-table v-if="advice.evidenceRefs?.length" :data="advice.evidenceRefs" border size="small" class="advice-table">
+          <el-table-column prop="standardCode" label="来源" min-width="150" />
+          <el-table-column prop="clauseNo" label="条款" width="90" />
+          <el-table-column prop="paragraphText" label="段落" min-width="320" show-overflow-tooltip />
+        </el-table>
+      </div>
+      <template #footer>
+        <el-button @click="adviceDialogVisible = false">关闭</el-button>
+        <el-button :loading="adviceActionLoading" @click="ignoreAdvice">忽略建议</el-button>
+        <el-button type="primary" :disabled="advice?.withheld" @click="adoptAdvice">采纳并预填</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -188,7 +303,9 @@ import { CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { useDictStore } from '@/store/dict'
 import { useTableFilter } from '@/composables/use-table-filter'
 import { getJudgmentExplanation, getJudgmentByRecord } from '@/api/judgment'
-import { initiateReinspection } from '@/api/reinspection'
+import { getReinspectionAdvice, initiateReinspection, type WorkflowAdvice } from '@/api/reinspection'
+import { getRejudgmentAdvice } from '@/api/rejudgment'
+import { handleAiAssessment } from '@/api/ai-assessment'
 
 const route = useRoute()
 const router = useRouter()
@@ -206,6 +323,13 @@ const reinspectionForm = ref({ reinspectionReason: '', responsibleNo: '' })
 const reinspectionRules = {
   reinspectionReason: [{ required: true, message: '请输入复检原因', trigger: 'blur' }]
 }
+const adviceDialogVisible = ref(false)
+const adviceLoading = ref(false)
+const adviceActionLoading = ref(false)
+const advice = ref<WorkflowAdvice | null>(null)
+const adviceKind = ref<'reinspection' | 'rejudgment'>('reinspection')
+
+const adviceTitle = computed(() => adviceKind.value === 'reinspection' ? 'AI复检建议' : 'AI改判建议')
 
 function isConcessionJudgment(type?: string) {
   return type === 'CAN_CONCESSION' || type === 'CONCESSION'
@@ -215,7 +339,10 @@ const canInitiateReinspection = computed(() => {
   const t = detail.value?.judgmentType
   return t === 'UNQUALIFIED' || t === 'NEED_REINSPECTION' || t === 'REINSPECTION'
 })
-const canApplyRejudgment = computed(() => !!detail.value?.judgmentType)
+const canApplyRejudgment = computed(() => {
+  const t = detail.value?.judgmentType
+  return !!t && t !== 'STANDARD_CONFLICT'
+})
 const canApplyConcession = computed(() => isConcessionJudgment(detail.value?.judgmentType))
 
 function judgmentColor(type: string): any {
@@ -225,9 +352,16 @@ function judgmentColor(type: string): any {
     CAN_CONCESSION: 'warning',
     CONCESSION: 'warning',
     NEED_REINSPECTION: 'info',
-    REINSPECTION: 'info'
+    REINSPECTION: 'info',
+    STANDARD_CONFLICT: 'danger'
   }
   return map[type] || 'info'
+}
+
+function confidenceType(label?: string): any {
+  if (label === 'HIGH') return 'success'
+  if (label === 'LOW') return 'danger'
+  return 'warning'
 }
 
 function stdTypeLabel(type: string) {
@@ -251,7 +385,8 @@ function indicatorResultLabel(result: string) {
     PASS: '合格',
     FAIL: '不合格',
     CONCESSION: '可让步',
-    WARNING: '无标准覆盖'
+    WARNING: '无标准覆盖',
+    STANDARD_CONFLICT: '标准冲突'
   }
   return fallback[result] || result
 }
@@ -261,7 +396,8 @@ function indicatorResultColor(result: string): any {
     PASS: 'success',
     FAIL: 'danger',
     CONCESSION: 'warning',
-    WARNING: 'warning'
+    WARNING: 'warning',
+    STANDARD_CONFLICT: 'danger'
   }
   return map[result] || 'info'
 }
@@ -284,6 +420,85 @@ async function loadDetail() {
 function handleReinspection() {
   reinspectionForm.value = { reinspectionReason: '', responsibleNo: '' }
   reinspectionDialogVisible.value = true
+}
+
+async function openAdvice(kind: 'reinspection' | 'rejudgment') {
+  const judgmentId = detail.value?.judgmentId ?? detail.value?.id
+  if (!judgmentId) {
+    ElMessage.warning('缺少判定ID')
+    return
+  }
+  adviceKind.value = kind
+  adviceDialogVisible.value = true
+  adviceLoading.value = true
+  try {
+    advice.value = kind === 'reinspection'
+      ? await getReinspectionAdvice(judgmentId)
+      : await getRejudgmentAdvice(judgmentId)
+  } finally {
+    adviceLoading.value = false
+  }
+}
+
+async function ignoreAdvice() {
+  if (!advice.value?.assessmentId) {
+    adviceDialogVisible.value = false
+    return
+  }
+  adviceActionLoading.value = true
+  try {
+    await handleAiAssessment(advice.value.assessmentId, {
+      adoptionStatus: 'IGNORED',
+      humanOpinion: '用户在判定解释页忽略AI流程建议'
+    })
+    ElMessage.success('已忽略AI建议')
+    adviceDialogVisible.value = false
+  } finally {
+    adviceActionLoading.value = false
+  }
+}
+
+async function adoptAdvice() {
+  if (!advice.value || advice.value.withheld) {
+    return
+  }
+  await markAdviceAdopted()
+  if (adviceKind.value === 'reinspection') {
+    reinspectionForm.value = {
+      reinspectionReason: advice.value.suggestedReason || '',
+      responsibleNo: ''
+    }
+    adviceDialogVisible.value = false
+    reinspectionDialogVisible.value = true
+    return
+  }
+  if (advice.value.recommendedAction !== 'RECOMMEND_REJUDGMENT') {
+    ElMessage.warning('当前建议不支持自动预填改判目标')
+    return
+  }
+  const jid = advice.value.judgmentId || detail.value?.judgmentId || detail.value?.id
+  router.push({
+    path: '/re-judgment/form',
+    query: {
+      judgmentId: jid,
+      targetJudgmentType: advice.value.targetJudgmentType || '',
+      reason: advice.value.suggestedReason || '',
+      impactScope: advice.value.affectedScope || ''
+    }
+  })
+}
+
+async function markAdviceAdopted() {
+  if (!advice.value?.assessmentId) return
+  adviceActionLoading.value = true
+  try {
+    await handleAiAssessment(advice.value.assessmentId, {
+      adoptionStatus: 'ADOPTED',
+      humanOpinion: '用户在判定解释页采纳AI流程建议并进入人工流程预填'
+    })
+  } finally {
+    adviceActionLoading.value = false
+  }
 }
 
 async function confirmReinspection() {
@@ -345,6 +560,31 @@ onMounted(loadDetail)
   gap: 12px;
   margin-bottom: 0;
 }
+.ai-card {
+  margin-top: 12px;
+  background: var(--bg-panel);
+  border-color: var(--border-color);
+}
+.ai-head,
+.ai-tags,
+.factor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-head {
+  justify-content: space-between;
+}
+.ai-text {
+  margin: 10px 0 0;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  color: var(--text-primary);
+}
+.factor-row {
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
 .match-card {
   flex: 1;
   text-align: center;
@@ -377,6 +617,24 @@ onMounted(loadDetail)
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.advice-alert,
+.advice-table,
+.advice-tags {
+  margin-top: 12px;
+}
+
+.advice-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.advice-tags-label {
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 .text-danger {
   color: #f56c6c;

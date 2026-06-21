@@ -14,7 +14,7 @@ public class QcJudgmentPageQuery {
     @ApiModelProperty(value = "批次号（模糊，关联检验记录）")
     private String batchNo;
 
-    @ApiModelProperty(value = "判定结论类型（QUALIFIED/UNQUALIFIED/NEED_REINSPECTION/CAN_CONCESSION）")
+    @ApiModelProperty(value = "判定结论类型（QUALIFIED/UNQUALIFIED/NEED_REINSPECTION/CAN_CONCESSION/STANDARD_CONFLICT）")
     private String judgmentType;
 
     @ApiModelProperty(value = "是否最终结论：1是 0否")

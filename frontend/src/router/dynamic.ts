@@ -3,7 +3,7 @@ import type { MenuTreeNode } from '@/types'
 
 const viewModules = import.meta.glob('@/views/**/*.vue')
 
-function resolveComponent(component?: string) {
+function resolveComponent(component?: string): RouteRecordRaw['component'] | undefined {
   if (!component) return undefined
   const key = `/src/views/${component}.vue`
   const loader = viewModules[key]
@@ -30,20 +30,25 @@ function flattenMenus(nodes: MenuTreeNode[]): MenuTreeNode[] {
 
 export function buildRoutesFromMenus(menuTree: MenuTreeNode[]): RouteRecordRaw[] {
   const flat = flattenMenus(menuTree)
-  return flat
+  const routes: RouteRecordRaw[] = []
+  flat
     .filter((m) => m.path && m.component)
-    .map((m) => ({
-      path: m.path!.startsWith('/') ? m.path!.slice(1) : m.path!,
-      name: m.routeName || m.id,
-      component: resolveComponent(m.component),
-      meta: {
-        title: m.menuName,
-        icon: m.icon,
-        permCode: m.permCode,
-        requiresAuth: true
-      }
-    }))
-    .filter((r) => r.component)
+    .forEach((m) => {
+      const component = resolveComponent(m.component)
+      if (!component) return
+      routes.push({
+        path: m.path!.startsWith('/') ? m.path!.slice(1) : m.path!,
+        name: m.routeName || m.id,
+        component,
+        meta: {
+          title: m.menuName,
+          icon: m.icon,
+          permCode: m.permCode,
+          requiresAuth: true
+        }
+      })
+    })
+  return routes
 }
 
 export function getSidebarMenus(menuTree: MenuTreeNode[]): MenuTreeNode[] {

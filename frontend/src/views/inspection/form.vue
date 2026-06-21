@@ -546,8 +546,11 @@ function judgmentTypeColor(type: string): any {
   const map: Record<string, string> = {
     QUALIFIED: 'success',
     UNQUALIFIED: 'danger',
+    CAN_CONCESSION: 'warning',
     CONCESSION: 'warning',
-    REINSPECTION: 'info'
+    NEED_REINSPECTION: 'info',
+    REINSPECTION: 'info',
+    STANDARD_CONFLICT: 'danger'
   }
   return map[type] || 'info'
 }

@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -88,6 +90,14 @@ public class IndicatorServiceImpl implements IndicatorService {
         return indicatorItemMapper.selectList(wrapper).stream()
                 .map(this::toVo)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<QcIndicatorItem> listEntitiesByIds(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return indicatorItemMapper.selectBatchIds(ids);
     }
 
     private LambdaQueryWrapper<QcIndicatorItem> buildListWrapper(String keyword, String category) {

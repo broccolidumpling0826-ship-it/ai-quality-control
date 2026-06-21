@@ -114,6 +114,9 @@ export interface DashboardSummary {
   unqualifiedBatch: number
   reinspectionTask: number
   concessionApproval: number
+  aiRiskWarning: number
+  lowConfidenceReview: number
+  pendingStandardConflict: number
 }
 
 export interface PendingItem {

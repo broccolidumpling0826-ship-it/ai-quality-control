@@ -29,3 +29,18 @@ mybatis-plus:
 app:
   upload:
     base-path: /tmp/quality-control/uploads
+  ai:
+    model:
+      enabled: ${DEEPSEEK_ENABLED:false}
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
+      api-key: ${DEEPSEEK_API_KEY:}
+      chat-model: ${DEEPSEEK_MODEL:deepseek-chat}
+      embedding-model: ${DEEPSEEK_EMBEDDING_MODEL:text-embedding-v1}
+      timeout-millis: ${DEEPSEEK_TIMEOUT_MILLIS:15000}
+    vector:
+      enabled: ${ES_VECTOR_ENABLED:false}
+      host: ${ES_HOST:http://localhost:9200}
+      username: ${ES_USERNAME:}
+      password: ${ES_PASSWORD:}
+      standard-index: ${ES_STANDARD_INDEX:quality-standard-clauses}
+      timeout-millis: ${ES_TIMEOUT_MILLIS:5000}

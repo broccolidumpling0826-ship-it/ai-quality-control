@@ -95,6 +95,36 @@ public interface QcQualityStandardMapper extends BaseMapper<QcQualityStandard> {
     );
 
     /**
+     * 查询所有候选适用标准，用于候选集、冲突检测和解释展示。
+     * 规格范围为文本口径，精确规格解析由上层匹配工具处理。
+     */
+    @Select("<script>" +
+            "SELECT * FROM qc_quality_standard " +
+            "WHERE variety = #{variety} " +
+            "AND grade = #{grade} " +
+            "AND effective_date &lt;= #{testDate} " +
+            "AND expiry_date &gt;= #{testDate} " +
+            "AND status = 'PUBLISHED' " +
+            "AND (" +
+            "standard_type IN ('ENTERPRISE', 'NATIONAL') " +
+            "<if test='customerId != null and customerId != \"\"'>" +
+            "OR (standard_type = 'CUSTOMER' AND customer_id = #{customerId}) " +
+            "</if>" +
+            ") " +
+            "ORDER BY CASE standard_type " +
+            "WHEN 'CUSTOMER' THEN 1 " +
+            "WHEN 'ENTERPRISE' THEN 2 " +
+            "WHEN 'NATIONAL' THEN 3 " +
+            "ELSE 9 END, effective_date DESC, create_date_time DESC" +
+            "</script>")
+    List<QcQualityStandard> findApplicableCandidateStandards(
+            @Param("customerId") String customerId,
+            @Param("variety") String variety,
+            @Param("grade") String grade,
+            @Param("testDate") LocalDate testDate
+    );
+
+    /**
      * 查询同体系其他已发布标准（发布时提示）
      */
     @Select("<script>" +

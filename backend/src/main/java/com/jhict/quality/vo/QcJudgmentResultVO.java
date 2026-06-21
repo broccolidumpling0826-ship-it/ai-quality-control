@@ -41,6 +41,9 @@ public class QcJudgmentResultVO {
     @ApiModelProperty(value = "检验人工号")
     private String testerNo;
 
+    @ApiModelProperty(value = "客户ID")
+    private String customerId;
+
     @ApiModelProperty(value = "检验人（前端展示名）")
     private String inspector;
 
@@ -67,6 +70,48 @@ public class QcJudgmentResultVO {
 
     @ApiModelProperty(value = "指标明细（前端 indicatorDetails，与 evidences 同源）")
     private List<IndicatorDetailVO> indicatorDetails;
+
+    @ApiModelProperty(value = "最终选择的候选标准")
+    private StandardCandidateVO selectedStandard;
+
+    @ApiModelProperty(value = "候选标准列表")
+    private List<StandardCandidateVO> candidateStandards;
+
+    @ApiModelProperty(value = "被优先级抑制的标准")
+    private List<StandardCandidateVO> suppressedStandards;
+
+    @ApiModelProperty(value = "标准冲突列表")
+    private List<StandardConflictVO> conflicts;
+
+    @ApiModelProperty(value = "来源引用列表")
+    private List<AiSourceReferenceVO> citations;
+
+    @ApiModelProperty(value = "规则模板解释")
+    private String ruleExplanation;
+
+    @ApiModelProperty(value = "AI解释文本")
+    private String aiExplanation;
+
+    @ApiModelProperty(value = "置信度标签 HIGH/MEDIUM/LOW")
+    private String confidenceLabel;
+
+    @ApiModelProperty(value = "置信度分值")
+    private Double confidenceScore;
+
+    @ApiModelProperty(value = "置信度因素")
+    private List<String> confidenceFactors;
+
+    @ApiModelProperty(value = "降级来源 GENERATED/CACHE/RULE_TEMPLATE/RAW_RETRIEVAL/UNAVAILABLE")
+    private String degradationSource;
+
+    @ApiModelProperty(value = "降级原因")
+    private String degradationReason;
+
+    @ApiModelProperty(value = "冲突或人工复核提示")
+    private List<String> conflictWarnings;
+
+    @ApiModelProperty(value = "是否缺少来源引用")
+    private Boolean citationMissing;
 
     @Data
     @ApiModel(value = "StandardMatchVO", description = "标准优先级匹配卡片")

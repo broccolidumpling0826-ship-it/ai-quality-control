@@ -116,9 +116,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="viewDetail(row)">查看详情</el-button>
+            <el-button link type="success" @click="handleDownloadPdf(row)">导出PDF</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -175,6 +176,7 @@
         </el-table>
       </template>
       <template #footer>
+        <el-button v-if="currentDetail?.id" type="success" @click="handleDownloadPdf(currentDetail)">导出PDF</el-button>
         <el-button @click="detailDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
@@ -188,6 +190,7 @@ import type { FormInstance } from 'element-plus'
 import { useDictStore } from '@/store/dict'
 import { useTableFilter } from '@/composables/use-table-filter'
 import {
+  downloadCertPdf,
   generateCertData,
   getCertDataById,
   mapCertGeneratePayload,
@@ -266,7 +269,8 @@ function judgmentTagType(type?: string) {
     CONCESSION: 'warning',
     NEED_REINSPECTION: 'info',
     REINSPECTION: 'info',
-    CAN_CONCESSION: 'warning'
+    CAN_CONCESSION: 'warning',
+    STANDARD_CONFLICT: 'danger'
   }
   return (type && map[type]) || 'info'
 }
@@ -319,7 +323,7 @@ async function loadData() {
       params.startTime = searchForm.timeRange[0]
       params.endTime = searchForm.timeRange[1]
     }
-    const res = await pageCertData(params as CertDataPageQuery)
+    const res = await pageCertData(params as unknown as CertDataPageQuery)
     tableData.value = (res.records || []).map((row) => normalizeCertDetail(row, true))
     total.value = res.total || 0
   } finally {
@@ -359,6 +363,24 @@ async function viewDetail(row: CertDisplayRow) {
     detailDialogVisible.value = true
   } catch {
     // handled by request interceptor
+  }
+}
+
+async function handleDownloadPdf(row: CertDisplayRow) {
+  if (!row.id) {
+    ElMessage.warning('缺少质保书数据ID')
+    return
+  }
+  try {
+    const blob = await downloadCertPdf(row.id)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `quality-cert-${row.id}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '导出质保书PDF失败')
   }
 }
 

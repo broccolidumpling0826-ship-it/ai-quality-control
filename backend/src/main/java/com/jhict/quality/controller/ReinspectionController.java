@@ -8,8 +8,10 @@ import com.jhict.quality.dto.QcReinspectionPageQuery;
 import com.jhict.quality.dto.ReinspectionCandidateQuery;
 import com.jhict.quality.dto.ReinspectionCompleteCmd;
 import com.jhict.quality.service.api.ReinspectionService;
+import com.jhict.quality.service.api.WorkflowAdviceService;
 import com.jhict.quality.vo.InspectionRecordCandidateVO;
 import com.jhict.quality.vo.QcReinspectionListVO;
+import com.jhict.quality.vo.WorkflowAdviceVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -26,6 +28,16 @@ public class ReinspectionController {
 
     @Resource
     private ReinspectionService reinspectionService;
+
+    @Resource
+    private WorkflowAdviceService workflowAdviceService;
+
+    @GetMapping("/advice/{judgmentId}")
+    @ApiOperation(value = "生成AI复检建议（不自动创建复检记录）")
+    public ApiResult<WorkflowAdviceVO> advice(
+            @ApiParam(value = "判定ID", required = true) @PathVariable String judgmentId) {
+        return ApiResult.success(workflowAdviceService.adviseReinspection(judgmentId));
+    }
 
     @PostMapping
     @ApiOperation(value = "发起复检申请")

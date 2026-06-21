@@ -20,6 +20,15 @@ public class DashboardSummaryVO {
     @ApiModelProperty(value = "待让步审批数量")
     private Long pendingConcessionApprovalCount;
 
+    @ApiModelProperty(value = "AI高风险预警数量")
+    private Long aiRiskWarningCount;
+
+    @ApiModelProperty(value = "低置信AI复核数量")
+    private Long lowConfidenceReviewCount;
+
+    @ApiModelProperty(value = "待裁决阻断标准冲突数量")
+    private Long pendingStandardConflictCount;
+
     @ApiModelProperty(value = "缓存更新时间")
     private String cacheUpdatedAt;
 }

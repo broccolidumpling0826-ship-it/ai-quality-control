@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.dto.QcInspectionRecordAddCmd;
 import com.jhict.quality.dto.QcInspectionRecordPageQuery;
 import com.jhict.quality.entity.QcInspectionRecord;
+import com.jhict.quality.entity.QcJudgmentResult;
 import com.jhict.quality.vo.InspectionResultVO;
 
 import java.util.Map;
@@ -44,4 +45,13 @@ public interface InspectionService {
      * @return 详情Map（含record和values字段）
      */
     Map<String, Object> getById(String id);
+
+    /**
+     * 按人工裁决后的控制标准重新判定。
+     *
+     * @param recordId           检验记录ID
+     * @param decisionStandardId 裁决控制标准ID
+     * @return 新的最终判定结论
+     */
+    QcJudgmentResult rejudgeWithStandard(String recordId, String decisionStandardId);
 }
