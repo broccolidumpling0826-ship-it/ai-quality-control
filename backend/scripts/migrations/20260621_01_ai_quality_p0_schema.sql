@@ -5,6 +5,54 @@
 
 USE ai_quality_control;
 
+-- MySQL 5.7 does not support ADD COLUMN IF NOT EXISTS.
+-- These helpers make the migration safe for databases where an earlier
+-- qc_standard_document/qc_standard_clause table already exists with fewer columns.
+DROP PROCEDURE IF EXISTS add_column_if_missing;
+DROP PROCEDURE IF EXISTS add_index_if_missing;
+
+DELIMITER $$
+CREATE PROCEDURE add_column_if_missing(
+  IN p_table_name VARCHAR(64),
+  IN p_column_name VARCHAR(64),
+  IN p_column_definition TEXT
+)
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = p_table_name
+      AND column_name = p_column_name
+  ) THEN
+    SET @ddl = CONCAT('ALTER TABLE `', p_table_name, '` ADD COLUMN ', p_column_definition);
+    PREPARE stmt FROM @ddl;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+  END IF;
+END$$
+
+CREATE PROCEDURE add_index_if_missing(
+  IN p_table_name VARCHAR(64),
+  IN p_index_name VARCHAR(64),
+  IN p_index_definition TEXT
+)
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.statistics
+    WHERE table_schema = DATABASE()
+      AND table_name = p_table_name
+      AND index_name = p_index_name
+  ) THEN
+    SET @ddl = CONCAT('ALTER TABLE `', p_table_name, '` ADD ', p_index_definition);
+    PREPARE stmt FROM @ddl;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+  END IF;
+END$$
+DELIMITER ;
+
 -- ────────────────────────────────────────────────────────────
 -- Standard source documents for RAG and citation.
 -- ────────────────────────────────────────────────────────────
@@ -47,6 +95,42 @@ CREATE TABLE IF NOT EXISTS `qc_standard_document` (
   KEY `idx_applicability` (`customer_id`, `variety`, `grade`, `effective_date`, `expiry_date`),
   KEY `idx_index_status` (`index_status`, `parse_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='标准/协议/案例源文档';
+
+CALL add_column_if_missing('qc_standard_document', 'company_id', '`company_id` VARCHAR(64) DEFAULT NULL COMMENT ''公司ID'' AFTER `id`');
+CALL add_column_if_missing('qc_standard_document', 'create_user_no', '`create_user_no` VARCHAR(64) DEFAULT NULL COMMENT ''创建人工号'' AFTER `company_id`');
+CALL add_column_if_missing('qc_standard_document', 'update_user_no', '`update_user_no` VARCHAR(64) DEFAULT NULL COMMENT ''修改人工号'' AFTER `create_user_no`');
+CALL add_column_if_missing('qc_standard_document', 'create_date_time', '`create_date_time` VARCHAR(32) DEFAULT NULL COMMENT ''创建时间'' AFTER `update_user_no`');
+CALL add_column_if_missing('qc_standard_document', 'update_date_time', '`update_date_time` VARCHAR(32) DEFAULT NULL COMMENT ''修改时间'' AFTER `create_date_time`');
+CALL add_column_if_missing('qc_standard_document', 'standard_id', '`standard_id` VARCHAR(64) DEFAULT NULL COMMENT ''结构化标准ID，投诉/案例文档可为空'' AFTER `update_date_time`');
+CALL add_column_if_missing('qc_standard_document', 'document_code', '`document_code` VARCHAR(100) DEFAULT NULL COMMENT ''文档编号'' AFTER `standard_id`');
+CALL add_column_if_missing('qc_standard_document', 'document_name', '`document_name` VARCHAR(200) DEFAULT NULL COMMENT ''文档名称'' AFTER `document_code`');
+CALL add_column_if_missing('qc_standard_document', 'document_type', '`document_type` VARCHAR(30) NOT NULL DEFAULT ''STANDARD'' COMMENT ''文档类型 STANDARD/AGREEMENT/CASE/COMPLAINT'' AFTER `document_name`');
+CALL add_column_if_missing('qc_standard_document', 'standard_type', '`standard_type` VARCHAR(20) DEFAULT NULL COMMENT ''标准类型 NATIONAL/ENTERPRISE/CUSTOMER'' AFTER `document_type`');
+CALL add_column_if_missing('qc_standard_document', 'standard_code', '`standard_code` VARCHAR(100) DEFAULT NULL COMMENT ''标准编号快照'' AFTER `standard_type`');
+CALL add_column_if_missing('qc_standard_document', 'standard_name', '`standard_name` VARCHAR(200) DEFAULT NULL COMMENT ''标准名称快照'' AFTER `standard_code`');
+CALL add_column_if_missing('qc_standard_document', 'version_no', '`version_no` VARCHAR(50) DEFAULT NULL COMMENT ''版本号'' AFTER `standard_name`');
+CALL add_column_if_missing('qc_standard_document', 'customer_id', '`customer_id` VARCHAR(64) DEFAULT NULL COMMENT ''客户ID'' AFTER `version_no`');
+CALL add_column_if_missing('qc_standard_document', 'variety', '`variety` VARCHAR(100) DEFAULT NULL COMMENT ''适用品种'' AFTER `customer_id`');
+CALL add_column_if_missing('qc_standard_document', 'grade', '`grade` VARCHAR(100) DEFAULT NULL COMMENT ''适用牌号'' AFTER `variety`');
+CALL add_column_if_missing('qc_standard_document', 'spec_range', '`spec_range` VARCHAR(200) DEFAULT NULL COMMENT ''适用规格范围'' AFTER `grade`');
+CALL add_column_if_missing('qc_standard_document', 'usage_scope', '`usage_scope` VARCHAR(200) DEFAULT NULL COMMENT ''客户用途或适用场景'' AFTER `spec_range`');
+CALL add_column_if_missing('qc_standard_document', 'effective_date', '`effective_date` DATE DEFAULT NULL COMMENT ''生效日期'' AFTER `usage_scope`');
+CALL add_column_if_missing('qc_standard_document', 'expiry_date', '`expiry_date` DATE DEFAULT NULL COMMENT ''失效日期'' AFTER `effective_date`');
+CALL add_column_if_missing('qc_standard_document', 'source_file_name', '`source_file_name` VARCHAR(255) DEFAULT NULL COMMENT ''原始文件名'' AFTER `expiry_date`');
+CALL add_column_if_missing('qc_standard_document', 'source_file_path', '`source_file_path` VARCHAR(500) DEFAULT NULL COMMENT ''原始文件路径或URL'' AFTER `source_file_name`');
+CALL add_column_if_missing('qc_standard_document', 'source_file_hash', '`source_file_hash` VARCHAR(128) DEFAULT NULL COMMENT ''原始文件哈希'' AFTER `source_file_path`');
+CALL add_column_if_missing('qc_standard_document', 'parse_status', '`parse_status` VARCHAR(30) NOT NULL DEFAULT ''PENDING'' COMMENT ''解析状态 PENDING/PARSED/FAILED'' AFTER `source_file_hash`');
+CALL add_column_if_missing('qc_standard_document', 'index_status', '`index_status` VARCHAR(30) NOT NULL DEFAULT ''PENDING'' COMMENT ''索引状态 PENDING/INDEXED/FAILED'' AFTER `parse_status`');
+CALL add_column_if_missing('qc_standard_document', 'parse_error_message', '`parse_error_message` VARCHAR(1000) DEFAULT NULL COMMENT ''解析或索引错误'' AFTER `index_status`');
+CALL add_column_if_missing('qc_standard_document', 'indexed_at', '`indexed_at` DATETIME DEFAULT NULL COMMENT ''索引时间'' AFTER `parse_error_message`');
+CALL add_column_if_missing('qc_standard_document', 'status', '`status` VARCHAR(20) NOT NULL DEFAULT ''ACTIVE'' COMMENT ''状态 ACTIVE/INACTIVE'' AFTER `indexed_at`');
+CALL add_column_if_missing('qc_standard_document', 'remark', '`remark` VARCHAR(500) DEFAULT NULL COMMENT ''备注'' AFTER `status`');
+CALL add_index_if_missing('qc_standard_document', 'uk_document_code', 'UNIQUE KEY `uk_document_code` (`document_code`)');
+CALL add_index_if_missing('qc_standard_document', 'idx_standard_id', 'KEY `idx_standard_id` (`standard_id`)');
+CALL add_index_if_missing('qc_standard_document', 'idx_document_type', 'KEY `idx_document_type` (`document_type`, `status`)');
+CALL add_index_if_missing('qc_standard_document', 'idx_standard_lookup', 'KEY `idx_standard_lookup` (`standard_type`, `standard_code`, `version_no`)');
+CALL add_index_if_missing('qc_standard_document', 'idx_applicability', 'KEY `idx_applicability` (`customer_id`, `variety`, `grade`, `effective_date`, `expiry_date`)');
+CALL add_index_if_missing('qc_standard_document', 'idx_index_status', 'KEY `idx_index_status` (`index_status`, `parse_status`)');
 
 -- ────────────────────────────────────────────────────────────
 -- Clause records mirrored into vector index.
@@ -94,6 +178,46 @@ CREATE TABLE IF NOT EXISTS `qc_standard_clause` (
   KEY `idx_applicability` (`customer_id`, `variety`, `grade`, `effective_date`, `expiry_date`),
   KEY `idx_embedding_status` (`embedding_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='标准/协议/案例条款';
+
+CALL add_column_if_missing('qc_standard_clause', 'company_id', '`company_id` VARCHAR(64) DEFAULT NULL COMMENT ''公司ID'' AFTER `id`');
+CALL add_column_if_missing('qc_standard_clause', 'create_user_no', '`create_user_no` VARCHAR(64) DEFAULT NULL COMMENT ''创建人工号'' AFTER `company_id`');
+CALL add_column_if_missing('qc_standard_clause', 'update_user_no', '`update_user_no` VARCHAR(64) DEFAULT NULL COMMENT ''修改人工号'' AFTER `create_user_no`');
+CALL add_column_if_missing('qc_standard_clause', 'create_date_time', '`create_date_time` VARCHAR(32) DEFAULT NULL COMMENT ''创建时间'' AFTER `update_user_no`');
+CALL add_column_if_missing('qc_standard_clause', 'update_date_time', '`update_date_time` VARCHAR(32) DEFAULT NULL COMMENT ''修改时间'' AFTER `create_date_time`');
+CALL add_column_if_missing('qc_standard_clause', 'document_id', '`document_id` VARCHAR(64) DEFAULT NULL COMMENT ''源文档ID'' AFTER `update_date_time`');
+CALL add_column_if_missing('qc_standard_clause', 'standard_id', '`standard_id` VARCHAR(64) DEFAULT NULL COMMENT ''结构化标准ID'' AFTER `document_id`');
+CALL add_column_if_missing('qc_standard_clause', 'clause_key', '`clause_key` VARCHAR(160) DEFAULT NULL COMMENT ''稳定条款键'' AFTER `standard_id`');
+CALL add_column_if_missing('qc_standard_clause', 'clause_no', '`clause_no` VARCHAR(80) DEFAULT NULL COMMENT ''条款号'' AFTER `clause_key`');
+CALL add_column_if_missing('qc_standard_clause', 'page_no', '`page_no` INT DEFAULT NULL COMMENT ''页码'' AFTER `clause_no`');
+CALL add_column_if_missing('qc_standard_clause', 'paragraph_text', '`paragraph_text` LONGTEXT NULL COMMENT ''来源段落原文'' AFTER `page_no`');
+CALL add_column_if_missing('qc_standard_clause', 'source_type', '`source_type` VARCHAR(30) NOT NULL DEFAULT ''STANDARD'' COMMENT ''来源类型 NATIONAL/ENTERPRISE/CUSTOMER/CASE/COMPLAINT'' AFTER `paragraph_text`');
+CALL add_column_if_missing('qc_standard_clause', 'standard_type', '`standard_type` VARCHAR(20) DEFAULT NULL COMMENT ''标准类型快照'' AFTER `source_type`');
+CALL add_column_if_missing('qc_standard_clause', 'standard_code', '`standard_code` VARCHAR(100) DEFAULT NULL COMMENT ''标准编号快照'' AFTER `standard_type`');
+CALL add_column_if_missing('qc_standard_clause', 'standard_name', '`standard_name` VARCHAR(200) DEFAULT NULL COMMENT ''标准名称快照'' AFTER `standard_code`');
+CALL add_column_if_missing('qc_standard_clause', 'version_no', '`version_no` VARCHAR(50) DEFAULT NULL COMMENT ''版本号快照'' AFTER `standard_name`');
+CALL add_column_if_missing('qc_standard_clause', 'customer_id', '`customer_id` VARCHAR(64) DEFAULT NULL COMMENT ''客户ID'' AFTER `version_no`');
+CALL add_column_if_missing('qc_standard_clause', 'variety', '`variety` VARCHAR(100) DEFAULT NULL COMMENT ''适用品种'' AFTER `customer_id`');
+CALL add_column_if_missing('qc_standard_clause', 'grade', '`grade` VARCHAR(100) DEFAULT NULL COMMENT ''适用牌号'' AFTER `variety`');
+CALL add_column_if_missing('qc_standard_clause', 'spec_range', '`spec_range` VARCHAR(200) DEFAULT NULL COMMENT ''适用规格范围'' AFTER `grade`');
+CALL add_column_if_missing('qc_standard_clause', 'usage_scope', '`usage_scope` VARCHAR(200) DEFAULT NULL COMMENT ''客户用途或适用场景'' AFTER `spec_range`');
+CALL add_column_if_missing('qc_standard_clause', 'indicator_id', '`indicator_id` VARCHAR(64) DEFAULT NULL COMMENT ''关联指标ID'' AFTER `usage_scope`');
+CALL add_column_if_missing('qc_standard_clause', 'indicator_code', '`indicator_code` VARCHAR(50) DEFAULT NULL COMMENT ''指标代码'' AFTER `indicator_id`');
+CALL add_column_if_missing('qc_standard_clause', 'indicator_name', '`indicator_name` VARCHAR(100) DEFAULT NULL COMMENT ''指标名称'' AFTER `indicator_code`');
+CALL add_column_if_missing('qc_standard_clause', 'effective_date', '`effective_date` DATE DEFAULT NULL COMMENT ''生效日期'' AFTER `indicator_name`');
+CALL add_column_if_missing('qc_standard_clause', 'expiry_date', '`expiry_date` DATE DEFAULT NULL COMMENT ''失效日期'' AFTER `effective_date`');
+CALL add_column_if_missing('qc_standard_clause', 'retrieval_keywords', '`retrieval_keywords` VARCHAR(500) DEFAULT NULL COMMENT ''检索关键词'' AFTER `expiry_date`');
+CALL add_column_if_missing('qc_standard_clause', 'es_document_key', '`es_document_key` VARCHAR(160) DEFAULT NULL COMMENT ''ES文档键'' AFTER `retrieval_keywords`');
+CALL add_column_if_missing('qc_standard_clause', 'embedding_status', '`embedding_status` VARCHAR(30) NOT NULL DEFAULT ''PENDING'' COMMENT ''向量状态 PENDING/INDEXED/FAILED'' AFTER `es_document_key`');
+CALL add_column_if_missing('qc_standard_clause', 'relevance_group', '`relevance_group` VARCHAR(50) DEFAULT NULL COMMENT ''演示/评测分组'' AFTER `embedding_status`');
+CALL add_column_if_missing('qc_standard_clause', 'status', '`status` VARCHAR(20) NOT NULL DEFAULT ''ACTIVE'' COMMENT ''状态 ACTIVE/INACTIVE'' AFTER `relevance_group`');
+CALL add_index_if_missing('qc_standard_clause', 'uk_clause_key', 'UNIQUE KEY `uk_clause_key` (`clause_key`)');
+CALL add_index_if_missing('qc_standard_clause', 'uk_es_document_key', 'UNIQUE KEY `uk_es_document_key` (`es_document_key`)');
+CALL add_index_if_missing('qc_standard_clause', 'idx_document_id', 'KEY `idx_document_id` (`document_id`)');
+CALL add_index_if_missing('qc_standard_clause', 'idx_standard_id', 'KEY `idx_standard_id` (`standard_id`)');
+CALL add_index_if_missing('qc_standard_clause', 'idx_source_type', 'KEY `idx_source_type` (`source_type`, `status`)');
+CALL add_index_if_missing('qc_standard_clause', 'idx_indicator', 'KEY `idx_indicator` (`indicator_id`, `indicator_code`)');
+CALL add_index_if_missing('qc_standard_clause', 'idx_applicability', 'KEY `idx_applicability` (`customer_id`, `variety`, `grade`, `effective_date`, `expiry_date`)');
+CALL add_index_if_missing('qc_standard_clause', 'idx_embedding_status', 'KEY `idx_embedding_status` (`embedding_status`)');
 
 -- ────────────────────────────────────────────────────────────
 -- Standard conflict records. Same-priority conflicts are blocking.
@@ -324,3 +448,6 @@ CREATE TABLE IF NOT EXISTS `qc_evaluation_case` (
   KEY `idx_expected_judgment` (`expected_judgment_type`),
   KEY `idx_prompt_injection` (`prompt_injection_flag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='AI质量增强评测用例';
+
+DROP PROCEDURE IF EXISTS add_column_if_missing;
+DROP PROCEDURE IF EXISTS add_index_if_missing;

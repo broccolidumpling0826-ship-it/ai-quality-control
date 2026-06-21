@@ -85,4 +85,4 @@ SELECT `id`, `role_id`, `menu_id` FROM (
 INSERT IGNORE INTO `sys_role_menu` (`id`, `role_id`, `menu_id`)
 SELECT CONCAT('rm_admin_', id), 'role005', id
 FROM `sys_menu`
-WHERE `id` IN ('menu014', 'menu034', 'menu043', 'menu108', 'menu109');
+WHERE `id` IN ('menu014', 'menu034', 'menu043', 'menu065', 'menu066', 'menu108', 'menu109');
