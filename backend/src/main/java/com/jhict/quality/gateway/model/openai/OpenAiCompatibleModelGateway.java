@@ -1,4 +1,4 @@
-package com.jhict.quality.gateway.model.deepseek;
+package com.jhict.quality.gateway.model.openai;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,19 +30,22 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * DeepSeek/OpenAI-compatible model gateway implementation.
+ * OpenAI-compatible model gateway implementation for chat and embedding calls.
  */
 @Slf4j
 @Component
-public class DeepSeekModelGateway implements ModelGateway {
+public class OpenAiCompatibleModelGateway implements ModelGateway {
 
-    private static final String PROVIDER = "DEEPSEEK";
+    private static final String DEFAULT_CHAT_PROVIDER = "SILICONFLOW";
     private static final String OPERATION_CHAT = "chat";
     private static final String OPERATION_EMBED = "embed";
     private static final int RAW_RESPONSE_LIMIT = 4000;
 
     @Resource
-    private DeepSeekModelProperties properties;
+    private OpenAiCompatibleModelProperties properties;
+
+    @Resource
+    private EmbeddingModelProperties embeddingProperties;
 
     @Resource
     private ObjectMapper objectMapper;
@@ -76,12 +79,13 @@ public class DeepSeekModelGateway implements ModelGateway {
     public ModelEmbeddingResponse embed(ModelEmbeddingRequest request) {
         long start = System.currentTimeMillis();
         String traceId = request == null ? null : request.getTraceId();
-        if (!isConfigured()) {
-            return buildEmbeddingFailure(request, start, notConfiguredCategory(), notConfiguredMessage());
+        if (!isEmbeddingConfigured()) {
+            return buildEmbeddingFailure(request, start, embeddingNotConfiguredCategory(), embeddingNotConfiguredMessage());
         }
         try {
             Map<String, Object> body = buildEmbeddingBody(request);
-            ResponseEntity<String> response = postJson(embeddingUrl(), body, effectiveTimeout(request == null ? null : request.getTimeoutMillis()));
+            ResponseEntity<String> response = postEmbeddingJson(embeddingUrl(), body,
+                    effectiveEmbeddingTimeout(request == null ? null : request.getTimeoutMillis()));
             return parseEmbeddingResponse(request, response.getBody(), start);
         } catch (ResourceAccessException ex) {
             logGatewayFailure(OPERATION_EMBED, traceId, request == null ? null : request.getBusinessId(), "TIMEOUT_OR_IO", ex);
@@ -99,12 +103,12 @@ public class DeepSeekModelGateway implements ModelGateway {
 
     @Override
     public String provider() {
-        return PROVIDER;
+        return chatProvider();
     }
 
     @Override
     public boolean enabled() {
-        return isConfigured();
+        return isConfigured() || isEmbeddingConfigured();
     }
 
     private Map<String, Object> buildChatBody(ModelChatRequest request) {
@@ -117,17 +121,11 @@ public class DeepSeekModelGateway implements ModelGateway {
         if (request != null && request.getMaxTokens() != null) {
             body.put("max_tokens", request.getMaxTokens());
         }
-        body.put("thinking", buildThinkingConfig());
+        body.put("enable_thinking", properties.isThinkingEnabled());
         if (properties.isThinkingEnabled() && StringUtils.hasText(properties.getReasoningEffort())) {
             body.put("reasoning_effort", properties.getReasoningEffort());
         }
         return body;
-    }
-
-    private Map<String, String> buildThinkingConfig() {
-        Map<String, String> thinking = new LinkedHashMap<>();
-        thinking.put("type", properties.isThinkingEnabled() ? "enabled" : "disabled");
-        return thinking;
     }
 
     private List<Map<String, String>> buildMessages(ModelChatRequest request) {
@@ -158,7 +156,7 @@ public class DeepSeekModelGateway implements ModelGateway {
 
     private Map<String, Object> buildEmbeddingBody(ModelEmbeddingRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", choose(request == null ? null : request.getModelName(), properties.getEmbeddingModel()));
+        body.put("model", choose(request == null ? null : request.getModelName(), embeddingProperties.getModel()));
         body.put("input", request == null || CollectionUtils.isEmpty(request.getInputTexts())
                 ? Collections.emptyList()
                 : request.getInputTexts());
@@ -166,9 +164,19 @@ public class DeepSeekModelGateway implements ModelGateway {
     }
 
     private ResponseEntity<String> postJson(String url, Map<String, Object> body, int timeoutMillis) {
+        return postJson(url, body, timeoutMillis, properties.getApiKey());
+    }
+
+    private ResponseEntity<String> postEmbeddingJson(String url, Map<String, Object> body, int timeoutMillis) {
+        return postJson(url, body, timeoutMillis, embeddingProperties.getApiKey());
+    }
+
+    private ResponseEntity<String> postJson(String url, Map<String, Object> body, int timeoutMillis, String apiKey) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(properties.getApiKey());
+        if (StringUtils.hasText(apiKey)) {
+            headers.setBearerAuth(apiKey);
+        }
         return restTemplate(timeoutMillis).postForEntity(url, new HttpEntity<>(body, headers), String.class);
     }
 
@@ -189,7 +197,7 @@ public class DeepSeekModelGateway implements ModelGateway {
         return ModelChatResponse.builder()
                 .success(StringUtils.hasText(content))
                 .traceId(request == null ? null : request.getTraceId())
-                .provider(PROVIDER)
+                .provider(chatProvider())
                 .modelName(root.path("model").asText(choose(request == null ? null : request.getModelName(), properties.getChatModel())))
                 .content(content)
                 .finishReason(choice == null ? null : choice.path("finish_reason").asText(null))
@@ -225,8 +233,8 @@ public class DeepSeekModelGateway implements ModelGateway {
         return ModelEmbeddingResponse.builder()
                 .success(!embeddings.isEmpty())
                 .traceId(request == null ? null : request.getTraceId())
-                .provider(PROVIDER)
-                .modelName(root.path("model").asText(choose(request == null ? null : request.getModelName(), properties.getEmbeddingModel())))
+                .provider(embeddingProvider())
+                .modelName(root.path("model").asText(choose(request == null ? null : request.getModelName(), embeddingProperties.getModel())))
                 .embeddings(embeddings)
                 .latencyMillis(System.currentTimeMillis() - start)
                 .rawResponse(truncate(responseBody))
@@ -243,7 +251,7 @@ public class DeepSeekModelGateway implements ModelGateway {
         return ModelChatResponse.builder()
                 .success(false)
                 .traceId(request == null ? null : request.getTraceId())
-                .provider(PROVIDER)
+                .provider(chatProvider())
                 .modelName(choose(request == null ? null : request.getModelName(), properties.getChatModel()))
                 .latencyMillis(System.currentTimeMillis() - start)
                 .errorCategory(errorCategory)
@@ -264,8 +272,8 @@ public class DeepSeekModelGateway implements ModelGateway {
         return ModelEmbeddingResponse.builder()
                 .success(false)
                 .traceId(request == null ? null : request.getTraceId())
-                .provider(PROVIDER)
-                .modelName(choose(request == null ? null : request.getModelName(), properties.getEmbeddingModel()))
+                .provider(embeddingProvider())
+                .modelName(choose(request == null ? null : request.getModelName(), embeddingProperties.getModel()))
                 .embeddings(Collections.emptyList())
                 .latencyMillis(System.currentTimeMillis() - start)
                 .errorCategory(errorCategory)
@@ -287,8 +295,28 @@ public class DeepSeekModelGateway implements ModelGateway {
         return properties.isEnabled() ? "模型服务未配置 API Key" : "模型服务未启用";
     }
 
+    private boolean isEmbeddingConfigured() {
+        return embeddingProperties.isEnabled() && StringUtils.hasText(embeddingProperties.getBaseUrl());
+    }
+
+    private String embeddingNotConfiguredCategory() {
+        return embeddingProperties.isEnabled() ? "MISSING_BASE_URL" : "DISABLED";
+    }
+
+    private String embeddingNotConfiguredMessage() {
+        return embeddingProperties.isEnabled() ? "向量模型服务未配置地址" : "向量模型服务未启用";
+    }
+
     private int effectiveTimeout(Integer requestTimeoutMillis) {
         Integer timeout = requestTimeoutMillis != null ? requestTimeoutMillis : properties.getTimeoutMillis();
+        if (timeout == null || timeout <= 0) {
+            return 15000;
+        }
+        return timeout;
+    }
+
+    private int effectiveEmbeddingTimeout(Integer requestTimeoutMillis) {
+        Integer timeout = requestTimeoutMillis != null ? requestTimeoutMillis : embeddingProperties.getTimeoutMillis();
         if (timeout == null || timeout <= 0) {
             return 15000;
         }
@@ -300,15 +328,31 @@ public class DeepSeekModelGateway implements ModelGateway {
     }
 
     private String embeddingUrl() {
-        return normalizedBaseUrl() + "/embeddings";
+        return normalizedEmbeddingBaseUrl() + "/embeddings";
     }
 
     private String normalizedBaseUrl() {
-        String baseUrl = choose(properties.getBaseUrl(), "https://api.deepseek.com");
+        String baseUrl = choose(properties.getBaseUrl(), "https://api.siliconflow.cn/v1");
         while (baseUrl.endsWith("/")) {
             baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         }
         return baseUrl;
+    }
+
+    private String normalizedEmbeddingBaseUrl() {
+        String baseUrl = choose(embeddingProperties.getBaseUrl(), "https://api.siliconflow.cn/v1");
+        while (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+        return baseUrl;
+    }
+
+    private String embeddingProvider() {
+        return choose(embeddingProperties.getProvider(), "OPENAI_COMPATIBLE_EMBEDDING");
+    }
+
+    private String chatProvider() {
+        return choose(properties.getProvider(), DEFAULT_CHAT_PROVIDER);
     }
 
     private String choose(String preferred, String fallback) {
@@ -337,12 +381,12 @@ public class DeepSeekModelGateway implements ModelGateway {
     private void logGatewayFailure(String operation, String traceId, String businessId,
                                    String errorCategory, Exception ex) {
         log.warn("模型网关调用失败，provider={}, operation={}, traceId={}, businessId={}, errorCategory={}, message={}",
-                PROVIDER, operation, traceId, businessId, errorCategory, ex.getMessage());
+                chatProvider(), operation, traceId, businessId, errorCategory, ex.getMessage());
     }
 
     private void logProviderFailure(String operation, String traceId, String businessId,
                                     String errorCategory, int statusCode, Exception ex) {
         log.warn("模型服务返回错误，provider={}, operation={}, traceId={}, businessId={}, errorCategory={}, statusCode={}, message={}",
-                PROVIDER, operation, traceId, businessId, errorCategory, statusCode, ex.getMessage());
+                chatProvider(), operation, traceId, businessId, errorCategory, statusCode, ex.getMessage());
     }
 }

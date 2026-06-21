@@ -65,14 +65,21 @@ app:
     remind-days: 7
   ai:
     model:
-      enabled: ${DEEPSEEK_ENABLED:false}
-      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
-      api-key: ${DEEPSEEK_API_KEY:}
-      chat-model: ${DEEPSEEK_MODEL:deepseek-v4-flash}
-      embedding-model: ${DEEPSEEK_EMBEDDING_MODEL:text-embedding-v1}
-      thinking-enabled: ${DEEPSEEK_THINKING_ENABLED:false}
-      reasoning-effort: ${DEEPSEEK_REASONING_EFFORT:high}
-      timeout-millis: ${DEEPSEEK_TIMEOUT_MILLIS:15000}
+      provider: ${AI_MODEL_PROVIDER:SILICONFLOW}
+      enabled: ${AI_MODEL_ENABLED:false}
+      base-url: ${AI_MODEL_BASE_URL:https://api.siliconflow.cn/v1}
+      api-key: ${AI_MODEL_API_KEY:}
+      chat-model: ${AI_MODEL_CHAT_MODEL:Pro/zai-org/GLM-4.7}
+      thinking-enabled: ${AI_MODEL_THINKING_ENABLED:false}
+      reasoning-effort: ${AI_MODEL_REASONING_EFFORT:high}
+      timeout-millis: ${AI_MODEL_TIMEOUT_MILLIS:15000}
+    embedding:
+      enabled: ${EMBEDDING_ENABLED:false}
+      base-url: ${EMBEDDING_BASE_URL:https://api.siliconflow.cn/v1}
+      api-key: ${EMBEDDING_API_KEY:}
+      model: ${EMBEDDING_MODEL:BAAI/bge-m3}
+      provider: ${EMBEDDING_PROVIDER:SILICONFLOW}
+      timeout-millis: ${EMBEDDING_TIMEOUT_MILLIS:15000}
     vector:
       enabled: ${ES_VECTOR_ENABLED:false}
       host: ${ES_HOST:http://localhost:9200}

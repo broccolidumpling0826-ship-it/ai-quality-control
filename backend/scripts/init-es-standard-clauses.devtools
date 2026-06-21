@@ -10,8 +10,8 @@
 // - This script is non-destructive. It does NOT delete an existing index.
 // - If the index already exists, the first PUT will return resource_already_exists_exception.
 // - The backend currently works with text retrieval even when embedding is absent.
-// - The dense_vector dims below MUST match the embedding provider output dimension
-//   before true vector retrieval is enabled end-to-end.
+// - The dense_vector dims below MUST match the embedding provider output dimension.
+//   Default SiliconFlow model BAAI/bge-m3 outputs 1024-dimensional vectors.
 
 GET /_cluster/health
 

@@ -3,8 +3,8 @@ package com.jhict.quality.gateway.model;
 /**
  * Provider-neutral model gateway.
  *
- * <p>Business services must depend on this interface instead of DeepSeek or any
- * other provider-specific HTTP contract.</p>
+ * <p>Business services must depend on this interface instead of any
+ * provider-specific HTTP contract.</p>
  */
 public interface ModelGateway {
 

@@ -1,26 +1,26 @@
-package com.jhict.quality.gateway.model.deepseek;
+package com.jhict.quality.gateway.model.openai;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Environment-backed configuration for the DeepSeek-compatible model gateway.
+ * Environment-backed configuration for an OpenAI-compatible chat model gateway.
  */
 @Data
 @Component
 @ConfigurationProperties(prefix = "app.ai.model")
-public class DeepSeekModelProperties {
+public class OpenAiCompatibleModelProperties {
 
     private boolean enabled = false;
 
-    private String baseUrl = "https://api.deepseek.com";
+    private String provider = "SILICONFLOW";
+
+    private String baseUrl = "https://api.siliconflow.cn/v1";
 
     private String apiKey;
 
-    private String chatModel = "deepseek-v4-flash";
-
-    private String embeddingModel = "text-embedding-v1";
+    private String chatModel = "Pro/zai-org/GLM-4.7";
 
     private boolean thinkingEnabled = false;
 

@@ -12,12 +12,20 @@ Backend runtime:
 | `DB_USER` | MySQL username | `ai_quality_control` in dev |
 | `DB_PASSWORD` | MySQL password | dev placeholder in `application-dev.yml` |
 | `REDIS_PASSWORD` | Redis password | dev placeholder in `application-dev.yml` |
-| `DEEPSEEK_ENABLED` | Enable model gateway calls | `false` |
-| `DEEPSEEK_BASE_URL` | DeepSeek-compatible API base URL | `https://api.deepseek.com/v1` |
-| `DEEPSEEK_API_KEY` | Model API key | empty |
-| `DEEPSEEK_MODEL` | Chat model name | `deepseek-chat` |
-| `DEEPSEEK_EMBEDDING_MODEL` | Embedding model name | `text-embedding-v1` |
-| `DEEPSEEK_TIMEOUT_MILLIS` | Model timeout | `15000` |
+| `AI_MODEL_PROVIDER` | Chat model provider label | `SILICONFLOW` |
+| `AI_MODEL_ENABLED` | Enable chat model gateway calls | `false` |
+| `AI_MODEL_BASE_URL` | OpenAI-compatible chat API base URL | `https://api.siliconflow.cn/v1` |
+| `AI_MODEL_API_KEY` | Chat model API key | empty |
+| `AI_MODEL_CHAT_MODEL` | Chat model name | `Pro/zai-org/GLM-4.7` |
+| `AI_MODEL_THINKING_ENABLED` | Enable provider reasoning/thinking mode when supported | `false` |
+| `AI_MODEL_REASONING_EFFORT` | Provider reasoning effort when supported | `high` |
+| `AI_MODEL_TIMEOUT_MILLIS` | Chat model timeout | `15000` |
+| `EMBEDDING_ENABLED` | Enable embedding model calls | `false` |
+| `EMBEDDING_BASE_URL` | OpenAI-compatible embedding API base URL | `https://api.siliconflow.cn/v1` |
+| `EMBEDDING_API_KEY` | Embedding model API key, separate from chat key | empty |
+| `EMBEDDING_MODEL` | Embedding model name | `BAAI/bge-m3` |
+| `EMBEDDING_PROVIDER` | Embedding provider label | `SILICONFLOW` |
+| `EMBEDDING_TIMEOUT_MILLIS` | Embedding model timeout | `15000` |
 | `ES_VECTOR_ENABLED` | Enable vector store calls | `false` |
 | `ES_HOST` | Elasticsearch endpoint | `http://localhost:9200` |
 | `ES_USERNAME` | Elasticsearch username | empty |
@@ -32,7 +40,8 @@ The following require live services or credentials and should be verified in the
 - MySQL end-to-end demo data load and API workflow.
 - Redis dashboard cache read/write behavior.
 - Elasticsearch 8.15.0 clause index creation, clause indexing, semantic retrieval, and raw retrieval fallback.
-- DeepSeek-compatible model generation and timeout/degradation behavior.
+- OpenAI-compatible chat model generation and timeout/degradation behavior.
+- OpenAI-compatible embedding generation and vector dimension alignment.
 - Browser/manual flow from inspection entry to judgment, explanation, concession risk, and certificate Q&A.
 
 ## Expected Degradation Behavior
