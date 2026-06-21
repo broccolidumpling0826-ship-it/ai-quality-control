@@ -116,23 +116,71 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
 
     private List<AiSourceReferenceVO> loadRiskEvidence(QcJudgmentResultVO judgment) {
         Map<String, AiSourceReferenceVO> refs = new LinkedHashMap<>();
-        for (QcJudgmentResultVO.MatchedStandardVO standard : judgment.getMatchedStandards() == null
-                ? Collections.<QcJudgmentResultVO.MatchedStandardVO>emptyList() : judgment.getMatchedStandards()) {
+        seedCitationRefs(refs, judgment.getCitations());
+        for (String standardId : resolveStandardIdsForClauseLookup(judgment)) {
             StandardClausePageQuery query = new StandardClausePageQuery();
-            query.setStandardId(standard.getStandardId());
+            query.setStandardId(standardId);
             query.setKeyword("让步");
             query.setPageNum(1);
             query.setPageSize(5);
             addRefs(refs, query);
         }
         StandardClausePageQuery caseQuery = new StandardClausePageQuery();
-        caseQuery.setSourceType("COMPLAINT");
+        caseQuery.setSourceType("CASE");
+        caseQuery.setCustomerId(judgment.getCustomerId());
         caseQuery.setVariety(judgment.getProductVariety());
         caseQuery.setGrade(judgment.getProductGrade());
         caseQuery.setPageNum(1);
         caseQuery.setPageSize(5);
         addRefs(refs, caseQuery);
+        StandardClausePageQuery complaintQuery = new StandardClausePageQuery();
+        complaintQuery.setSourceType("COMPLAINT");
+        complaintQuery.setCustomerId(judgment.getCustomerId());
+        complaintQuery.setVariety(judgment.getProductVariety());
+        complaintQuery.setGrade(judgment.getProductGrade());
+        complaintQuery.setPageNum(1);
+        complaintQuery.setPageSize(5);
+        addRefs(refs, complaintQuery);
         return refs.values().stream().limit(8).collect(Collectors.toList());
+    }
+
+    private void seedCitationRefs(Map<String, AiSourceReferenceVO> refs, List<AiSourceReferenceVO> citations) {
+        if (citations == null) {
+            return;
+        }
+        for (AiSourceReferenceVO citation : citations) {
+            if (citation != null && StringUtils.hasText(citation.getClauseId())) {
+                refs.putIfAbsent(citation.getClauseId(), citation);
+            }
+        }
+    }
+
+    private List<String> resolveStandardIdsForClauseLookup(QcJudgmentResultVO judgment) {
+        LinkedHashMap<String, String> ids = new LinkedHashMap<>();
+        if (judgment.getMatchedStandards() != null) {
+            for (QcJudgmentResultVO.MatchedStandardVO standard : judgment.getMatchedStandards()) {
+                if (standard != null && StringUtils.hasText(standard.getStandardId())) {
+                    ids.putIfAbsent(standard.getStandardId(), standard.getStandardId());
+                }
+            }
+        }
+        if (judgment.getCitations() != null) {
+            for (AiSourceReferenceVO citation : judgment.getCitations()) {
+                if (citation == null || !StringUtils.hasText(citation.getClauseId())) {
+                    continue;
+                }
+                try {
+                    StandardClauseVO clause = standardDocumentService.getClauseById(citation.getClauseId());
+                    if (clause != null && StringUtils.hasText(clause.getStandardId())) {
+                        ids.putIfAbsent(clause.getStandardId(), clause.getStandardId());
+                    }
+                } catch (Exception e) {
+                    log.warn("解析来源条款标准ID失败，clauseId={}, error={}",
+                            citation.getClauseId(), e.getMessage());
+                }
+            }
+        }
+        return new ArrayList<>(ids.values());
     }
 
     private void addRefs(Map<String, AiSourceReferenceVO> refs, StandardClausePageQuery query) {
@@ -170,8 +218,7 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
             block(result, "关键信息缺失：" + String.join("；", result.getMissingInfo()));
         }
         boolean hasConcessionEvidence = judgment.getEvidences() != null && judgment.getEvidences().stream()
-                .anyMatch(e -> e.getTriggerRule() != null
-                        && e.getTriggerRule().contains(JudgmentExplainConstants.TRIGGER_RULE_CONCESSION_MARKER));
+                .anyMatch(e -> JudgmentExplainConstants.isConcessionTriggerRule(e.getTriggerRule()));
         if (!hasConcessionEvidence) {
             block(result, "缺少让步范围触发依据");
         }

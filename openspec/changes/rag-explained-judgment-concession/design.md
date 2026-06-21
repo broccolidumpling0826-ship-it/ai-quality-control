@@ -145,6 +145,26 @@ Rationale:
 - Lightweight NLP sentence segmentation can improve fallback splitting without introducing a new model dependency.
 - RAG chunks remain evidence for retrieval and explanation; structured standard tables remain the judgment truth.
 
+### 3B. Standard Maintenance PDF Upload And Publish-Triggered Ingestion
+
+Standard maintenance integrates structured standards with one linked source document:
+
+1. User saves structured standard metadata and indicators in the standard library page.
+2. User uploads one PDF per standard; the file is stored under `backend/resources/standard-documents/{standardId}/`.
+3. Backend upserts `qc_standard_document` with `standard_id`, source file metadata, and `parse_status/index_status`.
+4. Draft upload/replace stores the file only and resets parse/index status to pending.
+5. Publish triggers `ingestAndIndexDocument` for the linked PDF using PDFBox + rule-based chunking + embedding + ES.
+6. Published replace purges prior clause rows and ES vectors, stores the new PDF, and re-indexes immediately.
+7. Delete standard removes stored PDF, document metadata, clause rows, and ES vectors.
+
+Publish success is not rolled back when indexing fails; the UI exposes index failure and supports manual re-index.
+
+Rationale:
+
+- Structured indicators remain editable before publish.
+- Draft PDFs should not pollute RAG retrieval.
+- Re-upload must not leave stale vectors in Elasticsearch.
+
 ### 4. Implement Consistency Checks Without Blocking All Workflows
 
 When standard structured limits and retrieved/document clauses disagree, runtime behavior must:

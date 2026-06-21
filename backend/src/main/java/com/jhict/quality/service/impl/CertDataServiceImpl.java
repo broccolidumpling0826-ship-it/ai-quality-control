@@ -684,8 +684,7 @@ public class CertDataServiceImpl implements CertDataService {
             return JudgmentExplainConstants.INDICATOR_RESULT_CONCESSION;
         }
         if (evidence != null
-                && StringUtils.hasText(evidence.getTriggerRule())
-                && evidence.getTriggerRule().contains(JudgmentExplainConstants.TRIGGER_RULE_CONCESSION_MARKER)) {
+                && JudgmentExplainConstants.isConcessionTriggerRule(evidence.getTriggerRule())) {
             return JudgmentExplainConstants.INDICATOR_RESULT_CONCESSION;
         }
         if (evidence == null) {

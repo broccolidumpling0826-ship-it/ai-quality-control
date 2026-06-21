@@ -9,6 +9,7 @@ import com.jhict.quality.dto.PreparedClauseIndexCmd;
 import com.jhict.quality.dto.StandardClausePageQuery;
 import com.jhict.quality.dto.StandardDocumentIngestCmd;
 import com.jhict.quality.dto.StandardDocumentPageQuery;
+import com.jhict.quality.entity.QcQualityStandard;
 import com.jhict.quality.entity.QcStandardClause;
 import com.jhict.quality.entity.QcStandardDocument;
 import com.jhict.quality.gateway.model.ModelEmbedding;
@@ -20,16 +21,20 @@ import com.jhict.quality.gateway.vector.VectorDeleteRequest;
 import com.jhict.quality.gateway.vector.VectorIndexRequest;
 import com.jhict.quality.gateway.vector.VectorIndexResponse;
 import com.jhict.quality.gateway.vector.VectorStoreGateway;
+import com.jhict.quality.gateway.vector.elasticsearch.ElasticsearchVectorProperties;
 import com.jhict.quality.mapper.QcStandardClauseMapper;
 import com.jhict.quality.mapper.QcStandardDocumentMapper;
 import com.jhict.quality.service.api.StandardDocumentService;
 import com.jhict.quality.service.support.rag.ExtractedStandardDocument;
 import com.jhict.quality.service.support.rag.StandardClauseChunk;
+import com.jhict.quality.service.support.rag.LegacyStandardDocumentFields;
 import com.jhict.quality.service.support.rag.StandardClauseChunker;
 import com.jhict.quality.service.support.rag.StandardDocumentTextExtractor;
+import com.jhict.quality.service.support.rag.StandardSourceFileStorageService;
 import com.jhict.quality.vo.StandardClauseVO;
 import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardDocumentVO;
+import com.jhict.quality.vo.StandardSourceDocumentVO;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -65,6 +70,12 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
 
     @Resource
     private StandardClauseChunker standardClauseChunker;
+
+    @Resource
+    private StandardSourceFileStorageService standardSourceFileStorageService;
+
+    @Resource
+    private ElasticsearchVectorProperties elasticsearchVectorProperties;
 
     @Override
     public IPage<StandardDocumentVO> pageDocuments(StandardDocumentPageQuery query) {
@@ -227,6 +238,137 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
             updateDocumentStatus(document.getId(), "FAILED", "FAILED", ex.getMessage());
             throw new ServiceException(ApiResult.CODE_SERVER_ERROR, "标准文档入库失败: " + ex.getMessage());
         }
+    }
+
+    @Override
+    public QcStandardDocument getLinkedDocument(String standardId) {
+        if (!StringUtils.hasText(standardId)) {
+            return null;
+        }
+        return standardDocumentMapper.selectOne(new LambdaQueryWrapper<QcStandardDocument>()
+                .eq(QcStandardDocument::getStandardId, standardId)
+                .eq(QcStandardDocument::getStatus, "ACTIVE")
+                .last("LIMIT 1"));
+    }
+
+    @Override
+    public QcStandardDocument syncLinkedDocument(QcQualityStandard standard) {
+        if (standard == null || !StringUtils.hasText(standard.getId())) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "标准信息不完整，无法同步源文档");
+        }
+        QcStandardDocument existing = getLinkedDocument(standard.getId());
+        if (existing == null) {
+            QcStandardDocument document = buildLinkedDocumentEntity(standard);
+            document.setParseStatus("PENDING");
+            document.setIndexStatus("PENDING");
+            document.setStatus("ACTIVE");
+            standardDocumentMapper.insert(document);
+            return document;
+        }
+        applyStandardSnapshot(existing.getId(), standard);
+        return standardDocumentMapper.selectById(existing.getId());
+    }
+
+    @Override
+    public void removeLinkedDocument(String standardId) {
+        QcStandardDocument document = getLinkedDocument(standardId);
+        if (document != null) {
+            purgeLinkedVectors(standardId);
+            standardDocumentMapper.deleteById(document.getId());
+        }
+        standardSourceFileStorageService.deleteStandardDirectory(standardId);
+    }
+
+    @Override
+    public void purgeLinkedVectors(String standardId) {
+        QcStandardDocument document = getLinkedDocument(standardId);
+        if (document == null) {
+            return;
+        }
+        deleteExistingClauses(document.getId(), defaultIndexName());
+        QcStandardDocument update = new QcStandardDocument();
+        update.setId(document.getId());
+        update.setIndexStatus("PENDING");
+        update.setIndexedAt(null);
+        update.setParseErrorMessage(null);
+        standardDocumentMapper.updateById(update);
+    }
+
+    @Override
+    public StandardDocumentIngestVO ingestLinkedDocument(String standardId) {
+        QcStandardDocument document = getLinkedDocument(standardId);
+        if (document == null || !StringUtils.hasText(document.getSourceFilePath())) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "标准未上传源 PDF，无法索引");
+        }
+        StandardDocumentIngestCmd cmd = new StandardDocumentIngestCmd();
+        cmd.setDocumentId(document.getId());
+        cmd.setReindexExisting(Boolean.TRUE);
+        cmd.setIndexName(defaultIndexName());
+        return ingestAndIndexDocument(cmd);
+    }
+
+    @Override
+    public StandardSourceDocumentVO buildSourceDocumentSummary(String standardId) {
+        QcStandardDocument document = getLinkedDocument(standardId);
+        StandardSourceDocumentVO vo = new StandardSourceDocumentVO();
+        if (document == null) {
+            vo.setHasSourceFile(false);
+            return vo;
+        }
+        vo.setDocumentId(document.getId());
+        vo.setSourceFileName(document.getSourceFileName());
+        vo.setParseStatus(document.getParseStatus());
+        vo.setIndexStatus(document.getIndexStatus());
+        vo.setIndexedAt(document.getIndexedAt());
+        vo.setParseErrorMessage(document.getParseErrorMessage());
+        vo.setHasSourceFile(StringUtils.hasText(document.getSourceFilePath()));
+        long chunkCount = standardClauseMapper.selectCount(new LambdaQueryWrapper<QcStandardClause>()
+                .eq(QcStandardClause::getDocumentId, document.getId())
+                .eq(QcStandardClause::getStatus, "ACTIVE"));
+        vo.setChunkCount((int) chunkCount);
+        return vo;
+    }
+
+    private QcStandardDocument buildLinkedDocumentEntity(QcQualityStandard standard) {
+        QcStandardDocument document = new QcStandardDocument();
+        document.setStandardId(standard.getId());
+        document.setDocumentCode(standard.getStandardCode());
+        document.setDocumentName(standard.getStandardName());
+        document.setDocumentType("STANDARD");
+        document.setStandardType(standard.getStandardType());
+        document.setStandardCode(standard.getStandardCode());
+        document.setStandardName(standard.getStandardName());
+        document.setVersionNo(standard.getVersionNo());
+        document.setCustomerId(standard.getCustomerId());
+        document.setVariety(standard.getVariety());
+        document.setGrade(standard.getGrade());
+        document.setSpecRange(standard.getSpecRange());
+        document.setEffectiveDate(standard.getEffectiveDate());
+        document.setExpiryDate(standard.getExpiryDate());
+        LegacyStandardDocumentFields.applyPendingFileFields(document, standard.getStandardCode());
+        return document;
+    }
+
+    private void applyStandardSnapshot(String documentId, QcQualityStandard standard) {
+        QcStandardDocument update = new QcStandardDocument();
+        update.setId(documentId);
+        update.setDocumentCode(standard.getStandardCode());
+        update.setDocumentName(standard.getStandardName());
+        update.setStandardType(standard.getStandardType());
+        update.setStandardCode(standard.getStandardCode());
+        update.setStandardName(standard.getStandardName());
+        update.setVersionNo(standard.getVersionNo());
+        update.setCustomerId(standard.getCustomerId());
+        update.setVariety(standard.getVariety());
+        update.setGrade(standard.getGrade());
+        update.setSpecRange(standard.getSpecRange());
+        update.setEffectiveDate(standard.getEffectiveDate());
+        update.setExpiryDate(standard.getExpiryDate());
+        standardDocumentMapper.updateById(update);
+    }
+
+    private String defaultIndexName() {
+        return elasticsearchVectorProperties.getStandardIndex();
     }
 
     private LambdaQueryWrapper<QcStandardDocument> buildDocumentWrapper(StandardDocumentPageQuery query) {

@@ -5,10 +5,13 @@ import com.jhict.quality.dto.PreparedClauseIndexCmd;
 import com.jhict.quality.dto.StandardClausePageQuery;
 import com.jhict.quality.dto.StandardDocumentIngestCmd;
 import com.jhict.quality.dto.StandardDocumentPageQuery;
+import com.jhict.quality.entity.QcStandardDocument;
+import com.jhict.quality.entity.QcQualityStandard;
 import com.jhict.quality.gateway.vector.VectorIndexResponse;
 import com.jhict.quality.vo.StandardClauseVO;
 import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardDocumentVO;
+import com.jhict.quality.vo.StandardSourceDocumentVO;
 
 import java.util.List;
 
@@ -72,4 +75,34 @@ public interface StandardDocumentService {
      * @return ingestion summary
      */
     StandardDocumentIngestVO ingestAndIndexDocument(StandardDocumentIngestCmd cmd);
+
+    /**
+     * Find linked source document by structured standard id.
+     */
+    QcStandardDocument getLinkedDocument(String standardId);
+
+    /**
+     * Create or update linked source document metadata from structured standard.
+     */
+    QcStandardDocument syncLinkedDocument(QcQualityStandard standard);
+
+    /**
+     * Remove linked document clauses, vectors, metadata, and stored files.
+     */
+    void removeLinkedDocument(String standardId);
+
+    /**
+     * Purge indexed clauses and vectors for the linked document.
+     */
+    void purgeLinkedVectors(String standardId);
+
+    /**
+     * Ingest linked PDF for a published standard.
+     */
+    StandardDocumentIngestVO ingestLinkedDocument(String standardId);
+
+    /**
+     * Build source document summary for standard detail page.
+     */
+    StandardSourceDocumentVO buildSourceDocumentSummary(String standardId);
 }

@@ -95,3 +95,14 @@ The system SHALL treat user questions and retrieved documents as untrusted input
 #### Scenario: User asks to ignore standards
 - **WHEN** a user query instructs the model to ignore uploaded standards or invent a limit
 - **THEN** the system SHALL ignore the injection instruction and answer only from retrieved source clauses or refuse when no basis exists
+
+### Requirement: RAG retrieval excludes draft-only source documents
+The system SHALL retrieve clauses only from active source documents linked to published structured standards unless an explicit administrative override is configured.
+
+#### Scenario: Published standard maintenance upload becomes retrievable
+- **WHEN** a standard is published and its linked PDF has been successfully indexed
+- **THEN** RAG queries SHALL be able to retrieve clauses from that standard's indexed chunks with citation metadata
+
+#### Scenario: Draft standard upload is not retrievable
+- **WHEN** a standard remains in `DRAFT` status with an uploaded PDF
+- **THEN** RAG queries SHALL NOT return clauses from that draft-only source document

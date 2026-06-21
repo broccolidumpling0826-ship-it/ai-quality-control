@@ -19,6 +19,7 @@ This change upgrades the system from “判定结果可见” to “判定依据
 - Add quality certificate output controls with data snapshot and optional PDF export; unresolved or non-release states can only generate internal preview where allowed.
 - Add confidence weight configuration with audit logging and permission controls.
 - Add repeatable demo/evaluation seed data for 20 documents, 100 inspection records, 5 conflict samples, and 30 evaluation cases.
+- Add standard maintenance PDF upload on the standard library page: store source files under backend resources, link each structured standard to one source document, ingest on publish, purge and re-index on replace, and expose download/re-index actions.
 - Split delivery into P0/P1/P2 so the final competition MVP is stable before broad platform expansion.
 
 ## Capabilities
@@ -26,6 +27,7 @@ This change upgrades the system from “判定结果可见” to “判定依据
 ### New Capabilities
 
 - `standard-rag-retrieval`: Standard/agreement/case document ingestion from PDF/Office/Markdown/text files, deterministic clause-aware chunking, embedding-based vector indexing, natural-language retrieval, cited answers, and no-evidence refusal.
+- `standard-source-file-management`: Standard maintenance PDF upload/download/replace, local source storage, publish-triggered ingestion, replace-triggered vector purge/re-index, and structured-standard linkage.
 - `ai-gateway-degradation`: Model gateway, vector-store gateway, OpenAI-compatible model configuration, Elasticsearch configuration, and layered AI fallback behavior.
 - `ai-judgment-explanation`: Source-cited judgment explanations with limits, deviations, trigger rules, confidence, and fallback text.
 - `standard-conflict-detection`: Multi-standard conflict detection, `STANDARD_CONFLICT`, conflict records, human裁决, and re-judgment after裁决.

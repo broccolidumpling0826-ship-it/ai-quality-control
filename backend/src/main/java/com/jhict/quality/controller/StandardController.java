@@ -8,15 +8,19 @@ import com.jhict.quality.dto.QcQualityStandardAddCmd;
 import com.jhict.quality.dto.QcQualityStandardPageQuery;
 import com.jhict.quality.dto.StandardCandidateQuery;
 import com.jhict.quality.service.api.StandardService;
+import com.jhict.quality.service.api.StandardSourceFileService;
 import com.jhict.quality.vo.QcIndicatorItemVO;
 import com.jhict.quality.vo.QcQualityStandardDetailVO;
 import com.jhict.quality.vo.QcQualityStandardVO;
 import com.jhict.quality.vo.StandardCandidateSetVO;
+import com.jhict.quality.vo.StandardDocumentIngestVO;
+import com.jhict.quality.vo.StandardSourceDocumentVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.jhict.quality.entity.QcQualityStandard;
@@ -24,6 +28,7 @@ import com.jhict.quality.mapper.QcQualityStandardMapper;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletResponse;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,6 +40,9 @@ public class StandardController {
 
     @Resource
     private StandardService standardService;
+
+    @Resource
+    private StandardSourceFileService standardSourceFileService;
 
     @Resource
     private QcQualityStandardMapper qualityStandardMapper;
@@ -136,5 +144,31 @@ public class StandardController {
             @ApiParam(value = "关键词（指标名称/代码）") @RequestParam(required = false) String keyword,
             @ApiParam(value = "指标类别") @RequestParam(required = false) String category) {
         return ApiResult.success(standardService.listIndicators(keyword, category));
+    }
+
+    @PostMapping("/{id}/source-file")
+    @ApiOperation(value = "上传标准源 PDF")
+    @SaCheckPermission("standard:manage")
+    public ApiResult<StandardSourceDocumentVO> uploadSourceFile(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id,
+            @ApiParam(value = "PDF 文件", required = true) @RequestPart("file") MultipartFile file) {
+        return ApiResult.success("上传成功", standardSourceFileService.uploadSourceFile(id, file));
+    }
+
+    @GetMapping("/{id}/source-file")
+    @ApiOperation(value = "下载标准源 PDF")
+    @SaCheckPermission("menu:standard")
+    public void downloadSourceFile(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id,
+            HttpServletResponse response) {
+        standardSourceFileService.downloadSourceFile(id, response);
+    }
+
+    @PostMapping("/{id}/source-file/reindex")
+    @ApiOperation(value = "重新解析并索引标准源 PDF")
+    @SaCheckPermission("standard:manage")
+    public ApiResult<StandardDocumentIngestVO> reindexSourceFile(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id) {
+        return ApiResult.success(standardSourceFileService.reindexSourceFile(id));
     }
 }

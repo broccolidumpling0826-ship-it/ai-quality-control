@@ -30,6 +30,23 @@ public final class JudgmentExplainConstants {
 
     public static final int PASSED_FLAG = 1;
 
+    /**
+     * 判断触发规则是否表示指标处于让步范围。
+     * 兼容引擎文案（含「让步范围内」）、演示种子（含 CAN_CONCESSION / 让步…范围内）等格式。
+     */
+    public static boolean isConcessionTriggerRule(String triggerRule) {
+        if (triggerRule == null || triggerRule.trim().isEmpty()) {
+            return false;
+        }
+        if (triggerRule.contains(TRIGGER_RULE_CONCESSION_MARKER)) {
+            return true;
+        }
+        if (triggerRule.contains("CAN_CONCESSION")) {
+            return true;
+        }
+        return triggerRule.contains("让步") && triggerRule.contains("范围内");
+    }
+
     private JudgmentExplainConstants() {
     }
 }

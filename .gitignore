@@ -38,7 +38,8 @@ Thumbs.db
 
 # Upload files (not committed, stored on server)
 uploads/
-*.pdf
+backend/resources/standard-documents/*
+!backend/resources/standard-documents/.gitkeep
 *.png
 *.jpg
 *.jpeg

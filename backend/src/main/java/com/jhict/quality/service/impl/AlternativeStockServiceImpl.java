@@ -1,12 +1,12 @@
 package com.jhict.quality.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.jhict.quality.engine.standard.ProductSpecMatchUtils;
 import com.jhict.quality.entity.AlternativeStock;
 import com.jhict.quality.mapper.AlternativeStockMapper;
 import com.jhict.quality.service.api.AlternativeStockService;
 import com.jhict.quality.vo.AlternativeStockVO;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.time.LocalDate;
@@ -29,10 +29,7 @@ public class AlternativeStockServiceImpl implements AlternativeStockService {
                         .le(AlternativeStock::getEarliestShipDate, latestShipDate)
                         .orderByAsc(AlternativeStock::getEarliestShipDate))
                 .stream()
-                .filter(stock -> !StringUtils.hasText(productSpec)
-                        || !StringUtils.hasText(stock.getSpecRange())
-                        || stock.getSpecRange().contains(productSpec)
-                        || productSpec.contains(stock.getSpecRange()))
+                .filter(stock -> ProductSpecMatchUtils.isCompatible(productSpec, stock.getSpecRange()))
                 .map(this::toVO)
                 .collect(Collectors.toList());
     }

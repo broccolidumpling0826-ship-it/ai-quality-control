@@ -8,6 +8,8 @@ import com.jhict.quality.gateway.model.ModelGateway;
 import com.jhict.quality.gateway.vector.VectorSearchResponse;
 import com.jhict.quality.gateway.vector.VectorSearchResult;
 import com.jhict.quality.gateway.vector.VectorStoreGateway;
+import com.jhict.quality.mapper.QcQualityStandardMapper;
+import com.jhict.quality.mapper.QcStandardClauseMapper;
 import com.jhict.quality.service.api.StandardDocumentService;
 import com.jhict.quality.vo.StandardClauseVO;
 import com.jhict.quality.vo.StandardRagAnswerVO;
@@ -23,6 +25,7 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class StandardRagServiceImplTest {
@@ -36,6 +39,12 @@ class StandardRagServiceImplTest {
     @Mock
     private StandardDocumentService standardDocumentService;
 
+    @Mock
+    private QcStandardClauseMapper standardClauseMapper;
+
+    @Mock
+    private QcQualityStandardMapper qualityStandardMapper;
+
     private StandardRagServiceImpl service;
 
     @BeforeEach
@@ -44,7 +53,10 @@ class StandardRagServiceImplTest {
         ReflectionTestUtils.setField(service, "vectorStoreGateway", vectorStoreGateway);
         ReflectionTestUtils.setField(service, "modelGateway", modelGateway);
         ReflectionTestUtils.setField(service, "standardDocumentService", standardDocumentService);
+        ReflectionTestUtils.setField(service, "standardClauseMapper", standardClauseMapper);
+        ReflectionTestUtils.setField(service, "qualityStandardMapper", qualityStandardMapper);
         ReflectionTestUtils.setField(service, "aiDegradationService", new AiDegradationServiceImpl());
+        lenient().when(standardClauseMapper.selectBatchIds(any())).thenReturn(Collections.emptyList());
     }
 
     @Test

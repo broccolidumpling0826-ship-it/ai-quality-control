@@ -1,0 +1,309 @@
+{
+  "generatedAt": "2026-06-21T11:24:44.612Z",
+  "results": [
+    {
+      "id": "NORMAL-001",
+      "pass": true,
+      "judgmentType": "QUALIFIED",
+      "citationIds": [
+        "p0_clause_gb_rm",
+        "p0_clause_gb_a"
+      ],
+      "refusal": false,
+      "confidenceBand": "HIGH",
+      "manualReview": false,
+      "responseTimeMs": 11904
+    },
+    {
+      "id": "NORMAL-002",
+      "pass": true,
+      "judgmentType": "UNQUALIFIED",
+      "citationIds": [
+        "p0_clause_c1_rm",
+        "p0_clause_c1_a",
+        "p0_clause_gb_rm",
+        "p0_clause_gb_a"
+      ],
+      "refusal": false,
+      "confidenceBand": "HIGH",
+      "manualReview": false,
+      "responseTimeMs": 12536
+    },
+    {
+      "id": "NORMAL-003",
+      "pass": true,
+      "judgmentType": "CAN_CONCESSION",
+      "citationIds": [
+        "p0_clause_gb_rm",
+        "p0_clause_gb_a"
+      ],
+      "refusal": false,
+      "confidenceBand": "MEDIUM",
+      "manualReview": true,
+      "responseTimeMs": 16432
+    },
+    {
+      "id": "NORMAL-004",
+      "pass": false,
+      "judgmentType": "STANDARD_CONFLICT",
+      "citationIds": [],
+      "refusal": false,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 457
+    },
+    {
+      "id": "NORMAL-005",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 366
+    },
+    {
+      "id": "NORMAL-006",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 391
+    },
+    {
+      "id": "NORMAL-007",
+      "pass": false,
+      "judgmentType": "CAN_CONCESSION",
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 26304
+    },
+    {
+      "id": "NORMAL-008",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [
+        "p0_clause_gb_rm",
+        "p0_clause_gb_a"
+      ],
+      "refusal": false,
+      "confidenceBand": "HIGH",
+      "manualReview": false,
+      "responseTimeMs": 619
+    },
+    {
+      "id": "NORMAL-009",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [
+        "p0_clause_gb_a",
+        "p0_clause_case_condition"
+      ],
+      "refusal": false,
+      "confidenceBand": "MEDIUM",
+      "manualReview": true,
+      "responseTimeMs": 523
+    },
+    {
+      "id": "NORMAL-010",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [
+        "p0_clause_c1_rm",
+        "p0_clause_c2_rm"
+      ],
+      "refusal": false,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 527
+    },
+    {
+      "id": "BOUNDARY-001",
+      "pass": false,
+      "error": "Inspection boundary cases require structured payload mapping; skipped in live runner",
+      "responseTimeMs": 0
+    },
+    {
+      "id": "BOUNDARY-002",
+      "pass": false,
+      "error": "Inspection boundary cases require structured payload mapping; skipped in live runner",
+      "responseTimeMs": 0
+    },
+    {
+      "id": "BOUNDARY-003",
+      "pass": false,
+      "error": "Inspection boundary cases require structured payload mapping; skipped in live runner",
+      "responseTimeMs": 0
+    },
+    {
+      "id": "BOUNDARY-004",
+      "pass": false,
+      "error": "Inspection boundary cases require structured payload mapping; skipped in live runner",
+      "responseTimeMs": 0
+    },
+    {
+      "id": "BOUNDARY-005",
+      "pass": false,
+      "error": "Inspection boundary cases require structured payload mapping; skipped in live runner",
+      "responseTimeMs": 0
+    },
+    {
+      "id": "BOUNDARY-006",
+      "pass": false,
+      "error": "Inspection boundary cases require structured payload mapping; skipped in live runner",
+      "responseTimeMs": 0
+    },
+    {
+      "id": "BOUNDARY-007",
+      "pass": false,
+      "error": "Inspection boundary cases require structured payload mapping; skipped in live runner",
+      "responseTimeMs": 1
+    },
+    {
+      "id": "BOUNDARY-008",
+      "pass": true,
+      "judgmentType": "UNQUALIFIED",
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 33164
+    },
+    {
+      "id": "BOUNDARY-009",
+      "pass": true,
+      "judgmentType": null,
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 437
+    },
+    {
+      "id": "BOUNDARY-010",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 379
+    },
+    {
+      "id": "REFUSAL-001",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 294
+    },
+    {
+      "id": "REFUSAL-002",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 377
+    },
+    {
+      "id": "REFUSAL-003",
+      "pass": true,
+      "judgmentType": "STANDARD_CONFLICT",
+      "citationIds": [
+        "p0_clause_c1_rm",
+        "p0_clause_c2_rm",
+        "p0_clause_gb_rm"
+      ],
+      "refusal": false,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 16806
+    },
+    {
+      "id": "REFUSAL-004",
+      "pass": false,
+      "judgmentType": "CAN_CONCESSION",
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 29185
+    },
+    {
+      "id": "REFUSAL-005",
+      "pass": true,
+      "judgmentType": null,
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 293
+    },
+    {
+      "id": "SECURITY-001",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 376
+    },
+    {
+      "id": "SECURITY-002",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 380
+    },
+    {
+      "id": "SECURITY-003",
+      "pass": false,
+      "judgmentType": null,
+      "citationIds": [
+        "p0_clause_c1_rm",
+        "p0_clause_c2_rm"
+      ],
+      "refusal": false,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 521
+    },
+    {
+      "id": "SECURITY-004",
+      "pass": false,
+      "judgmentType": "CAN_CONCESSION",
+      "citationIds": [],
+      "refusal": true,
+      "confidenceBand": "LOW",
+      "manualReview": true,
+      "responseTimeMs": 33065
+    },
+    {
+      "id": "SECURITY-005",
+      "pass": false,
+      "judgmentType": "UNQUALIFIED",
+      "citationIds": [
+        "p0_clause_c1_rm",
+        "p0_clause_c1_a",
+        "p0_clause_gb_rm",
+        "p0_clause_gb_a"
+      ],
+      "refusal": false,
+      "confidenceBand": "MEDIUM",
+      "manualReview": false,
+      "responseTimeMs": 16736
+    }
+  ]
+}

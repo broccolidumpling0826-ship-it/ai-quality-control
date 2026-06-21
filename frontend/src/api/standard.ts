@@ -60,3 +60,35 @@ export const getSpecRanges = (params: {
   grade: string
   customerId?: string
 }) => get<SpecRangeOption[]>('/standards/spec-ranges', params as Record<string, unknown>)
+
+export interface StandardSourceDocumentSummary {
+  documentId?: string
+  sourceFileName?: string
+  parseStatus?: string
+  indexStatus?: string
+  indexedAt?: string
+  parseErrorMessage?: string
+  chunkCount?: number
+  hasSourceFile?: boolean
+}
+
+export const uploadStandardSourceFile = (standardId: string, file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return post<StandardSourceDocumentSummary>(`/standards/${standardId}/source-file`, formData)
+}
+
+export async function downloadStandardSourceFile(standardId: string): Promise<Blob> {
+  const token = localStorage.getItem('qc_token')
+  const response = await fetch(`/api/v1/standards/${standardId}/source-file`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  })
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(text || '下载标准源 PDF 失败')
+  }
+  return response.blob()
+}
+
+export const reindexStandardSourceFile = (standardId: string) =>
+  post(`/standards/${standardId}/source-file/reindex`)

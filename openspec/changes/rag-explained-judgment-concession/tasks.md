@@ -124,3 +124,15 @@
 - [x] 12.7 Run evaluation report and confirm all expected fields are reported
 - [x] 12.8 Document unavailable external-service checks and required environment variables for handoff
 - [ ] 12.9 Manually verify document ingestion chain: PDF/Office/Markdown source → extracted text → clause chunks → embedding vectors → ES documents → RAG answer citations
+
+## 13. Standard Maintenance PDF Source File
+
+- [x] 13.1 Add OpenSpec delta for `standard-source-file-management` and update related change artifacts
+- [x] 13.2 Add runtime storage config and `backend/resources/standard-documents/` directory handling
+- [x] 13.3 Add standard source file upload/download/reindex APIs on `StandardController`
+- [x] 13.4 Link `qc_standard_document.standard_id` upsert/sync from standard maintenance CRUD
+- [x] 13.5 Trigger ingest on publish; purge/re-index on published replace; cascade delete on standard delete
+- [x] 13.6 Extend standard detail VO with source document status and chunk/index metadata
+- [x] 13.7 Add standard maintenance PDF upload/download/replace UI on `standard-lib/index.vue`
+- [x] 13.8 Filter RAG retrieval to exclude draft-only linked source documents
+- [ ] 13.9 Verify publish/upload/replace/delete E2E and update demo operation manual

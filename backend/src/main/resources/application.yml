@@ -57,6 +57,9 @@ app:
     base-path: /opt/quality-control/uploads
     url-prefix: /api/v1/files
     max-size: 20971520
+  standard-document:
+    storage-path: ${STANDARD_DOC_STORAGE_PATH:resources/standard-documents}
+    max-file-size-mb: ${STANDARD_DOC_MAX_MB:50}
   cert:
     # 质保书纳入的指标类别（D-017）：默认成分/性能/尺寸；ADMIN 可修改此配置项
     included-categories: COMPOSITION,PERFORMANCE,DIMENSION

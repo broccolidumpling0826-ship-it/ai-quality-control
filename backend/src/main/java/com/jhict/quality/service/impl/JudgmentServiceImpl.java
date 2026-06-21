@@ -460,8 +460,7 @@ public class JudgmentServiceImpl implements JudgmentService {
         }
         long failedCount = evidences.stream().filter(e -> !Integer.valueOf(1).equals(e.getIsPassed())).count();
         long concessionCount = evidences.stream()
-                .filter(e -> e.getTriggerRule() != null
-                        && e.getTriggerRule().contains(JudgmentExplainConstants.TRIGGER_RULE_CONCESSION_MARKER))
+                .filter(e -> JudgmentExplainConstants.isConcessionTriggerRule(e.getTriggerRule()))
                 .count();
         StringBuilder explanation = new StringBuilder();
         explanation.append("系统按结构化标准完成规则判定，最终结论为 ")
@@ -872,7 +871,7 @@ public class JudgmentServiceImpl implements JudgmentService {
         if (uncoveredByStandard) {
             return JudgmentExplainConstants.INDICATOR_RESULT_WARNING;
         }
-        if (triggerRule != null && triggerRule.contains(JudgmentExplainConstants.TRIGGER_RULE_CONCESSION_MARKER)) {
+        if (JudgmentExplainConstants.isConcessionTriggerRule(triggerRule)) {
             return JudgmentExplainConstants.INDICATOR_RESULT_CONCESSION;
         }
         if (Integer.valueOf(JudgmentExplainConstants.PASSED_FLAG).equals(passedFlag)) {

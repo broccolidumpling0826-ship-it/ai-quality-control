@@ -26,12 +26,30 @@ Backend runtime:
 | `EMBEDDING_MODEL` | Embedding model name | `BAAI/bge-m3` |
 | `EMBEDDING_PROVIDER` | Embedding provider label | `SILICONFLOW` |
 | `EMBEDDING_TIMEOUT_MILLIS` | Embedding model timeout | `15000` |
-| `ES_VECTOR_ENABLED` | Enable vector store calls | `false` |
+| `ES_VECTOR_ENABLED` | Enable vector store calls | `true` in dev profile |
 | `ES_HOST` | Elasticsearch endpoint | `http://localhost:9200` |
 | `ES_USERNAME` | Elasticsearch username | empty |
 | `ES_PASSWORD` | Elasticsearch password | empty |
 | `ES_STANDARD_INDEX` | Clause vector index | `quality-standard-clauses` |
 | `ES_TIMEOUT_MILLIS` | Vector search timeout | `5000` |
+| `STANDARD_DOC_STORAGE_PATH` | Runtime directory for uploaded standard PDFs | `resources/standard-documents` (relative to backend working directory) |
+
+## Standard Source File Storage
+
+Uploaded standard PDFs from the standard maintenance page are stored under:
+
+```text
+backend/resources/standard-documents/{standardId}/
+```
+
+This is a runtime directory, not `src/main/resources`. Each structured standard may have one linked `qc_standard_document` row via `standard_id`.
+
+Ingestion behavior:
+
+- `DRAFT` + upload/replace: store/replace file only, reset parse/index status to pending, no ES write
+- `PUBLISH`: parse PDF → deterministic chunk → embedding → ES index
+- `PUBLISHED` + replace: purge old clauses/vectors, store new file, re-index immediately
+- publish success with index failure: keep standard published, expose failure and allow manual re-index
 
 ## RAG Ingestion Contract
 
@@ -47,6 +65,13 @@ The current RAG requirement is a full ingestion pipeline, not only a prepared-cl
 5. Generate embedding vectors for chunks before ES indexing.
 6. Store source text, embedding vector, citation metadata, applicability metadata, and parse/embedding/index status in DB/ES.
 7. For RAG query, execute `query text -> query embedding -> vector/keyword retrieval -> source-grounded chat answer`.
+
+After applying P0 clause seed migrations, index prepared clauses into ES:
+
+```bash
+cd backend
+node scripts/index-p0-clauses.mjs
+```
 
 Structured standard tables remain the judgment truth. Extracted PDF/Office/table text is retrieval evidence for citation and review only.
 

@@ -18,6 +18,7 @@ import com.jhict.quality.mapper.QcIndicatorItemMapper;
 import com.jhict.quality.mapper.QcQualityStandardMapper;
 import com.jhict.quality.mapper.QcStandardIndicatorMapper;
 import com.jhict.quality.service.api.IndicatorService;
+import com.jhict.quality.service.api.StandardDocumentService;
 import com.jhict.quality.service.api.StandardService;
 import com.jhict.quality.vo.QcIndicatorItemVO;
 import com.jhict.quality.vo.QcQualityStandardDetailVO;
@@ -25,6 +26,8 @@ import com.jhict.quality.vo.QcQualityStandardVO;
 import com.jhict.quality.vo.StandardCandidateSetVO;
 import com.jhict.quality.vo.StandardCandidateVO;
 import com.jhict.quality.vo.StandardConflictDraftVO;
+import com.jhict.quality.vo.StandardDocumentIngestVO;
+import com.jhict.quality.vo.StandardSourceDocumentVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,6 +60,9 @@ public class StandardServiceImpl implements StandardService {
 
     @Resource
     private IndicatorService indicatorService;
+
+    @Resource
+    private StandardDocumentService standardDocumentService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -143,6 +149,8 @@ public class StandardServiceImpl implements StandardService {
         );
         saveStandardIndicators(cmd.getId(), cmd.getIndicators());
 
+        standardDocumentService.syncLinkedDocument(existing);
+
         log.info("更新质量标准，id={}", cmd.getId());
     }
 
@@ -159,6 +167,7 @@ public class StandardServiceImpl implements StandardService {
                 new LambdaQueryWrapper<QcStandardIndicator>()
                         .eq(QcStandardIndicator::getStandardId, id)
         );
+        standardDocumentService.removeLinkedDocument(id);
         qualityStandardMapper.deleteById(id);
 
         log.info("删除质量标准，id={}, type={}, variety={}, grade={}",
@@ -206,6 +215,8 @@ public class StandardServiceImpl implements StandardService {
         standard.setStatus("PUBLISHED");
         qualityStandardMapper.updateById(standard);
 
+        standardDocumentService.syncLinkedDocument(standard);
+
         // 查询同体系其他已发布的标准（作为提示信息返回）
         List<QcQualityStandard> otherPublished = qualityStandardMapper.findOtherPublishedInSameScope(
                 standard.getStandardType(),
@@ -230,6 +241,18 @@ public class StandardServiceImpl implements StandardService {
         result.put("message", needingExpiryList.isEmpty()
                 ? "标准发布成功"
                 : "标准发布成功，以下同体系已发布版本请注意处理有效期：" + needingExpiryList.size() + "条");
+
+        StandardSourceDocumentVO sourceDocument = standardDocumentService.buildSourceDocumentSummary(id);
+        result.put("sourceDocument", sourceDocument);
+        if (Boolean.TRUE.equals(sourceDocument.getHasSourceFile())) {
+            try {
+                StandardDocumentIngestVO ingestVO = standardDocumentService.ingestLinkedDocument(id);
+                result.put("sourceIngest", ingestVO);
+            } catch (Exception ex) {
+                log.warn("标准发布后立即索引源 PDF 失败，standardId={}, error={}", id, ex.getMessage());
+                result.put("sourceIngestError", ex.getMessage());
+            }
+        }
 
         log.info("发布质量标准，id={}, otherPublished={}", id, otherPublished.size());
         return result;
@@ -342,6 +365,7 @@ public class StandardServiceImpl implements StandardService {
         }).collect(Collectors.toList());
 
         detailVO.setIndicators(indicatorDetails);
+        detailVO.setSourceDocument(standardDocumentService.buildSourceDocumentSummary(id));
         return detailVO;
     }
 

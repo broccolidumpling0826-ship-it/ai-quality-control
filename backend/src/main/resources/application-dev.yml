@@ -47,7 +47,7 @@ app:
       provider: SILICONFLOW
       timeout-millis: 15000
     vector:
-      enabled: ${ES_VECTOR_ENABLED:false}
+      enabled: ${ES_VECTOR_ENABLED:true}
       host: ${ES_HOST:http://localhost:9200}
       username: ${ES_USERNAME:elastic}
       password: ${ES_PASSWORD:sisHuNo.1}

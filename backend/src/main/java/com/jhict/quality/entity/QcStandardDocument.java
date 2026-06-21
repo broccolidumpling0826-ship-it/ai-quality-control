@@ -1,5 +1,6 @@
 package com.jhict.quality.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.jhict.quality.common.entity.CoreEntity;
 import io.swagger.annotations.ApiModel;
@@ -60,6 +61,22 @@ public class QcStandardDocument extends CoreEntity {
 
     @ApiModelProperty(value = "失效日期")
     private LocalDate expiryDate;
+
+    @ApiModelProperty(value = "旧版文件名字段，兼容历史表结构")
+    @TableField("file_name")
+    private String fileName;
+
+    @ApiModelProperty(value = "旧版文件路径字段，兼容历史表结构")
+    @TableField("file_path")
+    private String filePath;
+
+    @ApiModelProperty(value = "旧版文件类型字段，兼容历史表结构")
+    @TableField("file_type")
+    private String fileType;
+
+    @ApiModelProperty(value = "旧版文件大小字段，兼容历史表结构")
+    @TableField("file_size")
+    private Long fileSize;
 
     @ApiModelProperty(value = "原始文件名")
     private String sourceFileName;

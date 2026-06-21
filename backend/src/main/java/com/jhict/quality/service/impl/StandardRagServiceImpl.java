@@ -6,6 +6,8 @@ import com.jhict.quality.common.exception.ServiceException;
 import com.jhict.quality.dto.AiDegradationRequest;
 import com.jhict.quality.dto.StandardClausePageQuery;
 import com.jhict.quality.dto.StandardRagQueryCmd;
+import com.jhict.quality.entity.QcQualityStandard;
+import com.jhict.quality.entity.QcStandardClause;
 import com.jhict.quality.enums.AiDegradationSource;
 import com.jhict.quality.gateway.model.ModelEmbedding;
 import com.jhict.quality.gateway.model.ModelEmbeddingRequest;
@@ -18,6 +20,8 @@ import com.jhict.quality.gateway.vector.VectorSearchRequest;
 import com.jhict.quality.gateway.vector.VectorSearchResponse;
 import com.jhict.quality.gateway.vector.VectorSearchResult;
 import com.jhict.quality.gateway.vector.VectorStoreGateway;
+import com.jhict.quality.mapper.QcQualityStandardMapper;
+import com.jhict.quality.mapper.QcStandardClauseMapper;
 import com.jhict.quality.service.api.AiDegradationService;
 import com.jhict.quality.service.api.StandardDocumentService;
 import com.jhict.quality.service.api.StandardRagService;
@@ -33,7 +37,10 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,14 +65,20 @@ public class StandardRagServiceImpl implements StandardRagService {
     @Resource
     private StandardDocumentService standardDocumentService;
 
+    @Resource
+    private QcStandardClauseMapper standardClauseMapper;
+
+    @Resource
+    private QcQualityStandardMapper qualityStandardMapper;
+
     @Override
     public StandardRagAnswerVO query(StandardRagQueryCmd cmd) {
         validateQuery(cmd);
         List<Double> queryVector = buildQueryVector(cmd);
         VectorSearchResponse vectorResponse = vectorStoreGateway.searchClauses(buildVectorSearchRequest(cmd, queryVector));
-        List<StandardRagSourceVO> sources = toSources(vectorResponse);
+        List<StandardRagSourceVO> sources = filterUnpublishedStandardSources(toSources(vectorResponse));
         if (sources.isEmpty()) {
-            sources = fallbackDbSearch(cmd);
+            sources = filterUnpublishedStandardSources(fallbackDbSearch(cmd));
         }
         if (sources.isEmpty()) {
             return noEvidence(cmd, vectorResponse, queryVector);
@@ -361,6 +374,50 @@ public class StandardRagServiceImpl implements StandardRagService {
         reference.setParagraphText(source.getParagraphText());
         reference.setScore(source.getScore());
         return reference;
+    }
+
+    private List<StandardRagSourceVO> filterUnpublishedStandardSources(List<StandardRagSourceVO> sources) {
+        if (CollectionUtils.isEmpty(sources)) {
+            return sources;
+        }
+        List<String> clauseIds = sources.stream()
+                .map(StandardRagSourceVO::getClauseId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList());
+        if (clauseIds.isEmpty()) {
+            return sources;
+        }
+        List<QcStandardClause> clauses = standardClauseMapper.selectBatchIds(clauseIds);
+        if (CollectionUtils.isEmpty(clauses)) {
+            return sources;
+        }
+        Set<String> standardIds = clauses.stream()
+                .map(QcStandardClause::getStandardId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (standardIds.isEmpty()) {
+            return sources;
+        }
+        List<QcQualityStandard> standards = qualityStandardMapper.selectBatchIds(standardIds);
+        Set<String> blockedStandardIds = standards.stream()
+                .filter(standard -> !"PUBLISHED".equals(standard.getStatus()))
+                .map(QcQualityStandard::getId)
+                .collect(Collectors.toSet());
+        if (blockedStandardIds.isEmpty()) {
+            return sources;
+        }
+        Map<String, String> clauseStandardMap = clauses.stream()
+                .filter(clause -> StringUtils.hasText(clause.getStandardId()))
+                .collect(Collectors.toMap(QcStandardClause::getId, QcStandardClause::getStandardId, (left, right) -> left));
+        Set<String> blockedClauseIds = new HashSet<>();
+        for (Map.Entry<String, String> entry : clauseStandardMap.entrySet()) {
+            if (blockedStandardIds.contains(entry.getValue())) {
+                blockedClauseIds.add(entry.getKey());
+            }
+        }
+        return sources.stream()
+                .filter(source -> !blockedClauseIds.contains(source.getClauseId()))
+                .collect(Collectors.toList());
     }
 
     private int safeTopK(Integer topK) {
