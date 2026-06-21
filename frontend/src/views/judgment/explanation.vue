@@ -1,5 +1,7 @@
 <template>
   <div class="explanation-page" v-loading="loading">
+    <el-tabs v-model="activeTab" class="explanation-tabs">
+      <el-tab-pane label="规则解释" name="rule">
     <!-- 顶部英雄区 -->
     <el-card shadow="never" class="hero-card" v-if="detail">
       <div class="hero-content">
@@ -160,6 +162,59 @@
         @click="handleConcession"
       >发起让步申请</el-button>
     </div>
+      </el-tab-pane>
+
+      <el-tab-pane label="AI 解释" name="ai">
+        <div v-if="!judgmentIdForAi" class="ai-tab-empty">
+          <el-empty description="暂无判定 ID，无法加载 AI 解释" />
+        </div>
+        <template v-else>
+          <div class="ai-tab-toolbar">
+            <el-button
+              type="primary"
+              :loading="aiLoading"
+              @click="loadAiPreview"
+            >刷新 AI 解释</el-button>
+            <el-button
+              type="primary"
+              plain
+              @click="router.push(`/judgment/ai-explanation?id=${judgmentIdForAi}`)"
+            >查看完整 AI 解释页</el-button>
+          </div>
+
+          <div v-if="aiPreview" v-loading="aiLoading" class="ai-preview">
+            <div class="ai-preview-badges">
+              <el-tag
+                :type="aiConfidenceTag(aiPreview.confidenceLevel) as any"
+                size="large"
+                effect="dark"
+              >
+                置信度：{{ aiConfidenceLabel(aiPreview.confidenceLevel) }}
+              </el-tag>
+              <el-tag v-if="aiPreview.degraded" type="warning" size="large">降级模式</el-tag>
+              <el-tag v-if="aiPreview.manualReviewRequired" type="danger" size="large">需人工复核</el-tag>
+            </div>
+            <el-card shadow="never" style="margin-top:12px">
+              <p class="ai-narrative">{{ aiPreview.narrativeText || '暂无 AI 解释' }}</p>
+            </el-card>
+            <div v-if="aiPreview.citations?.length" class="ai-citations">
+              <p class="ai-citations-title">引用来源</p>
+              <el-tag
+                v-for="(c, i) in aiPreview.citations"
+                :key="i"
+                size="small"
+                effect="plain"
+                class="citation-tag"
+                @click="router.push('/standard-rag')"
+              >
+                [{{ i + 1 }}] {{ c.standardName || c.sectionRef }}
+              </el-tag>
+            </div>
+          </div>
+          <el-empty v-else-if="!aiLoading" description="点击「刷新 AI 解释」加载内容" />
+        </template>
+      </el-tab-pane>
+    </el-tabs>
 
     <!-- 发起复检弹窗 -->
     <el-dialog v-model="reinspectionDialogVisible" title="发起复检" width="440px">
@@ -188,15 +243,21 @@ import { CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { useDictStore } from '@/store/dict'
 import { useTableFilter } from '@/composables/use-table-filter'
 import { getJudgmentExplanation, getJudgmentByRecord } from '@/api/judgment'
+import { getAiJudgmentExplanation, type AiJudgmentExplanation } from '@/api/ai-judgment'
 import { initiateReinspection } from '@/api/reinspection'
 
 const route = useRoute()
 const router = useRouter()
 const dictStore = useDictStore()
 
+const activeTab = ref('rule')
 const loading = ref(false)
 const detail = ref<any>(null)
 const actionLoading = ref(false)
+const aiLoading = ref(false)
+const aiPreview = ref<AiJudgmentExplanation | null>(null)
+
+const judgmentIdForAi = computed(() => detail.value?.judgmentId ?? detail.value?.id ?? route.query.id as string)
 const indicatorDetails = computed(() => detail.value?.indicatorDetails ?? [])
 const { getFilters: getIndicatorFilters, filterMethod: indicatorFilterMethod } = useTableFilter(indicatorDetails)
 
@@ -276,8 +337,35 @@ async function loadDetail() {
       res = await getJudgmentByRecord(route.query.recordId as string)
     }
     detail.value = res
+    if (route.query.tab === 'ai') {
+      activeTab.value = 'ai'
+      loadAiPreview()
+    }
   } finally {
     loading.value = false
+  }
+}
+
+function aiConfidenceLabel(level?: string) {
+  const map: Record<string, string> = { HIGH: '高', MEDIUM: '中', LOW: '低' }
+  return map[level || ''] || level || '—'
+}
+
+function aiConfidenceTag(level?: string) {
+  const map: Record<string, string> = { HIGH: 'success', MEDIUM: 'warning', LOW: 'danger' }
+  return map[level || ''] || 'info'
+}
+
+async function loadAiPreview() {
+  const jid = judgmentIdForAi.value
+  if (!jid) return
+  aiLoading.value = true
+  try {
+    aiPreview.value = await getAiJudgmentExplanation(jid)
+  } catch {
+    aiPreview.value = null
+  } finally {
+    aiLoading.value = false
   }
 }
 
@@ -381,5 +469,41 @@ onMounted(loadDetail)
 .text-danger {
   color: #f56c6c;
   font-weight: 600;
+}
+.explanation-tabs :deep(.el-tabs__header) {
+  margin-bottom: 12px;
+}
+.ai-tab-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ai-preview-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ai-narrative {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text-heading);
+  white-space: pre-wrap;
+}
+.ai-citations {
+  margin-top: 12px;
+}
+.ai-citations-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-heading);
+}
+.citation-tag {
+  margin-right: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+.ai-tab-empty {
+  padding: 40px 0;
 }
 </style>

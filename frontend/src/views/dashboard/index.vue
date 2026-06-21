@@ -11,6 +11,69 @@
       </el-button>
     </div>
 
+    <!-- AI 风险预警 -->
+    <el-card
+      v-if="aiRiskAlertCount > 0"
+      shadow="never"
+      class="ai-risk-card"
+    >
+      <div class="ai-risk-content">
+        <el-icon class="ai-risk-icon"><WarningFilled /></el-icon>
+        <div class="ai-risk-body">
+          <p class="ai-risk-title">AI 风险预警</p>
+          <p class="ai-risk-desc">
+            检测到 {{ aiRiskAlertCount }} 项需关注风险（高险让步 / 未裁定冲突 / 低置信度判定）
+          </p>
+        </div>
+        <div class="ai-risk-actions">
+          <el-button type="warning" plain size="small" @click="router.push('/standard-lib/conflicts')">
+            查看冲突
+          </el-button>
+          <el-button type="danger" plain size="small" @click="router.push('/ai-audit')">
+            AI 审计
+          </el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 决赛演示快捷入口 -->
+    <el-card shadow="never" class="demo-card" v-loading="demoLoading">
+      <template #header>
+        <div class="card-title">
+          <el-icon class="title-icon"><Promotion /></el-icon>
+          <span>决赛演示快捷入口</span>
+        </div>
+      </template>
+      <el-row :gutter="16">
+        <el-col
+          v-for="scenario in demoScenarios"
+          :key="scenario.demoCode"
+          :xs="24"
+          :sm="12"
+          :lg="6"
+        >
+          <div
+            class="demo-scenario-card"
+            :class="`demo-scenario-card--${scenarioTypeClass(scenario.judgmentType)}`"
+            @click="goDemoScenario(scenario)"
+          >
+            <div class="demo-scenario-badge">
+              <el-tag :type="judgmentTagType(scenario.judgmentType) as any" size="small" effect="dark">
+                {{ judgmentTypeLabel(scenario.judgmentType) }}
+              </el-tag>
+            </div>
+            <p class="demo-scenario-title">{{ scenario.title }}</p>
+            <p class="demo-scenario-code">{{ scenario.demoCode }}</p>
+            <div class="demo-scenario-footer">
+              <span>查看判定解释</span>
+              <el-icon><ArrowRight /></el-icon>
+            </div>
+          </div>
+        </el-col>
+      </el-row>
+      <el-empty v-if="!demoLoading && demoScenarios.length === 0" description="暂无演示数据" :image-size="60" />
+    </el-card>
+
     <!-- 指标卡片区 -->
     <el-row :gutter="20" class="stat-cards">
       <el-col :xs="24" :sm="12" :lg="6">
@@ -228,9 +291,10 @@ import { ElMessage } from 'element-plus'
 import {
   Refresh, Stamp, RefreshRight, Check, ArrowRight,
   List, Bell, Grid, CircleCloseFilled,
-  InfoFilled, WarningFilled, CircleCheckFilled
+  InfoFilled, WarningFilled, CircleCheckFilled, Promotion
 } from '@element-plus/icons-vue'
 import { get } from '@/utils/request'
+import { getDashboardOverview, getDemoScenarios, type DemoScenario } from '@/api/dashboard'
 import type { DashboardSummary, PendingItem, SystemMessage } from '@/types'
 
 const router = useRouter()
@@ -243,16 +307,23 @@ const summary = ref<DashboardSummary>({
   reinspectionTask: 0,
   concessionApproval: 0
 })
+const aiRiskAlertCount = ref(0)
+const demoLoading = ref(false)
+const demoScenarios = ref<DemoScenario[]>([])
 
 async function loadSummary() {
   summaryLoading.value = true
   try {
-    const data = await get<Record<string, number>>('/judgments/dashboard/summary')
+    const data = await getDashboardOverview()
     summary.value = {
-      pendingJudgment: Number(data.pendingJudgmentCount ?? data.pendingJudgment ?? 0),
-      unqualifiedBatch: Number(data.unqualifiedCount ?? data.unqualifiedBatch ?? 0),
-      reinspectionTask: Number(data.pendingReinspectionCount ?? data.reinspectionTask ?? 0),
-      concessionApproval: Number(data.pendingConcessionApprovalCount ?? data.concessionApproval ?? 0)
+      pendingJudgment: Number(data.pendingJudgmentCount ?? 0),
+      unqualifiedBatch: Number(data.unqualifiedCount ?? 0),
+      reinspectionTask: Number(data.pendingReinspectionCount ?? 0),
+      concessionApproval: Number(data.pendingConcessionApprovalCount ?? 0)
+    }
+    aiRiskAlertCount.value = Number(data.aiRiskAlertCount ?? 0)
+    if (data.demoLinks?.length) {
+      demoScenarios.value = data.demoLinks
     }
   } catch {
     summary.value = {
@@ -261,8 +332,62 @@ async function loadSummary() {
       reinspectionTask: 0,
       concessionApproval: 0
     }
+    aiRiskAlertCount.value = 0
   } finally {
     summaryLoading.value = false
+  }
+}
+
+async function loadDemoScenarios() {
+  demoLoading.value = true
+  try {
+    if (!demoScenarios.value.length) {
+      demoScenarios.value = await getDemoScenarios()
+    }
+  } finally {
+    demoLoading.value = false
+  }
+}
+
+function judgmentTypeLabel(type?: string) {
+  const map: Record<string, string> = {
+    QUALIFIED: '合格',
+    UNQUALIFIED: '不合格',
+    CAN_CONCESSION: '可让步',
+    CONCESSION: '让步',
+    NEED_REINSPECTION: '需复检'
+  }
+  return map[type || ''] || type || '演示'
+}
+
+function judgmentTagType(type?: string) {
+  const map: Record<string, string> = {
+    QUALIFIED: 'success',
+    UNQUALIFIED: 'danger',
+    CAN_CONCESSION: 'warning',
+    CONCESSION: 'warning',
+    NEED_REINSPECTION: 'info'
+  }
+  return map[type || ''] || 'info'
+}
+
+function scenarioTypeClass(type?: string) {
+  const map: Record<string, string> = {
+    QUALIFIED: 'success',
+    UNQUALIFIED: 'danger',
+    CAN_CONCESSION: 'warning',
+    CONCESSION: 'warning'
+  }
+  return map[type || ''] || 'primary'
+}
+
+function goDemoScenario(scenario: DemoScenario) {
+  if (scenario.routePath) {
+    router.push(scenario.routePath)
+    return
+  }
+  if (scenario.judgmentId) {
+    router.push(`/judgment/explanation?id=${scenario.judgmentId}`)
   }
 }
 
@@ -385,6 +510,7 @@ const quickActions = [
 async function loadData() {
   await Promise.all([
     loadSummary(),
+    loadDemoScenarios(),
     loadPendingItems(),
     loadSystemMessages()
   ])
@@ -416,6 +542,113 @@ onMounted(loadData)
 .page-desc {
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+/* ── AI 风险预警 ─────────────────────────────────────────── */
+.ai-risk-card {
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 140, 0, 0.35);
+  background: rgba(255, 140, 0, 0.08);
+}
+
+.ai-risk-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ai-risk-icon {
+  font-size: 32px;
+  color: var(--orange);
+  flex-shrink: 0;
+}
+
+.ai-risk-body {
+  flex: 1;
+}
+
+.ai-risk-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin-bottom: 4px;
+}
+
+.ai-risk-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ai-risk-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── 演示快捷入口 ─────────────────────────────────────────── */
+.demo-card {
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.demo-card :deep(.el-card__header) {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.demo-scenario-card {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+}
+
+.demo-scenario-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.demo-scenario-card--success:hover { border-color: var(--green); }
+.demo-scenario-card--danger:hover { border-color: var(--red); }
+.demo-scenario-card--warning:hover { border-color: var(--orange); }
+.demo-scenario-card--primary:hover { border-color: var(--cyan); }
+
+.demo-scenario-badge {
+  margin-bottom: 10px;
+}
+
+.demo-scenario-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin-bottom: 4px;
+  flex: 1;
+}
+
+.demo-scenario-code {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-data);
+  margin-bottom: 10px;
+}
+
+.demo-scenario-footer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.demo-scenario-card:hover .demo-scenario-footer {
+  color: var(--cyan);
 }
 
 /* ── 指标卡片 ─────────────────────────────────────────────── */

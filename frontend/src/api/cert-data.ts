@@ -26,7 +26,15 @@ export interface CertDataDetail {
   status?: string
   generateTime?: string
   generatedBy?: string
+  aiSummaryText?: string
   indicators?: CertIndicatorSnapshot[]
+}
+
+export interface CertAiSummaryResult {
+  batchNo?: string
+  aiSummaryText?: string
+  degraded?: boolean
+  auditLogId?: string
 }
 
 export interface CertDataPageQuery {
@@ -65,3 +73,6 @@ export const getCertDataById = (id: string) => get<CertDataDetail>(`/cert-data/$
 /** 后端分页接口使用 @RequestParam */
 export const pageCertData = (params: CertDataPageQuery) =>
   post<PageResult<CertDataDetail>>('/cert-data/page', null, { params })
+
+export const generateAiSummary = (batchNo: string) =>
+  post<CertAiSummaryResult>(`/cert-data/${encodeURIComponent(batchNo)}/ai-summary`)

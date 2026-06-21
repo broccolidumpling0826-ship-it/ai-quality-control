@@ -30,4 +30,9 @@ public interface CertDataService {
      */
     IPage<QcQualityCertDataVO> page(int pageNum, int pageSize, String coilNo, String batchNo,
                                     String startTime, String endTime);
+
+    /**
+     * 生成 AI 质保书说明
+     */
+    QcQualityCertDataVO generateAiSummary(String batchNo);
 }

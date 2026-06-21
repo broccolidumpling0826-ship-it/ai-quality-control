@@ -10,16 +10,21 @@ import com.jhict.quality.mapper.QcConcessionAcceptanceMapper;
 import com.jhict.quality.mapper.QcInspectionRecordMapper;
 import com.jhict.quality.mapper.QcJudgmentResultMapper;
 import com.jhict.quality.mapper.QcReinspectionRecordMapper;
+import com.jhict.quality.mapper.QcStandardConflictMapper;
 import com.jhict.quality.mapper.SysNotificationMapper;
 import com.jhict.quality.service.api.DashboardService;
+import com.jhict.quality.service.api.JudgmentService;
 import com.jhict.quality.vo.DashboardMessageVO;
 import com.jhict.quality.vo.DashboardPendingItemVO;
+import com.jhict.quality.vo.DashboardSummaryVO;
+import com.jhict.quality.vo.DemoScenarioVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -48,6 +53,19 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Resource
     private SysNotificationMapper notificationMapper;
+
+    @Resource
+    private QcStandardConflictMapper standardConflictMapper;
+
+    @Resource
+    private JudgmentService judgmentService;
+
+    private static final List<DemoDef> DEMO_DEFS = Arrays.asList(
+            new DemoDef("QUALIFIED", "演示：合格批次", "QUALIFIED", "DEMO-QUALIFIED-001", "/judgment/explanation"),
+            new DemoDef("UNQUALIFIED", "演示：不合格批次", "UNQUALIFIED", "DEMO-UNQUALIFIED-001", "/judgment/explanation"),
+            new DemoDef("CONCESSION", "演示：可让步批次", "CAN_CONCESSION", "DEMO-CONCESSION-001", "/judgment/explanation"),
+            new DemoDef("CONFLICT", "演示：标准冲突批次", "UNQUALIFIED", "DEMO-CONFLICT-001", "/judgment/explanation")
+    );
 
     @Override
     public List<DashboardPendingItemVO> listPendingItems(String userNo) {
@@ -248,5 +266,64 @@ public class DashboardServiceImpl implements DashboardService {
 
     private String nullToEmpty(String value) {
         return value != null ? value : "";
+    }
+
+    @Override
+    public List<DemoScenarioVO> listDemoScenarios() {
+        List<DemoScenarioVO> scenarios = new ArrayList<>();
+        for (DemoDef def : DEMO_DEFS) {
+            QcInspectionRecord record = inspectionRecordMapper.selectOne(
+                    new LambdaQueryWrapper<QcInspectionRecord>()
+                            .eq(QcInspectionRecord::getBatchNo, def.batchNo)
+                            .last("LIMIT 1"));
+            if (record == null) {
+                continue;
+            }
+            QcJudgmentResult judgment = judgmentResultMapper.selectOne(
+                    new LambdaQueryWrapper<QcJudgmentResult>()
+                            .eq(QcJudgmentResult::getRecordId, record.getId())
+                            .eq(QcJudgmentResult::getIsFinal, 1)
+                            .last("LIMIT 1"));
+            DemoScenarioVO vo = new DemoScenarioVO();
+            vo.setDemoCode(def.code);
+            vo.setTitle(def.title);
+            vo.setJudgmentType(def.judgmentType);
+            vo.setRecordId(record.getId());
+            vo.setJudgmentId(judgment != null ? judgment.getId() : null);
+            vo.setRoutePath(def.routePath + (judgment != null ? "?id=" + judgment.getId() : ""));
+            scenarios.add(vo);
+        }
+        return scenarios;
+    }
+
+    @Override
+    public DashboardSummaryVO getOverview() {
+        DashboardSummaryVO summary = judgmentService.getDashboardSummary();
+        summary.setDemoLinks(listDemoScenarios());
+        summary.setAiRiskAlertCount(aggregateAiRiskAlertCount());
+        return summary;
+    }
+
+    private long aggregateAiRiskAlertCount() {
+        long highRisk = standardConflictMapper.countHighRiskConcessions();
+        long pendingConflicts = standardConflictMapper.countPendingConflicts();
+        long lowConfidence = standardConflictMapper.countLowConfidenceReviews();
+        return highRisk + pendingConflicts + lowConfidence;
+    }
+
+    private static class DemoDef {
+        private final String code;
+        private final String title;
+        private final String judgmentType;
+        private final String batchNo;
+        private final String routePath;
+
+        private DemoDef(String code, String title, String judgmentType, String batchNo, String routePath) {
+            this.code = code;
+            this.title = title;
+            this.judgmentType = judgmentType;
+            this.batchNo = batchNo;
+            this.routePath = routePath;
+        }
     }
 }

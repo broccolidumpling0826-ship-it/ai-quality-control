@@ -618,6 +618,24 @@ public class CertDataServiceImpl implements CertDataService {
         return evidenceByIndicatorId.get(item.getId());
     }
 
+    /**
+     * 生成 AI 质保书说明（Phase 8 US6 实现占位，降级时直接返回现有数据）
+     */
+    @Override
+    public QcQualityCertDataVO generateAiSummary(String batchNo) {
+        // 查找该批次最新质保书
+        QcQualityCertData cert = certDataMapper.selectOne(
+                new LambdaQueryWrapper<QcQualityCertData>()
+                        .eq(QcQualityCertData::getBatchNo, batchNo)
+                        .orderByDesc(QcQualityCertData::getGenerateTime)
+                        .last("LIMIT 1"));
+        if (cert == null) {
+            throw new ServiceException("批次 [" + batchNo + "] 暂无质保书数据，请先生成质保书");
+        }
+        // AI 说明由 Phase 8 US6（T074-T078）实现；当前为降级占位，返回现有记录
+        return getById(cert.getId());
+    }
+
     private String getLoginUserNo() {
         try {
             Object loginId = StpUtil.getLoginIdDefaultNull();

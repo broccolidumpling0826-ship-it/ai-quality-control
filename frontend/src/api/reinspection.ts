@@ -1,4 +1,5 @@
-import { post, put } from '@/utils/request'
+import { get, post, put } from '@/utils/request'
+import type { ConfidenceLevel } from '@/api/ai-judgment'
 import type { PageResult } from '@/types'
 
 export interface InspectionRecordCandidate {
@@ -59,3 +60,17 @@ export const pageReinspections = (params: ReinspectionPageQuery & { responsibleP
       responsibleNo: params.responsibleNo ?? params.responsiblePerson
     }
   })
+
+export interface AiSuggestion {
+  suggestionType?: string
+  refId?: string
+  recommendedAction?: 'YES' | 'NO' | 'CONDITIONAL'
+  focusIndicators?: string[] | string
+  reasonText?: string
+  confidenceLevel?: ConfidenceLevel
+  degraded?: boolean
+  auditLogId?: string
+}
+
+export const getAiSuggestion = (judgmentId: string) =>
+  get<AiSuggestion>(`/reinspections/${judgmentId}/ai-suggestion`)

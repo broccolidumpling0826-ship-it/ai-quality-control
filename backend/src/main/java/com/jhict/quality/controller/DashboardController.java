@@ -5,6 +5,8 @@ import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.service.api.DashboardService;
 import com.jhict.quality.vo.DashboardMessageVO;
 import com.jhict.quality.vo.DashboardPendingItemVO;
+import com.jhict.quality.vo.DashboardSummaryVO;
+import com.jhict.quality.vo.DemoScenarioVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,5 +36,17 @@ public class DashboardController {
     public ApiResult<List<DashboardMessageVO>> messages() {
         String userNo = StpUtil.getLoginIdAsString();
         return ApiResult.success(dashboardService.listMessages(userNo));
+    }
+
+    @GetMapping("/overview")
+    @ApiOperation(value = "看板汇总（含 AI 风险预警 + Demo 入口）")
+    public ApiResult<DashboardSummaryVO> overview() {
+        return ApiResult.success(dashboardService.getOverview());
+    }
+
+    @GetMapping("/demo-scenarios")
+    @ApiOperation(value = "决赛演示快捷入口列表")
+    public ApiResult<List<DemoScenarioVO>> demoScenarios() {
+        return ApiResult.success(dashboardService.listDemoScenarios());
     }
 }

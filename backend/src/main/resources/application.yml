@@ -63,6 +63,16 @@ app:
   concession:
     # 让步催促提醒阈值（天数，FR-009）：confirm_status=PENDING 超过此天数自动提醒
     remind-days: 7
+  ai:
+    enabled: ${AI_ENABLED:true}
+    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:gpt-4o-mini}
+    timeout-ms: 5000
+    max-retries-on-429: 1
+    circuit-breaker-threshold: 3
+    circuit-breaker-open-ms: 60000
+    mock-failure: ${AI_MOCK_FAILURE:}
 
 logging:
   level:

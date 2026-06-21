@@ -29,3 +29,10 @@ mybatis-plus:
 app:
   upload:
     base-path: /tmp/quality-control/uploads
+  ai:
+    enabled: ${AI_ENABLED:false}
+    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:gpt-4o-mini}
+    timeout-ms: 5000
+    mock-failure: ${AI_MOCK_FAILURE:}

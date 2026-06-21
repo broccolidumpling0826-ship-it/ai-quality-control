@@ -112,6 +112,11 @@
       <div class="bottom-bar">
         <el-button @click="router.back()">返回</el-button>
         <el-button
+          type="primary"
+          plain
+          @click="goAiAssessment"
+        >AI 评估</el-button>
+        <el-button
           v-if="canReject"
           type="danger"
           :loading="actionLoading"
@@ -295,6 +300,13 @@ async function handleInternalApprove() {
   } finally {
     actionLoading.value = false
   }
+}
+
+function goAiAssessment() {
+  const q: Record<string, string> = {}
+  if (detail.value?.judgmentId) q.judgmentId = detail.value.judgmentId
+  if (detail.value?.id) q.concessionId = detail.value.id
+  router.push({ path: '/concession/ai-assessment', query: q })
 }
 
 onMounted(loadDetail)
