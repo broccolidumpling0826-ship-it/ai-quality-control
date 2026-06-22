@@ -41,12 +41,11 @@
         border
         stripe
         style="width:100%"
-        :row-class-name="rowClassName"
       >
         <el-table-column label="关联卷号/批次" min-width="180">
           <template #default="{ row }">
-            <div>卷号：{{ row.coilNo }}</div>
-            <div class="text-meta-sm">批次：{{ row.batchNo }}</div>
+            <div>卷号：{{ row.coilNo || '—' }}</div>
+            <div class="text-meta-sm">批次：{{ row.batchNo || '—' }}</div>
           </template>
         </el-table-column>
         <el-table-column
@@ -58,11 +57,13 @@
           :filter-method="filterMethod"
           filter-placement="bottom-start"
         />
-        <el-table-column label="有效期" width="180">
+        <el-table-column label="有效期" width="190">
           <template #default="{ row }">
-            <div>{{ row.validFrom ?? row.effectiveDate }} ~ {{ row.validTo ?? row.expiryDate }}</div>
-            <div :class="['remaining-days', remainingDaysClass(row.validTo)]">
-              剩余 {{ remainingDays(row.validTo ?? row.expiryDate) }} 天
+            <div>{{ formatValidRange(row) }}</div>
+            <div class="text-meta-sm">
+              <el-tag size="small" :type="remainingDaysTagType(row.validTo ?? row.expiryDate)">
+                剩余 {{ remainingDays(row.validTo ?? row.expiryDate) }} 天
+              </el-tag>
             </div>
           </template>
         </el-table-column>
@@ -142,15 +143,17 @@ function remainingDays(validTo: string): number {
   return Math.max(0, Math.ceil(diff / (24 * 3600 * 1000)))
 }
 
-function remainingDaysClass(validTo: string | undefined): string {
+function remainingDaysTagType(validTo: string | undefined): 'danger' | 'warning' | 'info' {
   const days = remainingDays(validTo ?? '')
-  if (days <= 7) return 'days-warning'
-  return 'days-normal'
+  if (days <= 3) return 'danger'
+  if (days <= 7) return 'warning'
+  return 'info'
 }
 
-function rowClassName({ row }: { row: any }): string {
-  if (remainingDays(row.validTo ?? row.expiryDate) <= 3) return 'expiring-row'
-  return ''
+function formatValidRange(row: any): string {
+  const from = row.validFrom ?? row.effectiveDate ?? '—'
+  const to = row.validTo ?? row.expiryDate ?? '—'
+  return `${from} ~ ${to}`
 }
 
 async function loadData() {
@@ -192,24 +195,8 @@ onMounted(loadData)
 .concession-page {
   padding: 16px;
 }
+
 .search-card :deep(.el-card__body) {
   padding: 16px 16px 0;
-}
-.remaining-days {
-  font-size: 12px;
-  margin-top: 2px;
-}
-.days-warning {
-  color: #e6a23c;
-  font-weight: 600;
-}
-.days-normal {
-  color: var(--text-muted);
-}
-:deep(.expiring-row) {
-  background-color: #fdf6ec !important;
-}
-:deep(.expiring-row:hover td) {
-  background-color: #faecd8 !important;
 }
 </style>
