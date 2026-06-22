@@ -1,86 +1,95 @@
 <template>
   <div class="standard-conflicts-page">
-    <el-card class="filter-card" shadow="never">
-      <el-form :model="query" inline>
-        <el-form-item label="状态">
-          <el-select v-model="query.status" clearable style="width: 130px">
-            <el-option label="待裁决" value="PENDING" />
-            <el-option label="已处理" value="RESOLVED" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="级别">
-          <el-select v-model="query.conflictLevel" clearable style="width: 160px">
-            <el-option label="阻断" value="BLOCKING" />
-            <el-option label="优先级可解" value="PRIORITY_RESOLVABLE" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="客户">
-          <el-input v-model="query.customerId" clearable style="width: 140px" />
-        </el-form-item>
-        <el-form-item label="品种">
-          <el-input v-model="query.variety" clearable style="width: 120px" />
-        </el-form-item>
-        <el-form-item label="牌号">
-          <el-input v-model="query.grade" clearable style="width: 120px" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search" @click="loadData">查询</el-button>
-          <el-button @click="reset">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
 
-    <el-card class="table-card" shadow="never">
-      <el-table v-loading="loading" :data="rows" border stripe>
-        <el-table-column prop="conflictNo" label="冲突编号" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="conflictLevel" label="级别" width="150">
-          <template #default="{ row }">
-            <el-tag :type="row.conflictLevel === 'BLOCKING' ? 'danger' : 'warning'">
-              {{ row.conflictLevel }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="110">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 'PENDING' ? 'danger' : 'success'">{{ row.status }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="indicatorName" label="指标" min-width="120" />
-        <el-table-column prop="customerId" label="客户" width="130" />
-        <el-table-column prop="variety" label="品种" width="120" />
-        <el-table-column prop="grade" label="牌号" width="110" />
-        <el-table-column prop="inspectionDate" label="检验日期" width="120" />
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="{ row }">
-            <el-button text type="primary" :icon="View" @click="openDetail(row.id)">详情</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div class="pager">
-        <el-pagination
-          v-model:current-page="query.pageNum"
-          v-model:page-size="query.pageSize"
-          layout="total, sizes, prev, pager, next"
-          :total="total"
-          @current-change="loadData"
-          @size-change="loadData"
-        />
+    <div class="search-bar">
+      <el-select v-model="query.status" clearable placeholder="状态" class="search-select">
+        <el-option label="待裁定" value="PENDING" />
+        <el-option label="已裁定" value="RESOLVED" />
+      </el-select>
+      <el-select v-model="query.conflictLevel" clearable placeholder="级别" class="search-select wide">
+        <el-option label="阻断" value="BLOCKING" />
+        <el-option label="优先级可解" value="PRIORITY_RESOLVABLE" />
+      </el-select>
+      <el-input v-model="query.variety" clearable placeholder="品种" class="search-input" @keyup.enter="loadData" />
+      <el-input v-model="query.grade" clearable placeholder="牌号" class="search-input" @keyup.enter="loadData" />
+      <el-button type="primary" :icon="Search" @click="loadData">查询</el-button>
+      <el-button @click="reset">重置</el-button>
+    </div>
+
+    <div class="split-layout">
+      <div class="list-panel">
+        <el-table
+          v-loading="loading"
+          :data="rows"
+          border
+          stripe
+          highlight-current-row
+          row-key="id"
+          :current-row-key="selectedId"
+          empty-text="暂无冲突记录"
+          @row-click="selectRow"
+        >
+          <el-table-column prop="variety" label="品种" min-width="96" show-overflow-tooltip />
+          <el-table-column prop="grade" label="牌号" width="96">
+            <template #default="{ row }">
+              <span class="mono">{{ row.grade }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="indicatorName" label="指标" min-width="110" show-overflow-tooltip />
+          <el-table-column prop="status" label="状态" width="96">
+            <template #default="{ row }">
+              <el-tag size="small" :type="row.status === 'PENDING' ? 'warning' : 'success'">
+                {{ row.status === 'PENDING' ? '待裁定' : '已裁定' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div class="pager">
+          <el-pagination
+            v-model:current-page="query.pageNum"
+            v-model:page-size="query.pageSize"
+            layout="total, prev, pager, next"
+            :total="total"
+            @current-change="loadData"
+            @size-change="loadData"
+          />
+        </div>
       </div>
-    </el-card>
+
+      <StandardConflictDetailPanel
+        class="detail-panel"
+        :detail="selectedDetail"
+        :loading="detailLoading"
+        @resolved="handleResolved"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { Search, View } from '@element-plus/icons-vue'
-import { pageStandardConflicts, type StandardConflict, type StandardConflictPageQuery } from '@/api/standard-conflict'
+import { useRoute } from 'vue-router'
+import { Search } from '@element-plus/icons-vue'
+import StandardConflictDetailPanel from '@/components/standard-conflicts/StandardConflictDetailPanel.vue'
+import {
+  getStandardConflict,
+  pageStandardConflicts,
+  type StandardConflict,
+  type StandardConflictPageQuery
+} from '@/api/standard-conflict'
 
-const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
+const detailLoading = ref(false)
 const rows = ref<StandardConflict[]>([])
 const total = ref(0)
-const query = reactive<StandardConflictPageQuery>({ pageNum: 1, pageSize: 10 })
+const selectedId = ref('')
+const selectedDetail = ref<StandardConflict | null>(null)
+const query = reactive<StandardConflictPageQuery>({
+  pageNum: 1,
+  pageSize: 10,
+  status: 'PENDING'
+})
 
 async function loadData() {
   loading.value = true
@@ -88,23 +97,53 @@ async function loadData() {
     const page = await pageStandardConflicts({ ...query })
     rows.value = page.records || []
     total.value = page.total || 0
+    if (!rows.value.length) {
+      selectedId.value = ''
+      selectedDetail.value = null
+      return
+    }
+    const routeId = String(route.query.id || '')
+    const preferredId = routeId && rows.value.some((row) => row.id === routeId)
+      ? routeId
+      : selectedId.value && rows.value.some((row) => row.id === selectedId.value)
+        ? selectedId.value
+        : rows.value[0].id
+    await selectById(preferredId)
   } finally {
     loading.value = false
   }
 }
 
+async function selectById(id: string) {
+  if (!id) return
+  selectedId.value = id
+  detailLoading.value = true
+  try {
+    selectedDetail.value = await getStandardConflict(id)
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+function selectRow(row: StandardConflict) {
+  if (row.id !== selectedId.value) {
+    selectById(row.id)
+  }
+}
+
+function handleResolved(detail: StandardConflict) {
+  selectedDetail.value = detail
+  loadData()
+}
+
 function reset() {
-  query.status = ''
+  query.status = 'PENDING'
   query.conflictLevel = ''
   query.customerId = ''
   query.variety = ''
   query.grade = ''
   query.pageNum = 1
   loadData()
-}
-
-function openDetail(id: string) {
-  router.push({ path: '/standard-conflicts/detail', query: { id } })
 }
 
 onMounted(loadData)
@@ -115,19 +154,88 @@ onMounted(loadData)
   padding: 16px;
 }
 
-.filter-card,
-.table-card {
-  background: var(--bg-panel);
-  border-color: var(--border-color);
+.page-header {
+  margin-bottom: 12px;
 }
 
-.table-card {
-  margin-top: 12px;
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-mark {
+  color: var(--gold, #ffb400);
+  font-size: 16px;
+}
+
+.title-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.page-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.search-input {
+  width: 120px;
+}
+
+.search-select {
+  width: 120px;
+}
+
+.search-select.wide {
+  width: 150px;
+}
+
+.split-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 42%) minmax(420px, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.list-panel,
+.detail-panel {
+  min-width: 0;
+}
+
+.list-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px 8px 0;
+}
+
+.mono {
+  font-family: var(--font-data);
 }
 
 .pager {
   display: flex;
   justify-content: flex-end;
-  margin-top: 12px;
+  padding: 8px 4px 10px;
+}
+
+@media (max-width: 1100px) {
+  .split-layout {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
