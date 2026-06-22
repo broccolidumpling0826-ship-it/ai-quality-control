@@ -23,6 +23,7 @@
             :menus="item.children"
             :collapsed="collapsed"
             :depth="depth + 1"
+            :active-menu-path="resolvedActiveMenuPath"
           />
         </div>
       </div>
@@ -44,11 +45,11 @@
         v-else-if="item.path"
         :to="resolvePath(item)"
         custom
-        v-slot="{ isActive, navigate }"
+        v-slot="{ navigate }"
       >
         <div
           class="nav-item"
-          :class="[itemClass, { active: isActive || isPathActive(item.path!) }]"
+          :class="[itemClass, { active: isItemActive(item.path!) }]"
           @click="navigate"
           :title="collapsed ? item.menuName : ''"
         >
@@ -70,11 +71,20 @@ const props = defineProps<{
   menus: MenuTreeNode[]
   collapsed?: boolean
   depth?: number
+  /** 由根节点计算后向下传递，避免递归组件 inject 失效导致白屏 */
+  activeMenuPath?: string | null
 }>()
 
 const route = useRoute()
 const depth = computed(() => props.depth ?? 0)
 const expandedDirs = ref<Record<string, boolean>>({})
+
+const resolvedActiveMenuPath = computed(() => {
+  if (props.activeMenuPath !== undefined) {
+    return props.activeMenuPath
+  }
+  return resolveActiveMenuPath(route.path, flattenSidebarPaths(props.menus))
+})
 
 const itemClass = computed(() => ({
   'nav-item-root': depth.value === 0,
@@ -108,9 +118,39 @@ function toggleExpand(id: string) {
   expandedDirs.value[id] = !isExpanded(id)
 }
 
-function isPathActive(path: string): boolean {
+function isItemActive(path: string): boolean {
+  const active = resolvedActiveMenuPath.value
+  return active !== null && normalizeMenuPath(path) === active
+}
+
+function normalizeMenuPath(path: string): string {
   const full = path.startsWith('/') ? path : `/${path}`
-  return route.path === full || route.path.startsWith(full + '/')
+  const trimmed = full.replace(/\/+$/, '')
+  return trimmed || '/'
+}
+
+function flattenSidebarPaths(nodes: MenuTreeNode[]): string[] {
+  const paths: string[] = []
+  for (const node of nodes) {
+    if (node.menuType === 'DIR') {
+      if (node.children?.length) {
+        paths.push(...flattenSidebarPaths(node.children))
+      }
+    } else if (node.path) {
+      paths.push(node.path)
+    }
+  }
+  return paths
+}
+
+/** 取与当前路由最精确匹配的侧栏菜单 path，避免 standard-lib 与 standard-lib/gaps 同时高亮 */
+function resolveActiveMenuPath(currentPath: string, menuPaths: string[]): string | null {
+  const current = normalizeMenuPath(currentPath)
+  const matches = menuPaths
+    .map(normalizeMenuPath)
+    .filter((p) => current === p || current.startsWith(`${p}/`))
+    .sort((a, b) => b.length - a.length)
+  return matches[0] ?? null
 }
 
 function resolvePath(item: MenuTreeNode): string {
