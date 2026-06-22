@@ -8,24 +8,24 @@ import crypto from 'node:crypto';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '..');
 const defaultDocPath = resolve(__dirname, 'demo-documents/semantic-rag-smoke-q235b.md');
-const appDevPath = resolve(projectRoot, 'src/main/resources/application-dev.yml');
+const appConfigPath = resolve(projectRoot, 'src/main/resources/application.yml');
 
 const docPath = resolve(process.argv[2] || defaultDocPath);
 const dryRun = process.argv.includes('--dry-run');
 
-const appDevText = safeRead(appDevPath);
+const appConfigText = safeRead(appConfigPath);
 
 const config = {
-  chatBaseUrl: envOrDevDefault('AI_MODEL_BASE_URL', 'https://api.siliconflow.cn/v1'),
-  chatApiKey: envOrDevDefault('AI_MODEL_API_KEY', ''),
-  chatModel: envOrDevDefault('AI_MODEL_CHAT_MODEL', 'deepseek-ai/DeepSeek-V3.2'),
-  embeddingBaseUrl: envOrDevDefault('EMBEDDING_BASE_URL', 'https://api.siliconflow.cn/v1'),
-  embeddingApiKey: envOrDevDefault('EMBEDDING_API_KEY', ''),
-  embeddingModel: envOrDevDefault('EMBEDDING_MODEL', 'BAAI/bge-m3'),
-  esHost: envOrDevDefault('ES_HOST', 'http://localhost:9200'),
-  esUsername: envOrDevDefault('ES_USERNAME', 'elastic'),
-  esPassword: envOrDevDefault('ES_PASSWORD', ''),
-  esIndex: envOrDevDefault('ES_STANDARD_INDEX', 'quality-standard-clauses'),
+  chatBaseUrl: envOrYamlDefault('AI_MODEL_BASE_URL', 'https://api.siliconflow.cn/v1'),
+  chatApiKey: envOrYamlDefault('AI_MODEL_API_KEY', ''),
+  chatModel: envOrYamlDefault('AI_MODEL_CHAT_MODEL', 'deepseek-ai/DeepSeek-V4-Flash'),
+  embeddingBaseUrl: envOrYamlDefault('EMBEDDING_BASE_URL', 'https://api.siliconflow.cn/v1'),
+  embeddingApiKey: envOrYamlDefault('EMBEDDING_API_KEY', ''),
+  embeddingModel: envOrYamlDefault('EMBEDDING_MODEL', 'BAAI/bge-m3'),
+  esHost: envOrYamlDefault('ES_HOST', 'http://localhost:9200'),
+  esUsername: envOrYamlDefault('ES_USERNAME', 'elastic'),
+  esPassword: envOrYamlDefault('ES_PASSWORD', ''),
+  esIndex: envOrYamlDefault('ES_STANDARD_INDEX', 'quality-standard-clauses'),
 };
 
 main().catch((error) => {
@@ -290,12 +290,12 @@ function parseJsonArray(content) {
   return parsed;
 }
 
-function envOrDevDefault(name, fallback) {
+function envOrYamlDefault(name, fallback) {
   if (process.env[name]) {
     return process.env[name];
   }
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = appDevText.match(new RegExp(`\\$\\{${escaped}:([^}]+)\\}`));
+  const match = appConfigText.match(new RegExp(`\\$\\{${escaped}:([^}]+)\\}`));
   return match?.[1] || fallback;
 }
 

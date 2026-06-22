@@ -9,11 +9,11 @@ export AI_MODEL_PROVIDER="SILICONFLOW"
 export AI_MODEL_ENABLED=true
 export AI_MODEL_BASE_URL="https://api.siliconflow.cn/v1"
 export AI_MODEL_API_KEY="sk-your-model-api-key"
-export AI_MODEL_CHAT_MODEL="deepseek-ai/DeepSeek-V3.2"
+export AI_MODEL_CHAT_MODEL="deepseek-ai/DeepSeek-V4-Flash"
 
 # Provider-specific optional knobs. Keep disabled unless the selected provider
 # supports them and the current feature needs reasoning-mode output.
 export AI_MODEL_THINKING_ENABLED=false
 export AI_MODEL_REASONING_EFFORT="high"
 
-export AI_MODEL_TIMEOUT_MILLIS=15000
+export AI_MODEL_TIMEOUT_MILLIS=60000

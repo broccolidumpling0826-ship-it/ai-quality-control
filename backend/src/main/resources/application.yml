@@ -69,15 +69,17 @@ app:
     # 让步催促提醒阈值（天数，FR-009）：confirm_status=PENDING 超过此天数自动提醒
     remind-days: 7
   ai:
+    # 模型/向量配置统一在此维护；dev 环境通过 profile 覆盖开关与本地密钥默认值，勿在 application-dev.yml 重复
     model:
       provider: ${AI_MODEL_PROVIDER:SILICONFLOW}
-      enabled: ${AI_MODEL_ENABLED:false}
+      enabled: ${AI_MODEL_ENABLED:true}
       base-url: ${AI_MODEL_BASE_URL:https://api.siliconflow.cn/v1}
-      api-key: ${AI_MODEL_API_KEY:}
-      chat-model: ${AI_MODEL_CHAT_MODEL:deepseek-ai/DeepSeek-V3.2}
+      api-key: ${AI_MODEL_API_KEY:sk-kfedpjxaawzkfdwiqseddiwiydyyrycbyfacsqfjsyqlfntl}
+      # RAG/解释推荐 V4-Flash；V3.2 在硅基流动上延迟高，本地 RAG 易超时
+      chat-model: ${AI_MODEL_CHAT_MODEL:deepseek-ai/DeepSeek-V4-Flash}
       thinking-enabled: ${AI_MODEL_THINKING_ENABLED:false}
       reasoning-effort: ${AI_MODEL_REASONING_EFFORT:high}
-      timeout-millis: ${AI_MODEL_TIMEOUT_MILLIS:15000}
+      timeout-millis: ${AI_MODEL_TIMEOUT_MILLIS:60000}
       vision:
         enabled: ${AI_VISION_ENABLED:true}
         model: ${AI_VISION_MODEL:deepseek-ai/DeepSeek-OCR}
@@ -85,14 +87,14 @@ app:
         image-detail: ${AI_VISION_IMAGE_DETAIL:high}
         timeout-millis: ${AI_VISION_TIMEOUT_MILLIS:60000}
     embedding:
-      enabled: ${EMBEDDING_ENABLED:false}
+      enabled: ${EMBEDDING_ENABLED:true}
       base-url: ${EMBEDDING_BASE_URL:https://api.siliconflow.cn/v1}
-      api-key: ${EMBEDDING_API_KEY:}
+      api-key: ${EMBEDDING_API_KEY:sk-vbbwrwhjxaqekhnketstevzmrxbutsctwvyzqospojwoevtg}
       model: ${EMBEDDING_MODEL:BAAI/bge-m3}
       provider: ${EMBEDDING_PROVIDER:SILICONFLOW}
       timeout-millis: ${EMBEDDING_TIMEOUT_MILLIS:15000}
     vector:
-      enabled: ${ES_VECTOR_ENABLED:false}
+      enabled: ${ES_VECTOR_ENABLED:true}
       host: ${ES_HOST:http://localhost:9200}
       username: ${ES_USERNAME:elastic}
       password: ${ES_PASSWORD:sisHuNo.1}

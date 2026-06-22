@@ -9,13 +9,13 @@ export AI_MODEL_PROVIDER="SILICONFLOW"
 export AI_MODEL_ENABLED=true
 export AI_MODEL_BASE_URL="https://api.siliconflow.cn/v1"
 export AI_MODEL_API_KEY="your-chat-api-key"
-export AI_MODEL_CHAT_MODEL="deepseek-ai/DeepSeek-V3.2"
+export AI_MODEL_CHAT_MODEL="deepseek-ai/DeepSeek-V4-Flash"
 
 # SiliconFlow supports provider-specific thinking parameters on supported models.
 # Keep disabled for grounded RAG/explanation output unless you explicitly need it.
 export AI_MODEL_THINKING_ENABLED=false
 export AI_MODEL_REASONING_EFFORT="high"
-export AI_MODEL_TIMEOUT_MILLIS=15000
+export AI_MODEL_TIMEOUT_MILLIS=60000
 
 # Vision OCR for scanned standard source images: POST ${AI_MODEL_BASE_URL}/chat/completions
 export AI_VISION_ENABLED=true
@@ -31,3 +31,11 @@ export EMBEDDING_BASE_URL="https://api.siliconflow.cn/v1"
 export EMBEDDING_API_KEY="your-embedding-api-key"
 export EMBEDDING_MODEL="BAAI/bge-m3"
 export EMBEDDING_TIMEOUT_MILLIS=15000
+
+# Elasticsearch vector store (RAG retrieval)
+export ES_VECTOR_ENABLED=true
+export ES_HOST="http://localhost:9200"
+export ES_USERNAME="elastic"
+export ES_PASSWORD="your-es-password"
+export ES_STANDARD_INDEX="quality-standard-clauses"
+export ES_TIMEOUT_MILLIS=5000
