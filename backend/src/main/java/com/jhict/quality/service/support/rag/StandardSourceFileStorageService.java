@@ -104,7 +104,7 @@ public class StandardSourceFileStorageService {
             Path path = resolveReadablePath(relativePath);
             Files.deleteIfExists(path);
         } catch (ServiceException ex) {
-            if (ApiResult.CODE_NOT_FOUND.equals(ex.getCode())) {
+            if (ex.getCode() == ApiResult.CODE_NOT_FOUND) {
                 return;
             }
             throw ex;

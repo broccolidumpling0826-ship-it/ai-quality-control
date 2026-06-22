@@ -1,17 +1,22 @@
 import type { RouteRecordRaw } from 'vue-router'
 import type { MenuTreeNode } from '@/types'
 
-const viewModules = import.meta.glob('@/views/**/*.vue')
+// 使用相对路径 glob，避免 Windows 下 @ 别名解析异常导致动态路由为空
+const viewModules = import.meta.glob('../views/**/*.vue')
 
 function resolveComponent(component?: string): RouteRecordRaw['component'] | undefined {
   if (!component) return undefined
-  const key = `/src/views/${component}.vue`
-  const loader = viewModules[key]
-  if (!loader) {
+  const normalized = component.replace(/\\/g, '/').replace(/^\//, '')
+  const suffix = `/views/${normalized}.vue`
+  const entry = Object.entries(viewModules).find(([key]) => {
+    const path = key.replace(/\\/g, '/')
+    return path.endsWith(suffix)
+  })
+  if (!entry) {
     console.warn(`[DynamicRoute] 组件未找到: ${component}`)
     return undefined
   }
-  return loader
+  return entry[1]
 }
 
 function flattenMenus(nodes: MenuTreeNode[]): MenuTreeNode[] {
@@ -78,6 +83,6 @@ function filterSidebarNode(node: MenuTreeNode): MenuTreeNode | null {
 
 export function getViewModulePaths(): string[] {
   return Object.keys(viewModules)
-    .map((k) => k.replace('/src/views/', '').replace('.vue', ''))
+    .map((k) => k.replace(/\\/g, '/').replace(/^.*\/views\//, '').replace('.vue', ''))
     .sort()
 }
