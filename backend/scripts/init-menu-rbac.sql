@@ -172,7 +172,8 @@ VALUES
   ('menu104', '0',       'HIDDEN', '改判详情',   're-judgment/detail',     're-judgment/detail',        're-judgment-detail',     'Edit',         'menu:rejudgment', 0, 104, 1, '2026-06-03 00:00:00'),
   ('menu105', '0',       'HIDDEN', '发起让步',   'concession/apply',       'concession/form',           'concession-apply',       'Check',        'menu:concession', 0, 105, 1, '2026-06-03 00:00:00'),
   ('menu106', '0',       'HIDDEN', '让步详情',   'concession/detail',      'concession/detail',         'concession-detail',      'Check',        'menu:concession', 0, 106, 1, '2026-06-03 00:00:00'),
-  ('menu107', '0',       'HIDDEN', '内嵌页面',   'iframe/:id',             'iframe/index',              'iframe-page',            'Link',         NULL,              0, 107, 1, '2026-06-03 00:00:00')
+  ('menu107', '0',       'HIDDEN', '内嵌页面',   'iframe/:id',             'iframe/index',              'iframe-page',            'Link',         NULL,              0, 107, 1, '2026-06-03 00:00:00'),
+  ('menu108', '0',       'HIDDEN', 'AI 判定解释', 'judgment/ai-explanation', 'judgment/ai-explanation', 'judgment-ai-explanation', 'Stamp',        'menu:judgment',   0, 108, 1, '2026-06-03 00:00:00')
 ON DUPLICATE KEY UPDATE
   menu_name  = VALUES(menu_name),
   path       = VALUES(path),
@@ -231,6 +232,7 @@ SELECT `id`, `role_id`, `menu_id` FROM (
     UNION SELECT 'menu040' UNION SELECT 'menu041' UNION SELECT 'menu042' UNION SELECT 'menu050'
     UNION SELECT 'menu060' UNION SELECT 'menu101' UNION SELECT 'menu102' UNION SELECT 'menu103'
     UNION SELECT 'menu104' UNION SELECT 'menu105' UNION SELECT 'menu106' UNION SELECT 'menu107'
+    UNION SELECT 'menu108'
   ) m
 ) AS seed_role_menu;
 

@@ -119,15 +119,15 @@ description: "Task list for 质量判定解释、让步与标准 RAG 系统（�
 **Goal**: 判定完成后 AI 自然语言解释 + 置信度 + 降级基线  
 **Independent Test**: quickstart.md 场景 3（四场景 DEMO-*）
 
-- [ ] T048 [P] [US3] 创建 QcAiJudgmentExplanation entity + Mapper — `backend/src/main/java/com/jhict/quality/entity/QcAiJudgmentExplanation.java`
-- [ ] T049 [US3] 实现 ConfidenceCalculator（HIGH/MEDIUM/LOW 启发式 D-022） — `backend/src/main/java/com/jhict/quality/ai/judgment/ConfidenceCalculator.java`
-- [ ] T050 [US3] 实现 AiJudgmentExplainService（基线 JSON + RAG + LlmClient 双轨） — `backend/src/main/java/com/jhict/quality/service/impl/AiJudgmentExplainServiceImpl.java`
-- [ ] T051 [US3] 定义 AiJudgmentExplainService 接口 — `backend/src/main/java/com/jhict/quality/service/api/AiJudgmentExplainService.java`
-- [ ] T052 [US3] 实现 AiJudgmentController（GET /api/v1/judgments/{id}/ai-explanation、GET /demo/{code}/ai-explanation） — `backend/src/main/java/com/jhict/quality/controller/AiJudgmentController.java`
-- [ ] T053 [P] [US3] 创建 AiJudgmentExplanationVO — `backend/src/main/java/com/jhict/quality/vo/AiJudgmentExplanationVO.java`
-- [ ] T054 [P] [US3] 创建 frontend/src/api/ai-judgment.ts — `frontend/src/api/ai-judgment.ts`
-- [ ] T055 [US3] 实现 AI 判定解释页（置信度徽章、引用跳转、需复核提示、degraded 标记） — `frontend/src/views/judgment/ai-explanation.vue`
-- [ ] T056 [US3] 在 judgment/explanation.vue 增加「AI 解释」Tab 入口 — `frontend/src/views/judgment/explanation.vue`
+- [X] T048 [P] [US3] 创建 QcAiJudgmentExplanation entity + Mapper — `backend/src/main/java/com/jhict/quality/entity/QcAiJudgmentExplanation.java`
+- [X] T049 [US3] 实现 ConfidenceCalculator（HIGH/MEDIUM/LOW 启发式 D-022） — `backend/src/main/java/com/jhict/quality/ai/judgment/ConfidenceCalculator.java`
+- [X] T050 [US3] 实现 AiJudgmentExplainService（基线 JSON + RAG + LlmClient 双轨） — `backend/src/main/java/com/jhict/quality/service/impl/AiJudgmentExplainServiceImpl.java`
+- [X] T051 [US3] 定义 AiJudgmentExplainService 接口 — `backend/src/main/java/com/jhict/quality/service/api/AiJudgmentExplainService.java`
+- [X] T052 [US3] 实现 AiJudgmentController（GET /api/v1/judgments/{id}/ai-explanation、GET /demo/{code}/ai-explanation） — `backend/src/main/java/com/jhict/quality/controller/AiJudgmentController.java`
+- [X] T053 [P] [US3] 创建 AiJudgmentExplanationVO — `backend/src/main/java/com/jhict/quality/vo/AiJudgmentExplanationVO.java`
+- [X] T054 [P] [US3] 创建 frontend/src/api/ai-judgment.ts — `frontend/src/api/ai-judgment.ts`
+- [X] T055 [US3] 实现 AI 判定解释页（置信度徽章、引用跳转、需复核提示、degraded 标记） — `frontend/src/views/judgment/ai-explanation.vue`
+- [X] T056 [US3] 在 judgment/explanation.vue 增加「AI 解释」Tab 入口 — `frontend/src/views/judgment/explanation.vue`
 
 **Checkpoint**: 四场景均可展示 AI 解释链；冲突场景 LOW + 需复核；LLM 失败显示基线解释
 

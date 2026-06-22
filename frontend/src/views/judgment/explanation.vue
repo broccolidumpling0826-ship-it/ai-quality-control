@@ -235,7 +235,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
@@ -401,6 +401,12 @@ function handleConcession() {
 }
 
 onMounted(loadDetail)
+
+watch(activeTab, (tab) => {
+  if (tab === 'ai' && judgmentIdForAi.value && !aiPreview.value && !aiLoading.value) {
+    loadAiPreview()
+  }
+})
 </script>
 
 <style scoped>
