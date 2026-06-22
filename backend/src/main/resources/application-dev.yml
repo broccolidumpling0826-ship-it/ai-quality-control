@@ -37,7 +37,7 @@ app:
       enabled: true
       base-url: https://api.siliconflow.cn/v1
       api-key: ${AI_MODEL_API_KEY:sk-kfedpjxaawzkfdwiqseddiwiydyyrycbyfacsqfjsyqlfntl}
-      chat-model: deepseek-ai/DeepSeek-V3.2
+      chat-model: deepseek-ai/DeepSeek-V4-Flash
       thinking-enabled: false
       reasoning-effort: high
       timeout-millis: 15000

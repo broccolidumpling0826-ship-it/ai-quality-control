@@ -1,104 +1,174 @@
 <template>
   <div class="standard-rag-page">
-    <el-card class="toolbar-card" shadow="never">
-      <el-form :model="form" inline>
-        <el-form-item label="问题">
-          <el-input
-            v-model="form.query"
-            class="query-input"
-            clearable
-            placeholder="输入标准、客户协议或指标问题"
-            @keyup.enter="handleQuery"
+    <div class="page-header">
+      <div class="page-title">标准 RAG 检索</div>
+      <div class="page-desc">自然语言检索标准条款，回答附带可追溯引用来源</div>
+    </div>
+
+    <div class="rag-layout">
+      <!-- 左侧：智能问答 -->
+      <section class="chat-panel" v-loading="loading">
+        <div class="chat-body">
+          <el-empty
+            v-if="!submittedQuery && !loading"
+            description="输入问题后开始检索"
+            :image-size="72"
           />
-        </el-form-item>
-        <el-form-item label="来源">
-          <el-select v-model="form.sourceTypes" multiple collapse-tags clearable style="width: 190px">
-            <el-option label="国标" value="NATIONAL" />
-            <el-option label="企标" value="ENTERPRISE" />
-            <el-option label="客户协议" value="CUSTOMER" />
-            <el-option label="案例/投诉" value="COMPLAINT" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="客户">
-          <el-input v-model="form.customerId" clearable style="width: 130px" />
-        </el-form-item>
-        <el-form-item label="品种">
-          <el-input v-model="form.variety" clearable style="width: 120px" />
-        </el-form-item>
-        <el-form-item label="牌号">
-          <el-input v-model="form.grade" clearable style="width: 120px" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search" :loading="loading" @click="handleQuery">检索</el-button>
-          <el-button @click="handleReset">清空</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
 
-    <div class="result-grid">
-      <el-card class="answer-panel" shadow="never" v-loading="loading">
-        <template #header>
-          <div class="panel-head">
-            <span>回答</span>
-            <div class="tag-row" v-if="answer">
-              <el-tag size="small" :type="confidenceType(answer.confidenceLabel)">
-                {{ answer.confidenceLabel || 'UNKNOWN' }}
-              </el-tag>
-              <el-tag size="small" type="info">{{ answer.degradationSource || 'N/A' }}</el-tag>
-              <el-tag size="small" :type="answer.embeddingUsed ? 'success' : 'warning'">
-                {{ answer.embeddingUsed ? 'EMBEDDING' : 'NO_EMBEDDING' }}
-              </el-tag>
-              <el-tag size="small" type="info">{{ answer.retrievalMode || 'N/A' }}</el-tag>
-              <el-tag v-if="answer.cacheHit" size="small" type="warning">CACHE</el-tag>
+          <template v-else>
+            <div v-if="submittedQuery" class="chat-item user-item">
+              <div class="chat-bubble user-bubble">{{ submittedQuery }}</div>
             </div>
-          </div>
-        </template>
-        <el-alert
-          v-if="answer?.refused"
-          type="warning"
-          :closable="false"
-          :title="answer.refusalReason || '未找到可回答依据'"
-          show-icon
-        />
-        <div class="answer-text">{{ answer?.answer || '输入问题后检索标准/协议来源。' }}</div>
-        <div v-if="answer?.degradationReason" class="degrade-text">{{ answer.degradationReason }}</div>
-      </el-card>
 
-      <el-card class="source-panel" shadow="never">
-        <template #header>
-          <div class="panel-head">
-            <span>来源段落</span>
-            <span class="count">{{ sources.length }}</span>
-          </div>
-        </template>
-        <el-empty v-if="!sources.length" description="暂无来源" />
-        <div v-else class="source-list">
-          <div v-for="item in sources" :key="item.clauseId || item.clauseNo" class="source-item">
-            <div class="source-meta">
-              <el-tag size="small" :type="item.referenceOnly ? 'warning' : 'success'">
-                {{ item.referenceOnly ? '参考' : '命中' }}
-              </el-tag>
-              <span class="mono">{{ item.standardCode || '-' }}</span>
-              <span>{{ item.clauseNo || '-' }}</span>
-              <span v-if="item.sourceFileName" class="text-meta">{{ item.sourceFileName }}</span>
-              <span v-if="item.score != null" class="mono">{{ Number(item.score).toFixed(3) }}</span>
+            <div v-if="answer || loading" class="chat-item ai-item">
+              <div class="chat-bubble ai-bubble">
+                <div class="ai-head">
+                  <el-tag size="small" :type="degradationTagType(answer?.degradationSource, answer?.cacheHit)">
+                    {{ degradationLabel(answer?.degradationSource, answer?.cacheHit) }}
+                  </el-tag>
+                  <el-tag v-if="answer?.confidenceLabel" size="small" :type="confidenceType(answer.confidenceLabel)">
+                    {{ answer.confidenceLabel }}
+                  </el-tag>
+                </div>
+
+                <el-alert
+                  v-if="answer?.refused"
+                  class="refusal-alert"
+                  type="warning"
+                  :closable="false"
+                  :title="answer.refusalReason || '在已上传的标准/协议中未找到相关依据'"
+                  show-icon
+                />
+
+                <div v-else class="answer-text">{{ displayAnswer }}</div>
+                <div v-if="answer?.degradationReason" class="degrade-text">{{ answer.degradationReason }}</div>
+
+                <div v-if="sources.length" class="citation-row">
+                  <button
+                    v-for="(item, index) in sources"
+                    :key="sourceKey(item, index)"
+                    type="button"
+                    class="citation-tag"
+                    :class="{ active: activeSourceIndex === index }"
+                    @click="focusSource(index)"
+                  >
+                    {{ buildRagSourceShortTitle(item, index) }}
+                  </button>
+                </div>
+              </div>
             </div>
-            <p>{{ item.paragraphText }}</p>
-          </div>
+          </template>
         </div>
-      </el-card>
+
+        <div class="chat-input">
+          <div class="input-toolbar">
+            <el-select
+              v-model="form.sourceTypes"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
+              clearable
+              placeholder="标准类型（全部）"
+              class="source-type-select"
+            >
+              <el-option label="国标" value="NATIONAL" />
+              <el-option label="企标" value="ENTERPRISE" />
+              <el-option label="客协" value="CUSTOMER" />
+              <el-option label="案例/投诉" value="COMPLAINT" />
+            </el-select>
+            <el-input v-model="form.customerId" clearable placeholder="客户" class="filter-input" />
+            <el-input v-model="form.variety" clearable placeholder="品种" class="filter-input short" />
+            <el-input v-model="form.grade" clearable placeholder="牌号" class="filter-input short" />
+          </div>
+          <div class="input-row">
+            <el-input
+              v-model="form.query"
+              type="textarea"
+              :rows="2"
+              resize="none"
+              placeholder="例如：Q235B 抗拉强度下限是多少？"
+              @keydown.ctrl.enter.prevent="handleQuery"
+            />
+            <el-button type="primary" :loading="loading" class="search-btn" @click="handleQuery">
+              检索
+            </el-button>
+          </div>
+          <div class="input-hint">Ctrl + Enter 发送 · 仅依据检索到的标准原文回答，不会编造限值</div>
+        </div>
+      </section>
+
+      <!-- 右侧：引用来源 -->
+      <aside class="source-panel">
+        <div class="source-panel-head">
+          <span class="source-panel-title">引用来源</span>
+          <span v-if="sources.length" class="source-count">{{ sources.length }}</span>
+        </div>
+
+        <el-empty v-if="!sources.length" description="检索后将在此展示引用标准" :image-size="64" />
+
+        <div v-else ref="sourceListRef" class="source-list">
+          <article
+            v-for="(item, index) in sources"
+            :key="sourceKey(item, index)"
+            :ref="(el) => setSourceRef(el, index)"
+            class="source-card"
+            :class="{ active: activeSourceIndex === index }"
+            @click="activeSourceIndex = index"
+          >
+            <div class="source-card-head">
+              <span class="source-index">[{{ index + 1 }}]</span>
+              <span class="source-name">{{ item.standardCode || item.standardName || '未知标准' }}</span>
+              <el-tag size="small" :type="ragSourceTypeTagType(item.sourceType)">
+                {{ ragSourceTypeLabel(item.sourceType) }}
+              </el-tag>
+              <el-tag v-if="item.referenceOnly" size="small" type="warning">参考</el-tag>
+            </div>
+            <div v-if="item.clauseNo" class="source-clause">条款 {{ item.clauseNo }}</div>
+
+            <div
+              v-if="activeSourceIndex === index"
+              class="source-excerpt"
+              v-html="highlightParagraph(item.paragraphText || '暂无段落内容', highlightKeywords)"
+            />
+            <div v-else class="source-preview">
+              {{ previewText(item.paragraphText) }}
+            </div>
+
+            <div class="source-foot">
+              <span v-if="item.pageNo != null" class="mono">P{{ item.pageNo }}</span>
+              <span v-if="item.score != null" class="mono">score {{ Number(item.score).toFixed(3) }}</span>
+              <span v-if="item.sourceFileName" class="file-name">{{ item.sourceFileName }}</span>
+            </div>
+          </article>
+        </div>
+      </aside>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { Search } from '@element-plus/icons-vue'
+import { computed, nextTick, reactive, ref } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { ElMessage } from 'element-plus'
-import { queryStandardRag, type StandardRagAnswer, type StandardRagQuery } from '@/api/standard-rag'
+import { queryStandardRag, type RagSource, type StandardRagAnswer, type StandardRagQuery } from '@/api/standard-rag'
+import {
+  buildRagSourceShortTitle,
+  degradationLabel,
+  degradationTagType,
+  extractHighlightKeywords,
+  highlightParagraph,
+  ragSourceTypeLabel,
+  ragSourceTypeTagType,
+  sourceKey
+} from '@/utils/standard-rag-display'
 
 const loading = ref(false)
+const submittedQuery = ref('')
 const answer = ref<StandardRagAnswer | null>(null)
+const activeSourceIndex = ref(0)
+const sourceListRef = ref<HTMLElement | null>(null)
+const sourceCardRefs = ref<Array<HTMLElement | null>>([])
+
 const form = reactive<StandardRagQuery>({
   query: '',
   sourceTypes: [],
@@ -107,26 +177,58 @@ const form = reactive<StandardRagQuery>({
 
 const sources = computed(() => answer.value?.sources || [])
 
+const highlightKeywords = computed(() => {
+  const queryText = submittedQuery.value || form.query || ''
+  const fromAnswer = answer.value?.query || ''
+  return extractHighlightKeywords(queryText || fromAnswer)
+})
+
+const displayAnswer = computed(() => {
+  if (!answer.value) return loading.value ? '正在检索标准条款...' : ''
+  if (answer.value.refused) return ''
+  return answer.value.answer || '未生成回答，请查看右侧引用来源。'
+})
+
+function setSourceRef(el: Element | ComponentPublicInstance | null, index: number) {
+  sourceCardRefs.value[index] = el instanceof HTMLElement ? el : null
+}
+
+function previewText(text?: string): string {
+  if (!text) return '暂无段落内容'
+  const normalized = text.replace(/\s+/g, ' ').trim()
+  return normalized.length > 96 ? `${normalized.slice(0, 96)}...` : normalized
+}
+
 async function handleQuery() {
-  if (!form.query?.trim()) {
+  const query = form.query?.trim()
+  if (!query) {
     ElMessage.warning('请输入检索问题')
     return
   }
   loading.value = true
+  submittedQuery.value = query
   try {
-    answer.value = await queryStandardRag({ ...form, query: form.query.trim() })
+    const payload: StandardRagQuery = {
+      ...form,
+      query,
+      sourceTypes: (form.sourceTypes || []).filter((item) => item)
+    }
+    answer.value = await queryStandardRag(payload)
+    activeSourceIndex.value = 0
+    sourceCardRefs.value = []
+    await nextTick()
+    focusSource(0, false)
   } finally {
     loading.value = false
   }
 }
 
-function handleReset() {
-  form.query = ''
-  form.sourceTypes = []
-  form.customerId = ''
-  form.variety = ''
-  form.grade = ''
-  answer.value = null
+function focusSource(index: number, scroll = true) {
+  activeSourceIndex.value = index
+  if (!scroll) return
+  nextTick(() => {
+    sourceCardRefs.value[index]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  })
 }
 
 function confidenceType(label?: string) {
@@ -139,82 +241,320 @@ function confidenceType(label?: string) {
 <style scoped>
 .standard-rag-page {
   padding: 16px;
+  min-height: calc(100vh - 120px);
 }
 
-.toolbar-card,
-.answer-panel,
-.source-panel {
-  background: var(--bg-panel);
-  border-color: var(--border-color);
+.page-header {
+  margin-bottom: 12px;
 }
 
-.query-input {
-  width: min(520px, 42vw);
-}
-
-.result-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 440px;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.panel-head,
-.tag-row,
-.source-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.panel-head {
-  justify-content: space-between;
-}
-
-.answer-text {
-  min-height: 180px;
-  white-space: pre-wrap;
-  line-height: 1.7;
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
-.degrade-text,
-.count {
-  color: var(--text-secondary);
+.page-desc {
+  margin-top: 4px;
   font-size: 12px;
+  color: var(--text-muted);
 }
 
-.source-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 560px;
-  overflow: auto;
+.rag-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 12px;
+  min-height: 640px;
 }
 
-.source-item {
-  padding: 10px;
+.chat-panel,
+.source-panel {
+  background: var(--bg-panel);
   border: 1px solid var(--border-color);
-  background: var(--bg-card);
   border-radius: 4px;
 }
 
-.source-item p {
-  margin: 8px 0 0;
-  color: var(--text-regular);
-  line-height: 1.55;
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 640px;
 }
 
+.chat-body {
+  flex: 1;
+  padding: 16px;
+  overflow: auto;
+}
+
+.chat-item {
+  display: flex;
+  margin-bottom: 14px;
+}
+
+.user-item {
+  justify-content: flex-end;
+}
+
+.ai-item {
+  justify-content: flex-start;
+}
+
+.chat-bubble {
+  max-width: 92%;
+  border-radius: 4px;
+  padding: 12px 14px;
+}
+
+.user-bubble {
+  background: rgba(0, 212, 255, 0.12);
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  color: var(--text-primary);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-bubble {
+  width: 100%;
+  max-width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.ai-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.refusal-alert {
+  margin-bottom: 8px;
+}
+
+.answer-text {
+  color: var(--text-primary);
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.degrade-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.citation-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.citation-tag {
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  background: rgba(0, 212, 255, 0.06);
+  color: var(--cyan);
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  font-family: var(--font-data);
+}
+
+.citation-tag:hover,
+.citation-tag.active {
+  border-color: var(--cyan);
+  background: rgba(0, 212, 255, 0.14);
+}
+
+.chat-input {
+  border-top: 1px solid var(--border-color);
+  padding: 12px 14px 14px;
+}
+
+.input-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.source-type-select {
+  width: 180px;
+}
+
+.filter-input {
+  width: 120px;
+}
+
+.filter-input.short {
+  width: 96px;
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.search-btn {
+  min-width: 72px;
+  height: auto;
+}
+
+.input-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.source-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 640px;
+}
+
+.source-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.source-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.source-count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--red, #ff4757);
+  color: #fff;
+  font-size: 11px;
+  line-height: 20px;
+  text-align: center;
+  font-family: var(--font-data);
+}
+
+.source-list {
+  flex: 1;
+  overflow: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.source-card {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.source-card.active {
+  border-color: rgba(0, 212, 255, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.12);
+}
+
+.source-card-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.source-index,
 .mono {
   font-family: var(--font-data);
 }
 
+.source-index {
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.source-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.source-clause {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.source-excerpt {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 3px;
+  background: rgba(255, 180, 0, 0.12);
+  border: 1px solid rgba(255, 180, 0, 0.28);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.source-excerpt :deep(.rag-highlight) {
+  background: rgba(255, 180, 0, 0.45);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.source-preview {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.source-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 @media (max-width: 1100px) {
-  .result-grid {
+  .rag-layout {
     grid-template-columns: 1fr;
   }
-  .query-input {
-    width: 100%;
+
+  .chat-panel,
+  .source-panel {
+    min-height: auto;
+  }
+
+  .source-list {
+    max-height: 420px;
   }
 }
 </style>
