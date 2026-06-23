@@ -170,6 +170,55 @@ class CitationReferenceSupportTest {
                 explanation, Collections.singletonList(concession), Collections.singletonList(rm)) != null);
     }
 
+    @Test
+    void buildJudgmentRuleExplanation_shouldPassValidationForConcessionCoilScenario() {
+        QcJudgmentResultVO.EvidenceVO elongation = evidence("延伸率", "26", "27", null,
+                "实测值 26.0% 低于协议下限 27.0%，但在让步范围内，触发 CAN_CONCESSION", 0);
+        QcJudgmentResultVO.EvidenceVO thickness = evidence("厚度公差", "0.09", "-0.08", "0.08",
+                "实测值 0.09 mm 超出协议上限 0.08 mm，但在让步范围内，触发 CAN_CONCESSION", 0);
+        QcJudgmentResultVO.EvidenceVO rm = evidence("抗拉强度", "372", "375", "505",
+                "实测值 372.0 MPa 低于协议下限 375.0 MPa，但在让步范围内，触发 CAN_CONCESSION", 0);
+
+        List<AiSourceReferenceVO> citations = Arrays.asList(
+                ref("c31", "3.1 客户机械性能 供西南建材集团的Q235B冷轧板，抗拉强度Rm应为375MPa至505MPa；"
+                        + "下屈服强度ReL不应低于235MPa且不宜高于360MPa；断后伸长率A不应低于27%。"),
+                ref("c71", "7.1 质量证明书 正式质量证明书应列明本协议编号、客户订单号、炉号、卷号。"),
+                ref("c61", "6.1 让步接收 当Rm不低于370MPa且低于375MPa，或A不低于25%且低于27%时，可提交客户让步评审。"),
+                ref("c42", "4.2 厚度与尺寸偏差 厚度0.80mm至1.50mm时，厚度偏差应控制在-0.080mm至+0.080mm。"),
+                ref("c32", "3.2 成形性能提示 客户加工工艺包含辊压成形和现场轻度折弯。"));
+
+        String explanation = CitationReferenceSupport.buildJudgmentRuleExplanation(
+                "CAN_CONCESSION",
+                Arrays.asList(elongation, thickness, rm),
+                citations,
+                3);
+
+        assertTrue(explanation.contains("[1]"));
+        assertTrue(explanation.contains("[4]"));
+        assertTrue(CitationReferenceSupport.acceptTrustedCitedOutput(
+                explanation, citations, Arrays.asList(elongation, thickness, rm)) != null);
+    }
+
+    private static QcJudgmentResultVO.EvidenceVO evidence(String name,
+                                                          String test,
+                                                          String lower,
+                                                          String upper,
+                                                          String triggerRule,
+                                                          int passed) {
+        QcJudgmentResultVO.EvidenceVO evidence = new QcJudgmentResultVO.EvidenceVO();
+        evidence.setIndicatorName(name);
+        evidence.setTestValue(new BigDecimal(test));
+        if (lower != null) {
+            evidence.setLowerLimit(new BigDecimal(lower));
+        }
+        if (upper != null) {
+            evidence.setUpperLimit(new BigDecimal(upper));
+        }
+        evidence.setTriggerRule(triggerRule);
+        evidence.setIsPassed(passed);
+        return evidence;
+    }
+
     private static AiSourceReferenceVO ref(String id, String paragraph) {
         AiSourceReferenceVO reference = new AiSourceReferenceVO();
         reference.setClauseId(id);

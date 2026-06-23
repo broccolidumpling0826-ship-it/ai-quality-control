@@ -416,7 +416,7 @@ public class JudgmentServiceImpl implements JudgmentService {
                 conflicts == null ? 0 : conflicts.size()));
         AiExplanationSource aiSource = generateAiExplanation
                 ? fillGeneratedExplanationIfPossible(vo, result, citations)
-                : AiExplanationSource.SKIPPED;
+                : tryStructuredExplanation(vo, citations);
         applyConfidenceAndDegradation(vo, result, conflicts, aiSource);
         if (aiSource == AiExplanationSource.GENERATED || aiSource == AiExplanationSource.STRUCTURED) {
             persistJudgmentExplanationAssessment(vo, result);

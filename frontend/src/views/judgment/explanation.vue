@@ -425,7 +425,13 @@ async function loadDetail() {
     if (route.query.id) {
       res = await getJudgmentExplanation(route.query.id as string)
     } else if (route.query.recordId) {
-      res = await getJudgmentByRecord(route.query.recordId as string)
+      const snapshot = await getJudgmentByRecord(route.query.recordId as string)
+      const judgmentId = snapshot?.judgmentId ?? snapshot?.id
+      if (!judgmentId) {
+        ElMessage.warning('未找到该检验记录的判定结论')
+        return
+      }
+      res = await getJudgmentExplanation(judgmentId)
     }
     detail.value = res
   } finally {
