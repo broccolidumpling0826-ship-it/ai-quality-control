@@ -10,8 +10,22 @@
         <el-option label="阻断" value="BLOCKING" />
         <el-option label="优先级可解" value="PRIORITY_RESOLVABLE" />
       </el-select>
-      <el-input v-model="query.variety" clearable placeholder="品种" class="search-input" @keyup.enter="loadData" />
-      <el-input v-model="query.grade" clearable placeholder="牌号" class="search-input" @keyup.enter="loadData" />
+      <el-select v-model="query.variety" clearable filterable placeholder="品种" class="search-select">
+        <el-option
+          v-for="item in dictStore.getItems('PRODUCT_VARIETY')"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+      <el-select v-model="query.grade" clearable filterable placeholder="牌号" class="search-select wide">
+        <el-option
+          v-for="item in dictStore.getItems('PRODUCT_GRADE')"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
       <el-button type="primary" :icon="Search" @click="loadData">查询</el-button>
       <el-button @click="reset">重置</el-button>
     </div>
@@ -70,6 +84,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
+import { useDictStore } from '@/store/dict'
 import StandardConflictDetailPanel from '@/components/standard-conflicts/StandardConflictDetailPanel.vue'
 import {
   getStandardConflict,
@@ -79,6 +94,7 @@ import {
 } from '@/api/standard-conflict'
 
 const route = useRoute()
+const dictStore = useDictStore()
 const loading = ref(false)
 const detailLoading = ref(false)
 const rows = ref<StandardConflict[]>([])
@@ -146,7 +162,16 @@ function reset() {
   loadData()
 }
 
-onMounted(loadData)
+async function loadFilterOptions() {
+  if (!dictStore.loaded) {
+    await dictStore.loadAll()
+  }
+}
+
+onMounted(async () => {
+  await loadFilterOptions()
+  await loadData()
+})
 </script>
 
 <style scoped>

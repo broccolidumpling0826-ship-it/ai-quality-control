@@ -25,6 +25,12 @@ public class CertQaAnswerVO {
     @ApiModelProperty(value = "是否有质保书快照")
     private Boolean certificateSnapshotFound;
 
+    @ApiModelProperty(value = "操作引导文案（如让步已批准但尚未生成质保书快照）")
+    private String guidanceMessage;
+
+    @ApiModelProperty(value = "让步接收是否已审批通过")
+    private Boolean concessionApproved;
+
     @ApiModelProperty(value = "是否命中缓存")
     private Boolean cacheHit;
 

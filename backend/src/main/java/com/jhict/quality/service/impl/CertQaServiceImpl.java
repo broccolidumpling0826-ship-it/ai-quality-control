@@ -2,11 +2,14 @@ package com.jhict.quality.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.dto.AiAssessmentCreateCmd;
 import com.jhict.quality.dto.CertQaQueryCmd;
 import com.jhict.quality.dto.QcJudgmentPageQuery;
 import com.jhict.quality.entity.QcAiCache;
+import com.jhict.quality.entity.QcConcessionAcceptance;
+import com.jhict.quality.mapper.QcConcessionAcceptanceMapper;
 import com.jhict.quality.enums.JudgmentType;
 import com.jhict.quality.gateway.model.ModelChatRequest;
 import com.jhict.quality.gateway.model.ModelChatResponse;
@@ -30,6 +33,7 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,8 +44,15 @@ import java.util.stream.Collectors;
 @Service
 public class CertQaServiceImpl implements CertQaService {
 
-    private static final String PROMPT_VERSION = "cert-qa-v3";
+    private static final String PROMPT_VERSION = "cert-qa-v4";
     private static final String ASSESSMENT_TYPE_CERT_QA = "CERT_QA";
+    private static final String MSG_CONCESSION_PENDING_WORKFLOW =
+            "当前为可让步判定，尚未完成客户确认或内部让步审批，暂不能生成正式质保书。"
+                    + "请先在【质量流程 → 让步接收】完成客户确认与审批。";
+    private static final String MSG_CONCESSION_APPROVED_NEED_SNAPSHOT =
+            "让步接收已完成（客户确认与内部审批已通过），当前仅缺正式质保书数据快照。"
+                    + "请前往【数据汇总 → 质保书数据】，输入本卷卷号或批次号后点击「生成」；"
+                    + "生成成功后可在此问答页确认出证依据，并导出正式 PDF。";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -59,6 +70,9 @@ public class CertQaServiceImpl implements CertQaService {
 
     @Resource
     private AiAssessmentService aiAssessmentService;
+
+    @Resource
+    private QcConcessionAcceptanceMapper concessionMapper;
 
     @Override
     public CertQaAnswerVO answer(CertQaQueryCmd cmd) {
@@ -87,13 +101,24 @@ public class CertQaServiceImpl implements CertQaService {
 
         answer.setCitations(citations);
         answer.setIndicatorBasis(basis);
-        applyStateGate(answer, cert, judgment);
+        boolean concessionApproved = isConcessionApproved(judgment.getJudgmentId());
+        applyStateGate(answer, cert, judgment, concessionApproved);
         if (Boolean.TRUE.equals(answer.getRefused())) {
             return answer;
         }
 
-        String ruleAnswer = buildAnswerText(cmd.getQuestion(), cert, judgment, basis);
-        fillGeneratedAnswer(cmd, answer, cert, judgment, ruleAnswer);
+        String ruleAnswer = buildAnswerText(cert, judgment, basis, concessionApproved);
+        if (shouldUseGuidanceRuleOnly(answer, cert, judgment, concessionApproved)) {
+            String guidedAnswer = StringUtils.hasText(answer.getGuidanceMessage())
+                    ? answer.getGuidanceMessage() + "\n\n" + ruleAnswer
+                    : ruleAnswer;
+            answer.setAnswer(guidedAnswer);
+            applyRuleDegradation(answer, citations, guidedAnswer);
+            persistCertQaAssessment(cmd, judgment, answer, false);
+            return answer;
+        }
+
+        fillGeneratedAnswer(cmd, answer, cert, judgment, ruleAnswer, concessionApproved);
         return answer;
     }
 
@@ -101,7 +126,11 @@ public class CertQaServiceImpl implements CertQaService {
                                      CertQaAnswerVO answer,
                                      QcQualityCertDataVO cert,
                                      QcJudgmentResultVO judgment,
-                                     String ruleAnswer) {
+                                     String ruleAnswer,
+                                     boolean concessionApproved) {
+        if (StringUtils.hasText(answer.getGuidanceMessage())) {
+            ruleAnswer = answer.getGuidanceMessage() + "\n\n" + ruleAnswer;
+        }
         answer.setAnswer(ruleAnswer);
         List<AiSourceReferenceVO> citations = answer.getCitations() == null
                 ? Collections.emptyList() : answer.getCitations();
@@ -110,7 +139,7 @@ public class CertQaServiceImpl implements CertQaService {
             return;
         }
         ModelChatResponse response = modelGateway.chat(buildCertQaChatRequest(
-                cmd, cert, judgment, answer.getIndicatorBasis(), citations, ruleAnswer));
+                cmd, cert, judgment, answer.getIndicatorBasis(), citations, ruleAnswer, concessionApproved));
         String trusted = CitationReferenceSupport.acceptTrustedCitedOutput(
                 response != null ? response.getContent() : null, citations, answer.getIndicatorBasis());
         if (StringUtils.hasText(trusted)) {
@@ -149,14 +178,20 @@ public class CertQaServiceImpl implements CertQaService {
                                                     QcJudgmentResultVO judgment,
                                                     List<QcJudgmentResultVO.EvidenceVO> basis,
                                                     List<AiSourceReferenceVO> citations,
-                                                    String ruleAnswer) {
+                                                    String ruleAnswer,
+                                                    boolean concessionApproved) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("用户问题：").append(cmd.getQuestion()).append("\n\n");
         prompt.append("结构化事实摘要：\n").append(ruleAnswer).append("\n\n");
         if (cert != null) {
             prompt.append("质保书快照状态：").append(cert.getStatus()).append("\n");
+        } else {
+            prompt.append("质保书快照状态：未生成\n");
         }
         prompt.append("最终判定：").append(judgment.getJudgmentType()).append("\n");
+        if (JudgmentType.CAN_CONCESSION.getCode().equals(judgment.getJudgmentType())) {
+            prompt.append("让步接收审批：").append(concessionApproved ? "已通过" : "未完成").append("\n");
+        }
         prompt.append("是否非最终态：").append(Boolean.TRUE.equals(answerNonFinal(cert, judgment)) ? "是" : "否").append("\n");
         if (basis != null && !basis.isEmpty()) {
             prompt.append("\n指标依据：\n");
@@ -173,7 +208,11 @@ public class CertQaServiceImpl implements CertQaService {
         }
         CitationReferenceSupport.appendNumberedCitationBlock(prompt, citations);
         CitationReferenceSupport.appendCitationAnswerRules(prompt, CitationPromptStyle.CERT_QA);
-        if (Boolean.TRUE.equals(answerNonFinal(cert, judgment))) {
+        if (concessionApproved && needsCertSnapshot(cert, judgment)) {
+            prompt.append("让步接收已审批通过，仅缺质保书数据快照；"
+                    + "应明确引导用户前往【数据汇总 → 质保书数据】点击生成，"
+                    + "勿误判为客户确认或让步审批未完成。");
+        } else if (Boolean.TRUE.equals(answerNonFinal(cert, judgment))) {
             prompt.append("当前为不可正式出证或非最终状态，回答中必须明确说明。");
         }
         return ModelChatRequest.builder()
@@ -191,11 +230,34 @@ public class CertQaServiceImpl implements CertQaService {
     }
 
     private boolean answerNonFinal(QcQualityCertDataVO cert, QcJudgmentResultVO judgment) {
-        if (JudgmentType.CAN_CONCESSION.getCode().equals(judgment.getJudgmentType())
-                && (cert == null || !"SUCCESS".equals(cert.getStatus()))) {
-            return true;
+        return needsCertSnapshot(cert, judgment) || cert == null;
+    }
+
+    private boolean needsCertSnapshot(QcQualityCertDataVO cert, QcJudgmentResultVO judgment) {
+        return JudgmentType.CAN_CONCESSION.getCode().equals(judgment.getJudgmentType())
+                && (cert == null || !"SUCCESS".equals(cert.getStatus()));
+    }
+
+    private boolean shouldUseGuidanceRuleOnly(CertQaAnswerVO answer,
+                                              QcQualityCertDataVO cert,
+                                              QcJudgmentResultVO judgment,
+                                              boolean concessionApproved) {
+        return StringUtils.hasText(answer.getGuidanceMessage())
+                && concessionApproved
+                && needsCertSnapshot(cert, judgment);
+    }
+
+    private boolean isConcessionApproved(String judgmentId) {
+        if (!StringUtils.hasText(judgmentId)) {
+            return false;
         }
-        return cert == null;
+        Long count = concessionMapper.selectCount(new LambdaQueryWrapper<QcConcessionAcceptance>()
+                .eq(QcConcessionAcceptance::getJudgmentId, judgmentId)
+                .eq(QcConcessionAcceptance::getApprovalStatus, "APPROVED")
+                .and(w -> w.isNull(QcConcessionAcceptance::getExpiryDate)
+                        .or()
+                        .ge(QcConcessionAcceptance::getExpiryDate, LocalDate.now())));
+        return count != null && count > 0;
     }
 
     private void persistCertQaAssessment(CertQaQueryCmd cmd,
@@ -302,8 +364,12 @@ public class CertQaServiceImpl implements CertQaService {
         return judgmentService.getExplanationSnapshot(page.getRecords().get(0).getId());
     }
 
-    private void applyStateGate(CertQaAnswerVO answer, QcQualityCertDataVO cert, QcJudgmentResultVO judgment) {
+    private void applyStateGate(CertQaAnswerVO answer,
+                                QcQualityCertDataVO cert,
+                                QcJudgmentResultVO judgment,
+                                boolean concessionApproved) {
         String type = judgment.getJudgmentType();
+        answer.setConcessionApproved(concessionApproved);
         if (JudgmentType.STANDARD_CONFLICT.getCode().equals(type)) {
             answer.setNonFinal(true);
             refuse(answer, "当前最终判定为标准冲突，完成冲突裁决前不能形成正式质保书结论");
@@ -314,12 +380,14 @@ public class CertQaServiceImpl implements CertQaService {
             refuse(answer, "当前判定为 " + type + "，不满足正式质保书放行条件");
             return;
         }
-        if (JudgmentType.CAN_CONCESSION.getCode().equals(type)
-                && (cert == null || !"SUCCESS".equals(cert.getStatus()))) {
+        if (needsCertSnapshot(cert, judgment)) {
             answer.setNonFinal(true);
-            answer.setAnswer("当前为可让步判定，但尚未确认存在正式质保书快照；需完成客户确认和让步审批后才能正式化。");
-        }
-        if (cert == null) {
+            if (concessionApproved) {
+                answer.setGuidanceMessage(MSG_CONCESSION_APPROVED_NEED_SNAPSHOT);
+            } else {
+                answer.setGuidanceMessage(MSG_CONCESSION_PENDING_WORKFLOW);
+            }
+        } else if (cert == null) {
             answer.setNonFinal(true);
         }
     }
@@ -334,8 +402,10 @@ public class CertQaServiceImpl implements CertQaService {
         return matched.isEmpty() ? judgment.getEvidences() : matched;
     }
 
-    private String buildAnswerText(String question, QcQualityCertDataVO cert, QcJudgmentResultVO judgment,
-                                   List<QcJudgmentResultVO.EvidenceVO> basis) {
+    private String buildAnswerText(QcQualityCertDataVO cert,
+                                   QcJudgmentResultVO judgment,
+                                   List<QcJudgmentResultVO.EvidenceVO> basis,
+                                   boolean concessionApproved) {
         StringBuilder sb = new StringBuilder();
         if (cert == null) {
             sb.append("未找到正式质保书快照，以下回答来自检验记录和最终判定快照。");
@@ -343,6 +413,9 @@ public class CertQaServiceImpl implements CertQaService {
             sb.append("已找到质保书快照，状态=").append(cert.getStatus()).append("。");
         }
         sb.append("当前最终判定为 ").append(judgment.getJudgmentType()).append("。");
+        if (JudgmentType.CAN_CONCESSION.getCode().equals(judgment.getJudgmentType())) {
+            sb.append("让步接收审批状态：").append(concessionApproved ? "已通过" : "未完成").append("。");
+        }
         if (!basis.isEmpty()) {
             sb.append("关键指标依据：");
             for (QcJudgmentResultVO.EvidenceVO e : basis) {

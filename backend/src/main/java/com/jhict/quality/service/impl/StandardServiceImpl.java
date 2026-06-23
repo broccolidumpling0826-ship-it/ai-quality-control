@@ -29,6 +29,7 @@ import com.jhict.quality.vo.StandardConflictDraftVO;
 import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardSourceDocumentVO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -63,6 +64,13 @@ public class StandardServiceImpl implements StandardService {
 
     @Resource
     private StandardDocumentService standardDocumentService;
+
+    /**
+     * 同体系已发布标准生效区间不得重叠（FR-003）。
+     * 本地冲突场景测试可在 application-dev.yml 临时设为 false，测完恢复 true。
+     */
+    @Value("${app.standard.enforce-effective-window-overlap:true}")
+    private boolean enforceEffectiveWindowOverlap;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -123,7 +131,7 @@ public class StandardServiceImpl implements StandardService {
 
         // 已发布标准：保存时校验同体系时间窗口不重叠
         if ("PUBLISHED".equals(status)) {
-            List<QcQualityStandard> overlapping = qualityStandardMapper.findOverlappingPublished(
+            assertNoOverlappingPublishedWindow(
                     cmd.getStandardType(),
                     cmd.getVariety(),
                     cmd.getGrade(),
@@ -132,11 +140,6 @@ public class StandardServiceImpl implements StandardService {
                     expiryDate,
                     cmd.getId()
             );
-            if (!overlapping.isEmpty()) {
-                QcQualityStandard conflict = overlapping.get(0);
-                throw new ServiceException(ApiResult.CODE_BAD_REQUEST,
-                        String.format("标准时间窗口与 %s 重叠，请调整生效/失效日期", conflict.getVersionNo()));
-            }
         }
 
         applyCmdToEntity(existing, cmd);
@@ -196,7 +199,7 @@ public class StandardServiceImpl implements StandardService {
         }
 
         // 时间窗口重叠校验：同体系已发布标准生效区间不得重叠（FR-003 / TC-B004）
-        List<QcQualityStandard> overlapping = qualityStandardMapper.findOverlappingPublished(
+        assertNoOverlappingPublishedWindow(
                 standard.getStandardType(),
                 standard.getVariety(),
                 standard.getGrade(),
@@ -205,11 +208,6 @@ public class StandardServiceImpl implements StandardService {
                 standard.getExpiryDate(),
                 id
         );
-        if (!overlapping.isEmpty()) {
-            QcQualityStandard conflict = overlapping.get(0);
-            throw new ServiceException(ApiResult.CODE_BAD_REQUEST,
-                    String.format("标准时间窗口与 %s 重叠，请调整生效/失效日期", conflict.getVersionNo()));
-        }
 
         // 发布标准
         standard.setStatus("PUBLISHED");
@@ -682,6 +680,33 @@ public class StandardServiceImpl implements StandardService {
         standard.setExpiryDate(cmd.getExpiryDate() != null ? cmd.getExpiryDate() : DEFAULT_EXPIRY_DATE);
         standard.setCustomerId(cmd.getCustomerId());
         standard.setRemark(cmd.getRemark());
+    }
+
+    private void assertNoOverlappingPublishedWindow(String standardType,
+                                                    String variety,
+                                                    String grade,
+                                                    String customerId,
+                                                    LocalDate effectiveDate,
+                                                    LocalDate expiryDate,
+                                                    String excludeId) {
+        if (!enforceEffectiveWindowOverlap) {
+            log.warn("标准生效区间重叠校验已临时关闭（app.standard.enforce-effective-window-overlap=false）");
+            return;
+        }
+        List<QcQualityStandard> overlapping = qualityStandardMapper.findOverlappingPublished(
+                standardType,
+                variety,
+                grade,
+                customerId,
+                effectiveDate,
+                expiryDate,
+                excludeId
+        );
+        if (!overlapping.isEmpty()) {
+            QcQualityStandard conflict = overlapping.get(0);
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST,
+                    String.format("标准时间窗口与 %s 重叠，请调整生效/失效日期", conflict.getVersionNo()));
+        }
     }
 
     /**

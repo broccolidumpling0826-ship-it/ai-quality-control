@@ -199,6 +199,27 @@ class CitationReferenceSupportTest {
                 explanation, citations, Arrays.asList(elongation, thickness, rm)) != null);
     }
 
+    @Test
+    void buildJudgmentRuleExplanation_shouldIncludeAllIndicatorsWhenRequested() {
+        QcJudgmentResultVO.EvidenceVO passed = evidence("屈服强度", "280", "235", "360", "合格", 1);
+        QcJudgmentResultVO.EvidenceVO failed = evidence("延伸率", "28", "27", null,
+                "实测值 28.0% 低于协议下限 27.0%，但在让步范围内，触发 CAN_CONCESSION", 0);
+
+        String explanation = CitationReferenceSupport.buildJudgmentRuleExplanation(
+                "CAN_CONCESSION",
+                Arrays.asList(passed, failed),
+                Collections.emptyList(),
+                0,
+                "【标准冲突裁决后重判】示例前缀。",
+                true);
+
+        assertTrue(explanation.startsWith("【标准冲突裁决后重判】"));
+        assertTrue(explanation.contains("屈服强度"));
+        assertTrue(explanation.contains("（合格）"));
+        assertTrue(explanation.contains("延伸率"));
+        assertTrue(explanation.contains("（落入让步范围）"));
+    }
+
     private static QcJudgmentResultVO.EvidenceVO evidence(String name,
                                                           String test,
                                                           String lower,

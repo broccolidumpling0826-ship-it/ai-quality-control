@@ -33,6 +33,11 @@ public interface StandardConflictService {
     void bindRejudgeJudgment(String id, String rejudgeJudgmentId);
 
     /**
+     * 查询与指定重判记录关联的已裁决冲突（标准冲突裁决后重判场景）。
+     */
+    List<StandardConflictVO> findResolvedByRejudgeJudgmentId(String rejudgeJudgmentId);
+
+    /**
      * 判断检验记录是否存在未裁决的阻断冲突。
      *
      * @param recordId 检验记录ID

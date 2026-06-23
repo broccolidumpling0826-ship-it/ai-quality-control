@@ -1,5 +1,13 @@
 <template>
   <div class="cert-qa-page">
+    <div class="page-toolbar">
+      <div>
+        <div class="page-toolbar-title">质保书问答</div>
+        <div class="page-toolbar-desc">基于质保书快照与判定依据回答出证问题；正式快照请在质保书数据页生成。</div>
+      </div>
+      <el-button plain @click="goToCertData">← 质保书数据</el-button>
+    </div>
+
     <el-card class="query-card" shadow="never">
       <el-form :model="form" inline>
         <el-form-item label="卷号">
@@ -47,6 +55,14 @@
           :closable="false"
           :title="answer.refusalReason || '无法回答'"
         />
+        <el-alert
+          v-else-if="answer?.guidanceMessage"
+          type="warning"
+          show-icon
+          :closable="false"
+          :title="answer.guidanceMessage"
+          style="margin-bottom: 12px"
+        />
         <p class="answer-text">
           <template v-for="(part, index) in answerParts" :key="index">
             <span v-if="part.type === 'text'">{{ part.value }}</span>
@@ -86,11 +102,15 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ChatLineSquare } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { askCertQa, type CertQaAnswer, type CertQaQuery } from '@/api/cert-data'
 import { useCitationParts } from '@/composables/use-citation-parts'
+
+const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const answer = ref<CertQaAnswer | null>(null)
@@ -102,7 +122,18 @@ const form = reactive<CertQaQuery>({
 
 const DEFAULT_ANSWER_HINT = '按卷号或批次提问，系统会基于质保书快照和判定依据回答。'
 
-const answerParts = useCitationParts(() => answer.value?.answer, DEFAULT_ANSWER_HINT)
+const answerParts = useCitationParts(
+  () => {
+    const text = answer.value?.answer
+    const guidance = answer.value?.guidanceMessage
+    if (!text) return DEFAULT_ANSWER_HINT
+    if (guidance && text.startsWith(guidance)) {
+      return text.slice(guidance.length).replace(/^\s+/, '') || DEFAULT_ANSWER_HINT
+    }
+    return text
+  },
+  DEFAULT_ANSWER_HINT
+)
 
 async function ask() {
   if (!form.coilNo && !form.batchNo) {
@@ -126,11 +157,57 @@ function confidenceType(label?: string) {
   if (label === 'LOW') return 'danger'
   return 'warning'
 }
+
+function goToCertData() {
+  router.push({
+    path: '/cert-data',
+    query: {
+      ...(form.coilNo ? { coilNo: form.coilNo } : {}),
+      ...(form.batchNo ? { batchNo: form.batchNo } : {})
+    }
+  })
+}
+
+function applyRouteQuery() {
+  const coilNo = typeof route.query.coilNo === 'string' ? route.query.coilNo : ''
+  const batchNo = typeof route.query.batchNo === 'string' ? route.query.batchNo : ''
+  const question = typeof route.query.question === 'string' ? route.query.question : ''
+  if (coilNo) form.coilNo = coilNo
+  if (batchNo) form.batchNo = batchNo
+  if (question) form.question = question
+}
+
+onMounted(() => {
+  applyRouteQuery()
+  if (form.question.trim() && (form.coilNo || form.batchNo)) {
+    void ask()
+  }
+})
 </script>
 
 <style scoped>
 .cert-qa-page {
   padding: 16px;
+}
+
+.page-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.page-toolbar-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.page-toolbar-desc {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-secondary, #909399);
 }
 
 .query-card,

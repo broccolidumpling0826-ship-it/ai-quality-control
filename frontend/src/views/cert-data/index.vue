@@ -1,8 +1,21 @@
 <template>
   <div class="cert-data-page">
+    <div class="page-toolbar">
+      <div>
+        <div class="page-toolbar-title">质保书数据</div>
+        <div class="page-toolbar-desc">生成正式质保书快照并导出 PDF；出证依据可在质保书问答中查询。</div>
+      </div>
+      <el-button type="primary" plain :icon="ChatLineSquare" @click="goToCertQa()">质保书问答</el-button>
+    </div>
+
     <!-- 生成区 -->
     <el-card shadow="never" style="margin-bottom:12px">
-      <template #header><span style="font-weight:600">生成质保书数据</span></template>
+      <template #header>
+        <div class="card-head">
+          <span style="font-weight:600">生成质保书数据</span>
+          <el-button link type="primary" @click="goToCertQaFromGenerate">生成后去问答页核对 →</el-button>
+        </div>
+      </template>
       <el-form ref="generateFormRef" :model="generateForm" :rules="generateRules" inline label-width="80px">
         <el-form-item label="卷号" prop="coilNo">
           <el-input
@@ -116,9 +129,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="viewDetail(row)">查看详情</el-button>
+            <el-button link type="primary" @click="goToCertQa(row)">问答</el-button>
             <el-button link type="success" @click="handleDownloadPdf(row)">导出PDF</el-button>
           </template>
         </el-table-column>
@@ -185,7 +199,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { ChatLineSquare } from '@element-plus/icons-vue'
 import type { FormInstance } from 'element-plus'
 import { useDictStore } from '@/store/dict'
 import { useTableFilter } from '@/composables/use-table-filter'
@@ -201,7 +217,11 @@ import {
 } from '@/api/cert-data'
 import type { PageResult } from '@/types'
 
+const router = useRouter()
+const route = useRoute()
 const dictStore = useDictStore()
+
+const DEFAULT_CERT_QA_QUESTION = '这卷当前能否生成正式质保书？'
 
 const generateFormRef = ref<FormInstance>()
 const generateLoading = ref(false)
@@ -384,7 +404,38 @@ async function handleDownloadPdf(row: CertDisplayRow) {
   }
 }
 
+function goToCertQa(source?: Pick<CertDisplayRow, 'coilNo' | 'batchNo'>) {
+  const coilNo = source?.coilNo || searchForm.coilNo || generateForm.coilNo || undefined
+  const batchNo = source?.batchNo || searchForm.batchNo || generateForm.batchNo || undefined
+  router.push({
+    path: '/cert-data/qa',
+    query: {
+      ...(coilNo ? { coilNo } : {}),
+      ...(batchNo ? { batchNo } : {}),
+      question: DEFAULT_CERT_QA_QUESTION
+    }
+  })
+}
+
+function goToCertQaFromGenerate() {
+  if (!generateForm.coilNo && !generateForm.batchNo) {
+    ElMessage.warning('请先输入卷号或批次号')
+    return
+  }
+  goToCertQa({ coilNo: generateForm.coilNo, batchNo: generateForm.batchNo })
+}
+
 onMounted(() => {
+  const coilNo = typeof route.query.coilNo === 'string' ? route.query.coilNo : ''
+  const batchNo = typeof route.query.batchNo === 'string' ? route.query.batchNo : ''
+  if (coilNo) {
+    generateForm.coilNo = coilNo
+    searchForm.coilNo = coilNo
+  }
+  if (batchNo) {
+    generateForm.batchNo = batchNo
+    searchForm.batchNo = batchNo
+  }
   loadData()
 })
 </script>
@@ -393,6 +444,34 @@ onMounted(() => {
 .cert-data-page {
   padding: 16px;
 }
+
+.page-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.page-toolbar-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.page-toolbar-desc {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-secondary, #909399);
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .search-card :deep(.el-card__body) {
   padding: 16px 16px 0;
 }

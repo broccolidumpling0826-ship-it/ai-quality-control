@@ -49,9 +49,12 @@ export const getStandardById = (id: string) => get(`/standards/${id}`)
 export const listIndicators = (params?: any) => get('/standards/indicators', params)
 
 export interface SpecRangeOption {
+  /** 下拉选中值，对应质量标准 ID */
   value: string
   label: string
   standardId: string
+  /** 写入检验记录的规格文本 */
+  specRange: string
 }
 
 /** 查询有效规格范围下拉选项（D-016：product_spec 强制下拉，禁止自由文本） */

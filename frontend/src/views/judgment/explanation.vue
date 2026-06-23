@@ -75,6 +75,9 @@
               {{ detail.confidenceLabel || 'N/A' }}
             </el-tag>
             <el-tag type="info" size="small">{{ detail.degradationSource || 'N/A' }}</el-tag>
+            <el-tag v-if="detail.aiExplanationTrace" type="warning" size="small">
+              {{ explanationTraceLabel(detail.aiExplanationTrace) }}
+            </el-tag>
             <el-tag v-if="detail.citationMissing" type="warning" size="small">引用缺失</el-tag>
           </div>
         </div>
@@ -378,6 +381,20 @@ function confidenceType(label?: string): any {
   if (label === 'HIGH') return 'success'
   if (label === 'LOW') return 'danger'
   return 'warning'
+}
+
+function explanationTraceLabel(trace?: string) {
+  const map: Record<string, string> = {
+    MODEL_GENERATED: '已调模型·校验通过',
+    MODEL_REJECTED: '已调模型·校验未通过',
+    ASSESSMENT_REUSE: '未调模型·复用历史评估',
+    CACHE_HIT: '未调模型·缓存命中',
+    MODEL_DISABLED: '未调模型·开关关闭',
+    STRUCTURED_ONLY: '未调模型·仅结构化',
+    CONFLICT_REJUDGE: '冲突裁决后重判·结构化解释',
+    SKIPPED: '未生成解释'
+  }
+  return map[trace || ''] || trace || '路径未知'
 }
 
 function stdTypeLabel(type: string) {

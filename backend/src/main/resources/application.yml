@@ -68,6 +68,9 @@ app:
   concession:
     # 让步催促提醒阈值（天数，FR-009）：confirm_status=PENDING 超过此天数自动提醒
     remind-days: 7
+  standard:
+    # 发布/保存已发布标准时，校验同体系生效区间不得重叠
+    enforce-effective-window-overlap: ${STANDARD_ENFORCE_EFFECTIVE_WINDOW_OVERLAP:true}
   ai:
     # 模型/向量配置统一在此维护；dev 环境通过 profile 覆盖开关与本地密钥默认值，勿在 application-dev.yml 重复
     model:

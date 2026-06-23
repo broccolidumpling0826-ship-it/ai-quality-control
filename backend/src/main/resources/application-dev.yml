@@ -29,3 +29,6 @@ mybatis-plus:
 app:
   upload:
     base-path: /tmp/quality-control/uploads
+  standard:
+    # 临时关闭生效区间重叠校验，便于构造标准冲突测试数据；测完请改回 true
+    enforce-effective-window-overlap: false

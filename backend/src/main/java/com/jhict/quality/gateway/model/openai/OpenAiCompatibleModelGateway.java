@@ -65,6 +65,11 @@ public class OpenAiCompatibleModelGateway implements ModelGateway {
         }
         try {
             Map<String, Object> body = buildChatBody(request);
+            log.info("模型chat HTTP请求，provider={}, businessType={}, businessId={}, model={}",
+                    chatProvider(),
+                    request == null ? null : request.getBusinessType(),
+                    request == null ? null : request.getBusinessId(),
+                    request == null ? null : request.getModelName());
             ResponseEntity<String> response = postJson(chatUrl(), body, effectiveTimeout(request == null ? null : request.getTimeoutMillis()));
             return parseChatResponse(request, response.getBody(), start);
         } catch (ResourceAccessException ex) {

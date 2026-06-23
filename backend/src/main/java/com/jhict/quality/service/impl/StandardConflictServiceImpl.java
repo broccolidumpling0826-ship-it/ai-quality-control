@@ -152,6 +152,19 @@ public class StandardConflictServiceImpl implements StandardConflictService {
     }
 
     @Override
+    public List<StandardConflictVO> findResolvedByRejudgeJudgmentId(String rejudgeJudgmentId) {
+        if (!StringUtils.hasText(rejudgeJudgmentId)) {
+            return new ArrayList<>();
+        }
+        List<StandardConflict> conflicts = standardConflictMapper.selectList(new LambdaQueryWrapper<StandardConflict>()
+                .eq(StandardConflict::getRejudgeJudgmentId, rejudgeJudgmentId)
+                .eq(StandardConflict::getStatus, STATUS_RESOLVED)
+                .orderByDesc(StandardConflict::getDecisionTime)
+                .orderByDesc(StandardConflict::getCreateDateTime));
+        return conflicts.stream().map(this::toVO).collect(Collectors.toList());
+    }
+
+    @Override
     public boolean hasUnresolvedBlockingConflict(String recordId) {
         if (!StringUtils.hasText(recordId)) {
             return false;

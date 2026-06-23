@@ -92,6 +92,8 @@ export interface CertQaAnswer {
   refusalReason?: string
   nonFinal?: boolean
   certificateSnapshotFound?: boolean
+  guidanceMessage?: string
+  concessionApproved?: boolean
   cacheHit?: boolean
   confidenceLabel?: string
   degradationSource?: string

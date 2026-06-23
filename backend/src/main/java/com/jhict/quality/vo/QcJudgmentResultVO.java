@@ -107,6 +107,9 @@ public class QcJudgmentResultVO {
     @ApiModelProperty(value = "降级原因")
     private String degradationReason;
 
+    @ApiModelProperty(value = "AI解释生成路径追踪：MODEL_GENERATED/MODEL_REJECTED/ASSESSMENT_REUSE/CACHE_HIT/MODEL_DISABLED/STRUCTURED_ONLY/SKIPPED")
+    private String aiExplanationTrace;
+
     @ApiModelProperty(value = "冲突或人工复核提示")
     private List<String> conflictWarnings;
 

@@ -403,21 +403,36 @@ public class JudgmentServiceImpl implements JudgmentService {
             vo.setCandidateStandards(Collections.emptyList());
             vo.setSuppressedStandards(Collections.emptyList());
         }
-        List<StandardConflictVO> conflicts = loadConflictsByJudgmentId(result.getId());
+        List<StandardConflictVO> rejudgeConflicts = standardConflictService.findResolvedByRejudgeJudgmentId(result.getId());
+        boolean conflictRejudge = !rejudgeConflicts.isEmpty();
+        if (conflictRejudge) {
+            annotateCandidateStandardsAfterAdjudication(vo, rejudgeConflicts);
+        }
+        List<StandardConflictVO> conflicts = conflictRejudge
+                ? rejudgeConflicts
+                : loadConflictsByJudgmentId(result.getId());
         vo.setConflicts(conflicts);
-        vo.setConflictWarnings(buildConflictWarnings(result, conflicts));
+        vo.setConflictWarnings(buildConflictWarnings(result, conflicts, rejudgeConflicts));
         List<AiSourceReferenceVO> citations = loadCitationReferences(result, vo.getEvidences());
         vo.setCitations(citations);
         vo.setCitationMissing(citations.isEmpty());
+        String contextPrefix = conflictRejudge ? buildConflictRejudgePrefix(rejudgeConflicts) : null;
         vo.setRuleExplanation(CitationReferenceSupport.buildJudgmentRuleExplanation(
                 result.getJudgmentType(),
                 vo.getEvidences(),
                 citations,
-                conflicts == null ? 0 : conflicts.size()));
-        AiExplanationSource aiSource = generateAiExplanation
-                ? fillGeneratedExplanationIfPossible(vo, result, citations)
-                : tryStructuredExplanation(vo, citations);
-        applyConfidenceAndDegradation(vo, result, conflicts, aiSource);
+                conflicts == null ? 0 : conflicts.size(),
+                contextPrefix,
+                conflictRejudge));
+        AiExplanationSource aiSource;
+        if (generateAiExplanation) {
+            aiSource = fillGeneratedExplanationIfPossible(vo, result, citations, conflictRejudge);
+        } else {
+            aiSource = tryStructuredExplanation(vo, citations);
+            vo.setAiExplanationTrace(aiSource == AiExplanationSource.STRUCTURED
+                    ? "STRUCTURED_ONLY" : "SKIPPED");
+        }
+        applyConfidenceAndDegradation(vo, result, conflicts, aiSource, conflictRejudge);
         if (aiSource == AiExplanationSource.GENERATED || aiSource == AiExplanationSource.STRUCTURED) {
             persistJudgmentExplanationAssessment(vo, result);
         }
@@ -462,8 +477,13 @@ public class JudgmentServiceImpl implements JudgmentService {
         return standardConflictService.page(query).getRecords();
     }
 
-    private List<String> buildConflictWarnings(QcJudgmentResult result, List<StandardConflictVO> conflicts) {
+    private List<String> buildConflictWarnings(QcJudgmentResult result, List<StandardConflictVO> conflicts,
+                                               List<StandardConflictVO> rejudgeConflicts) {
         List<String> warnings = new ArrayList<>();
+        if (rejudgeConflicts != null && !rejudgeConflicts.isEmpty()) {
+            warnings.add(buildConflictRejudgePrefix(rejudgeConflicts));
+            return warnings;
+        }
         if (JudgmentType.STANDARD_CONFLICT.getCode().equals(result.getJudgmentType())) {
             warnings.add("当前判定为标准冲突，必须完成标准冲突裁决后才能形成放行类结论");
         }
@@ -475,11 +495,94 @@ public class JudgmentServiceImpl implements JudgmentService {
         return warnings;
     }
 
+    private void annotateCandidateStandardsAfterAdjudication(QcJudgmentResultVO vo,
+                                                             List<StandardConflictVO> rejudgeConflicts) {
+        if (rejudgeConflicts == null || rejudgeConflicts.isEmpty()
+                || vo.getCandidateStandards() == null || vo.getCandidateStandards().isEmpty()) {
+            return;
+        }
+        String decisionStandardId = rejudgeConflicts.get(0).getDecisionStandardId();
+        if (!StringUtils.hasText(decisionStandardId)) {
+            return;
+        }
+        for (StandardCandidateVO candidate : vo.getCandidateStandards()) {
+            if (decisionStandardId.equals(candidate.getId())) {
+                candidate.setSelected(true);
+                candidate.setConflict(false);
+                candidate.setReason("人工裁决控制标准，已用于冲突后重判");
+            } else if (Boolean.TRUE.equals(candidate.getConflict())) {
+                candidate.setReason("曾与控制标准冲突，已由人工裁决明确控制标准");
+            }
+        }
+    }
+
+    private String buildConflictRejudgePrefix(List<StandardConflictVO> rejudgeConflicts) {
+        if (rejudgeConflicts == null || rejudgeConflicts.isEmpty()) {
+            return null;
+        }
+        StandardConflictVO conflict = rejudgeConflicts.get(0);
+        String standardLabel = resolveStandardLabel(conflict.getDecisionStandardId());
+        String indicatorPart = rejudgeConflicts.stream()
+                .map(StandardConflictVO::getIndicatorName)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.joining("、"));
+        if (!StringUtils.hasText(indicatorPart)) {
+            indicatorPart = "相关指标";
+        }
+        StringBuilder prefix = new StringBuilder();
+        prefix.append("【标准冲突裁决后重判】");
+        prefix.append("原检验曾因同优先级标准限值不一致触发 STANDARD_CONFLICT（冲突编号 ")
+                .append(nullToEmpty(conflict.getConflictNo()))
+                .append("），涉及指标：")
+                .append(indicatorPart)
+                .append("。");
+        if (StringUtils.hasText(standardLabel)) {
+            prefix.append("质量管理人员已选定控制标准「").append(standardLabel).append("」");
+        } else if (StringUtils.hasText(conflict.getDecisionStandardId())) {
+            prefix.append("质量管理人员已选定控制标准（ID ").append(conflict.getDecisionStandardId()).append("）");
+        }
+        if (conflict.getDecisionTime() != null) {
+            prefix.append("，裁决时间 ")
+                    .append(conflict.getDecisionTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        }
+        if (StringUtils.hasText(conflict.getDecisionReason())) {
+            prefix.append("；裁决理由：").append(conflict.getDecisionReason().trim());
+        }
+        prefix.append("。以下结论依据该控制标准重新判定，不再沿用冲突阻断状态。");
+        return prefix.toString();
+    }
+
+    private String resolveStandardLabel(String standardId) {
+        if (!StringUtils.hasText(standardId)) {
+            return null;
+        }
+        QcQualityStandard standard = qualityStandardMapper.selectById(standardId);
+        if (standard == null) {
+            return null;
+        }
+        if (StringUtils.hasText(standard.getStandardCode())) {
+            String label = standard.getStandardCode();
+            if (StringUtils.hasText(standard.getVersionNo())) {
+                label = label + " " + standard.getVersionNo();
+            }
+            return label;
+        }
+        if (StringUtils.hasText(standard.getStandardName())) {
+            return standard.getStandardName();
+        }
+        return standard.getVersionNo();
+    }
+
     private void applyConfidenceAndDegradation(QcJudgmentResultVO vo, QcJudgmentResult result,
                                                List<StandardConflictVO> conflicts,
-                                               AiExplanationSource aiSource) {
+                                               AiExplanationSource aiSource,
+                                               boolean conflictRejudge) {
         List<String> factors = new ArrayList<>();
         factors.add("已使用结构化判定依据生成规则解释");
+        if (conflictRejudge) {
+            factors.add("本判定为标准冲突人工裁决后的系统重判");
+        }
         if (Boolean.TRUE.equals(vo.getCitationMissing())) {
             factors.add("来源段落引用尚未命中，禁止补写不存在的标准原文");
         } else {
@@ -503,6 +606,10 @@ public class JudgmentServiceImpl implements JudgmentService {
             vo.setConfidenceScore(0.85D);
             if (aiSource == AiExplanationSource.STRUCTURED) {
                 factors.add("结构化依据解释已附来源编号并通过校验");
+            } else if (aiSource == AiExplanationSource.ASSESSMENT) {
+                factors.add("解释复用历史评估记录，本次未调用模型");
+            } else if (aiSource == AiExplanationSource.CACHE) {
+                factors.add("解释来自缓存，本次未调用模型");
             } else {
                 factors.add("AI解释已通过来源编号校验");
             }
@@ -517,9 +624,19 @@ public class JudgmentServiceImpl implements JudgmentService {
         }
         vo.setConfidenceFactors(factors);
         if (StringUtils.hasText(vo.getAiExplanation())) {
-            if (aiSource == AiExplanationSource.STRUCTURED) {
+            if (conflictRejudge && aiSource == AiExplanationSource.STRUCTURED) {
+                vo.setDegradationSource("CONFLICT_REJUDGE");
+                vo.setDegradationReason("标准冲突裁决后系统重判，已基于控制标准重新生成含全部指标依据的解释");
+                vo.setAiExplanationTrace("CONFLICT_REJUDGE");
+            } else if (aiSource == AiExplanationSource.STRUCTURED) {
                 vo.setDegradationSource("RULE_TEMPLATE");
                 vo.setDegradationReason("模型解释未通过校验，已展示含指标依据与来源编号的结构化解释");
+            } else if (aiSource == AiExplanationSource.ASSESSMENT) {
+                vo.setDegradationSource("ASSESSMENT_REUSE");
+                vo.setDegradationReason("复用历史评估记录中的可信解释，本次未调用模型");
+            } else if (aiSource == AiExplanationSource.CACHE) {
+                vo.setDegradationSource("CACHE");
+                vo.setDegradationReason("命中解释缓存，本次未调用模型");
             } else {
                 vo.setDegradationSource("GENERATED");
                 vo.setDegradationReason("AI解释已基于来源条款生成并通过引用校验");
@@ -540,37 +657,66 @@ public class JudgmentServiceImpl implements JudgmentService {
 
     private AiExplanationSource fillGeneratedExplanationIfPossible(QcJudgmentResultVO vo,
                                                                    QcJudgmentResult result,
-                                                                   List<AiSourceReferenceVO> citations) {
+                                                                   List<AiSourceReferenceVO> citations,
+                                                                   boolean conflictRejudge) {
         vo.setAiExplanation(null);
+        vo.setAiExplanationTrace(null);
+        String judgmentId = result.getId();
         if (citations == null || citations.isEmpty()) {
+            vo.setAiExplanationTrace("SKIPPED");
+            log.info("判定解释未调模型，judgmentId={}，trace=SKIPPED，原因=无来源引用", judgmentId);
             return tryStructuredExplanation(vo, citations);
         }
         if (!modelGateway.enabled()) {
+            vo.setAiExplanationTrace("MODEL_DISABLED");
+            log.info("判定解释未调模型，judgmentId={}，trace=MODEL_DISABLED", judgmentId);
             return tryStructuredExplanation(vo, citations);
         }
-        String cachedExplanation = loadCachedExplanation(result.getId(), citations, vo.getEvidences());
-        if (StringUtils.hasText(cachedExplanation)) {
-            vo.setAiExplanation(cachedExplanation);
-            return AiExplanationSource.CACHE;
+        if (!conflictRejudge) {
+            String cachedExplanation = loadCachedExplanation(judgmentId, citations, vo.getEvidences());
+            if (StringUtils.hasText(cachedExplanation)) {
+                vo.setAiExplanation(cachedExplanation);
+                vo.setAiExplanationTrace("CACHE_HIT");
+                log.info("判定解释未调模型，judgmentId={}，trace=CACHE_HIT", judgmentId);
+                return AiExplanationSource.CACHE;
+            }
+            String assessedExplanation = loadAssessedExplanation(judgmentId, citations, vo.getEvidences());
+            if (StringUtils.hasText(assessedExplanation)) {
+                vo.setAiExplanation(assessedExplanation);
+                vo.setAiExplanationTrace("ASSESSMENT_REUSE");
+                log.info("判定解释未调模型，judgmentId={}，trace=ASSESSMENT_REUSE", judgmentId);
+                return AiExplanationSource.ASSESSMENT;
+            }
+        } else {
+            log.info("判定解释跳过缓存/历史复用，judgmentId={}，原因=标准冲突裁决后重判", judgmentId);
         }
-        String assessedExplanation = loadAssessedExplanation(result.getId(), citations, vo.getEvidences());
-        if (StringUtils.hasText(assessedExplanation)) {
-            vo.setAiExplanation(assessedExplanation);
-            return AiExplanationSource.ASSESSMENT;
-        }
+        log.info("判定解释开始调用模型，judgmentId={}，businessType=JUDGMENT_EXPLANATION", judgmentId);
         ModelChatResponse response = modelGateway.chat(buildExplanationChatRequest(vo, result, citations));
         String trusted = CitationReferenceSupport.acceptTrustedCitedOutput(
                 response != null ? response.getContent() : null, citations, vo.getEvidences());
         if (StringUtils.hasText(trusted)) {
             vo.setAiExplanation(trusted);
+            vo.setAiExplanationTrace("MODEL_GENERATED");
+            log.info("判定解释模型调用成功且通过引用校验，judgmentId={}，trace=MODEL_GENERATED，latencyMs={}",
+                    judgmentId, response != null ? response.getLatencyMillis() : null);
             return AiExplanationSource.GENERATED;
         }
         if (response != null && response.isSuccess()) {
-            log.warn("AI判定解释引用校验未通过，judgmentId={}", result.getId());
+            log.warn("AI判定解释引用校验未通过，judgmentId={}，trace=MODEL_REJECTED", judgmentId);
+            vo.setAiExplanationTrace("MODEL_REJECTED");
         } else if (response != null) {
-            log.warn("AI判定解释生成失败，judgmentId={}, error={}", result.getId(), response.getErrorMessage());
+            log.warn("AI判定解释生成失败，judgmentId={}, trace=MODEL_REJECTED, error={}",
+                    judgmentId, response.getErrorMessage());
+            vo.setAiExplanationTrace("MODEL_REJECTED");
+        } else {
+            log.warn("AI判定解释模型无响应，judgmentId={}，trace=MODEL_REJECTED", judgmentId);
+            vo.setAiExplanationTrace("MODEL_REJECTED");
         }
-        return tryStructuredExplanation(vo, citations);
+        AiExplanationSource structured = tryStructuredExplanation(vo, citations);
+        if (structured == AiExplanationSource.STRUCTURED && !StringUtils.hasText(vo.getAiExplanationTrace())) {
+            vo.setAiExplanationTrace("MODEL_REJECTED");
+        }
+        return structured;
     }
 
     private AiExplanationSource tryStructuredExplanation(QcJudgmentResultVO vo,

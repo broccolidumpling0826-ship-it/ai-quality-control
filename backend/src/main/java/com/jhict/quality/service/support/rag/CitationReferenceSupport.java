@@ -225,6 +225,15 @@ public final class CitationReferenceSupport {
                                                       List<QcJudgmentResultVO.EvidenceVO> evidences,
                                                       List<AiSourceReferenceVO> citations,
                                                       int conflictCount) {
+        return buildJudgmentRuleExplanation(judgmentType, evidences, citations, conflictCount, null, false);
+    }
+
+    public static String buildJudgmentRuleExplanation(String judgmentType,
+                                                      List<QcJudgmentResultVO.EvidenceVO> evidences,
+                                                      List<AiSourceReferenceVO> citations,
+                                                      int conflictCount,
+                                                      String contextPrefix,
+                                                      boolean includeAllIndicators) {
         if (JudgmentType.STANDARD_CONFLICT.getCode().equals(judgmentType)) {
             return "当前记录触发同优先级标准冲突，系统已阻断合格/不合格/让步类结论，需人工裁决控制标准后重新判定。";
         }
@@ -253,7 +262,7 @@ public final class CitationReferenceSupport {
         }
         explanation.append("。");
 
-        boolean showAllIndicators = failedCount == 0 && concessionCount == 0;
+        boolean showAllIndicators = includeAllIndicators || (failedCount == 0 && concessionCount == 0);
         List<String> detailLines = new ArrayList<>();
         List<AiSourceReferenceVO> safeCitations = citations == null ? new ArrayList<AiSourceReferenceVO>() : citations;
         for (QcJudgmentResultVO.EvidenceVO evidence : evidences) {
@@ -278,6 +287,8 @@ public final class CitationReferenceSupport {
                 line.append("（落入让步范围）");
             } else if (!passed) {
                 line.append("（未通过）");
+            } else if (includeAllIndicators) {
+                line.append("（合格）");
             }
             int citationIndex = findBestCitationIndex(safeCitations, evidence);
             if (citationIndex > 0) {
@@ -291,7 +302,11 @@ public final class CitationReferenceSupport {
                 explanation.append(detailLine).append("\n");
             }
         }
-        return explanation.toString().trim();
+        String body = explanation.toString().trim();
+        if (StringUtils.hasText(contextPrefix)) {
+            return contextPrefix.trim() + "\n\n" + body;
+        }
+        return body;
     }
 
     public static int findBestCitationIndex(List<AiSourceReferenceVO> citations,

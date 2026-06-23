@@ -122,19 +122,18 @@ public class StandardController {
                     .or().isNull(QcQualityStandard::getCustomerId));
         }
         List<QcQualityStandard> standards = qualityStandardMapper.selectList(wrapper);
+        // 每条已发布标准单独一项；同规格文本不同版本须分别可选（冲突测试场景）
         List<Map<String, String>> result = standards.stream()
                 .filter(s -> StringUtils.hasText(s.getSpecRange()))
                 .map(s -> {
                     Map<String, String> item = new LinkedHashMap<>();
-                    item.put("value", s.getSpecRange());
+                    item.put("value", s.getId());
                     item.put("label", s.getSpecRange() + " (" + s.getVersionNo() + ")");
                     item.put("standardId", s.getId());
+                    item.put("specRange", s.getSpecRange());
                     return item;
                 })
-                .filter(m -> !m.isEmpty())
-                .collect(Collectors.collectingAndThen(
-                        Collectors.toCollection(() -> new TreeSet<>(Comparator.comparing(m -> m.get("value")))),
-                        ArrayList::new));
+                .collect(Collectors.toList());
         return ApiResult.success(result);
     }
 

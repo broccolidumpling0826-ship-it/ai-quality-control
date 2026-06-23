@@ -79,9 +79,9 @@
               >
                 <el-option
                   v-for="opt in specRangeOptions"
-                  :key="opt.value"
+                  :key="opt.standardId"
                   :label="opt.label"
-                  :value="opt.value"
+                  :value="opt.standardId"
                 />
                 <template v-if="specRangeOptions.length === 0 && !specRangeLoading" #empty>
                   <div class="text-muted" style="padding:8px 16px;font-size:12px;">
@@ -403,7 +403,7 @@ async function loadSpecRanges() {
     })
     specRangeOptions.value = opts ?? []
     // 清空已选规格（品种或牌号已变更）
-    if (!specRangeOptions.value.some(o => o.value === baseForm.specification)) {
+    if (!specRangeOptions.value.some((o) => o.standardId === baseForm.specification)) {
       baseForm.specification = ''
     }
   } catch {
@@ -468,7 +468,7 @@ async function loadStandardIndicators() {
     return
   }
 
-  const specOpt = specRangeOptions.value.find((o) => o.value === baseForm.specification)
+  const specOpt = specRangeOptions.value.find((o) => o.standardId === baseForm.specification)
   if (!specOpt?.standardId) {
     ElMessage.warning('未找到匹配的质量标准，请确认规格选择或先在标准库维护')
     return
@@ -584,9 +584,10 @@ async function handleSubmit() {
   }
   submitLoading.value = true
   try {
+    const selectedSpec = specRangeOptions.value.find((o) => o.standardId === baseForm.specification)
     const payload = mapInspectionAddPayload({
       ...baseForm,
-      productSpec: baseForm.specification,
+      productSpec: selectedSpec?.specRange || selectedSpec?.label || baseForm.specification,
       testTime: baseForm.inspectionTime,
       testerNo: authStore.userInfo?.userNo,
       indicators: indicatorRows.value
