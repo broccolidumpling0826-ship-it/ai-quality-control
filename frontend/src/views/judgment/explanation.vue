@@ -86,7 +86,12 @@
         :closable="false"
         :title="detail.conflictWarnings.join('；')"
       />
-      <p class="ai-text">{{ detail.aiExplanation || detail.ruleExplanation || '暂无解释' }}</p>
+      <p class="ai-text">
+        <template v-for="(part, index) in explanationParts" :key="index">
+          <span v-if="part.type === 'text'">{{ part.value }}</span>
+          <span v-else class="citation-mark">[{{ part.index }}]</span>
+        </template>
+      </p>
       <div v-if="detail.confidenceFactors?.length" class="factor-row">
         <el-tag v-for="item in detail.confidenceFactors" :key="item" size="small" type="info">{{ item }}</el-tag>
       </div>
@@ -125,7 +130,12 @@
           </el-table>
         </el-tab-pane>
         <el-tab-pane label="来源引用">
-          <el-table :data="detail.citations || []" border size="small">
+          <el-table :data="detail.citations || []" border size="small" class="citation-table">
+            <el-table-column label="引用" width="72" align="center" fixed>
+              <template #default="{ $index }">
+                <span class="citation-index">[{{ $index + 1 }}]</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="standardCode" label="标准/协议" min-width="150" />
             <el-table-column prop="clauseNo" label="条款" width="100" />
             <el-table-column prop="pageNo" label="页码" width="80" />
@@ -302,6 +312,7 @@ import type { FormInstance } from 'element-plus'
 import { CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { useDictStore } from '@/store/dict'
 import { useTableFilter } from '@/composables/use-table-filter'
+import { useCitationParts } from '@/composables/use-citation-parts'
 import { getJudgmentExplanation, getJudgmentByRecord } from '@/api/judgment'
 import { getReinspectionAdvice, initiateReinspection, type WorkflowAdvice } from '@/api/reinspection'
 import { getRejudgmentAdvice } from '@/api/rejudgment'
@@ -316,6 +327,11 @@ const detail = ref<any>(null)
 const actionLoading = ref(false)
 const indicatorDetails = computed(() => detail.value?.indicatorDetails ?? [])
 const { getFilters: getIndicatorFilters, filterMethod: indicatorFilterMethod } = useTableFilter(indicatorDetails)
+
+const explanationParts = useCitationParts(
+  () => detail.value?.aiExplanation || detail.value?.ruleExplanation || '暂无解释',
+  '暂无解释'
+)
 
 const reinspectionDialogVisible = ref(false)
 const reinspectionFormRef = ref<FormInstance>()
@@ -580,6 +596,18 @@ onMounted(loadDetail)
   line-height: 1.7;
   white-space: pre-wrap;
   color: var(--text-primary);
+}
+.citation-mark,
+.citation-index {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+.citation-table :deep(.citation-index) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 .factor-row {
   flex-wrap: wrap;

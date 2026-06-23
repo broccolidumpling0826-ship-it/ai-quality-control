@@ -25,6 +25,8 @@ import com.jhict.quality.mapper.QcStandardClauseMapper;
 import com.jhict.quality.service.api.AiDegradationService;
 import com.jhict.quality.service.api.StandardDocumentService;
 import com.jhict.quality.service.api.StandardRagService;
+import com.jhict.quality.service.support.rag.CitationReferenceSupport;
+import com.jhict.quality.service.support.rag.CitationReferenceSupport.CitationPromptStyle;
 import com.jhict.quality.vo.AiDegradationResultVO;
 import com.jhict.quality.vo.AiSourceReferenceVO;
 import com.jhict.quality.vo.StandardClauseVO;
@@ -52,7 +54,7 @@ public class StandardRagServiceImpl implements StandardRagService {
     private static final double HIGH_CONFIDENCE_SCORE = 0.86D;
     private static final double MEDIUM_CONFIDENCE_SCORE = 0.66D;
     private static final double RAW_RETRIEVAL_SCORE = 0.55D;
-    private static final String PROMPT_VERSION = "standard-rag-p0-v1";
+    private static final String PROMPT_VERSION = "standard-rag-p0-v3";
 
     @Resource
     private VectorStoreGateway vectorStoreGateway;
@@ -87,6 +89,7 @@ public class StandardRagServiceImpl implements StandardRagService {
         if (!hasAuthoritativeEvidence(sources)) {
             return lowQualityReferences(cmd, sources, queryVector);
         }
+        sources = CitationReferenceSupport.filterActionableRagSources(sources);
         if (looksLikePromptInjection(cmd.getQuery())) {
             return promptInjectionRawAnswer(cmd, sources, queryVector);
         }
@@ -143,19 +146,8 @@ public class StandardRagServiceImpl implements StandardRagService {
         StringBuilder userPrompt = new StringBuilder();
         userPrompt.append("问题：").append(cmd.getQuery()).append("\n\n");
         userPrompt.append("只能依据以下来源条款回答，并在句末标注条款号或来源编号：\n");
-        for (int i = 0; i < sources.size(); i++) {
-            StandardRagSourceVO source = sources.get(i);
-            userPrompt.append("[").append(i + 1).append("] ")
-                    .append(nullToEmpty(source.getStandardCode()))
-                    .append(" ")
-                    .append(nullToEmpty(source.getClauseNo()));
-            if (StringUtils.hasText(source.getSourceFileName())) {
-                userPrompt.append(" (").append(source.getSourceFileName()).append(")");
-            }
-            userPrompt.append("：")
-                    .append(nullToEmpty(source.getParagraphText()))
-                    .append("\n");
-        }
+        CitationReferenceSupport.appendNumberedRagCitationBlock(userPrompt, sources);
+        CitationReferenceSupport.appendCitationAnswerRules(userPrompt, CitationPromptStyle.STANDARD_RAG);
         log.info("标准RAG调用Chat模型，sourceCount={}, promptChars={}, sourceIds={}",
                 sources.size(),
                 userPrompt.length(),
@@ -179,7 +171,7 @@ public class StandardRagServiceImpl implements StandardRagService {
         request.setAssessmentType("STANDARD_RAG");
         request.setBusinessType("STANDARD_RAG_QUERY");
         request.setGeneratedOutput(isGroundedGeneratedOutput(modelResponse, sources) ? modelResponse.getContent() : null);
-        request.setRawReferences(sources.stream().map(this::toAiReference).collect(Collectors.toList()));
+        request.setRawReferences(CitationReferenceSupport.toAiReferences(sources));
         if (modelResponse != null && !modelResponse.isSuccess()) {
             request.setUnavailableReason(modelResponse.getErrorMessage());
         } else if (modelResponse != null && modelResponse.isSuccess() && request.getGeneratedOutput() == null) {
@@ -298,19 +290,12 @@ public class StandardRagServiceImpl implements StandardRagService {
     }
 
     private boolean isGroundedGeneratedOutput(ModelChatResponse modelResponse, List<StandardRagSourceVO> sources) {
-        if (modelResponse == null || !modelResponse.isSuccess() || !StringUtils.hasText(modelResponse.getContent())) {
+        if (modelResponse == null || !modelResponse.isSuccess()) {
             return false;
         }
-        String content = modelResponse.getContent();
-        for (int i = 0; i < sources.size(); i++) {
-            StandardRagSourceVO source = sources.get(i);
-            if (content.contains("[" + (i + 1) + "]")
-                    || (StringUtils.hasText(source.getClauseNo()) && content.contains(source.getClauseNo()))
-                    || (StringUtils.hasText(source.getStandardCode()) && content.contains(source.getStandardCode()))) {
-                return true;
-            }
-        }
-        return false;
+        List<AiSourceReferenceVO> references = CitationReferenceSupport.toAiReferences(sources);
+        return StringUtils.hasText(CitationReferenceSupport.acceptTrustedCitedOutput(
+                modelResponse.getContent(), references, null));
     }
 
     private List<StandardRagSourceVO> toSources(VectorSearchResponse response) {
@@ -388,21 +373,6 @@ public class StandardRagServiceImpl implements StandardRagService {
         source.setScore(RAW_RETRIEVAL_SCORE);
         source.setReferenceOnly(true);
         return source;
-    }
-
-    private AiSourceReferenceVO toAiReference(StandardRagSourceVO source) {
-        AiSourceReferenceVO reference = new AiSourceReferenceVO();
-        reference.setClauseId(source.getClauseId());
-        reference.setDocumentId(source.getDocumentId());
-        reference.setSourceType(source.getSourceType());
-        reference.setStandardCode(source.getStandardCode());
-        reference.setStandardName(source.getStandardName());
-        reference.setVersionNo(source.getVersionNo());
-        reference.setClauseNo(source.getClauseNo());
-        reference.setPageNo(source.getPageNo());
-        reference.setParagraphText(source.getParagraphText());
-        reference.setScore(source.getScore());
-        return reference;
     }
 
     private List<StandardRagSourceVO> filterUnpublishedStandardSources(List<StandardRagSourceVO> sources) {

@@ -14,6 +14,8 @@ public class StandardClauseChunker {
     private static final int DEFAULT_MAX_CHUNK_CHARS = 1200;
     private static final Pattern CLAUSE_HEADING = Pattern.compile(
             "^\\s*((?:\\d+\\.){1,5}\\d+|\\d{1,2}\\.?|[一二三四五六七八九十]+[、.])\\s+(.{0,80})\\s*$");
+    private static final Pattern NUMBERED_CLAUSE_PREFIX = Pattern.compile(
+            "^\\s*(\\d+(?:\\.\\d+)+)\\s+(.+)$");
 
     public List<StandardClauseChunk> chunk(ExtractedStandardDocument document, Integer maxChunkChars) {
         int maxChars = maxChunkChars == null || maxChunkChars < 200 ? DEFAULT_MAX_CHUNK_CHARS : maxChunkChars;
@@ -28,7 +30,7 @@ public class StandardClauseChunker {
             if (segment == null || !StringUtils.hasText(segment.getText())) {
                 continue;
             }
-            String[] lines = segment.getText().split("\\n");
+            String[] lines = normalizeClauseBoundaries(segment.getText()).split("\\n");
             for (String rawLine : lines) {
                 String line = cleanLine(rawLine);
                 if (!StringUtils.hasText(line)) {
@@ -57,14 +59,35 @@ public class StandardClauseChunker {
     private Heading parseHeading(String line) {
         String normalized = line.replaceFirst("^#{1,6}\\s*", "").trim();
         Matcher matcher = CLAUSE_HEADING.matcher(normalized);
-        if (!matcher.matches()) {
+        if (matcher.matches()) {
+            String title = matcher.group(2) == null ? "" : matcher.group(2).trim();
+            if (title.length() > 80 || title.contains("。")) {
+                return parseNumberedClausePrefix(normalized);
+            }
+            return new Heading(matcher.group(1).replaceAll("\\.$", ""), title);
+        }
+        return parseNumberedClausePrefix(normalized);
+    }
+
+    private Heading parseNumberedClausePrefix(String normalized) {
+        Matcher prefixMatcher = NUMBERED_CLAUSE_PREFIX.matcher(normalized);
+        if (!prefixMatcher.matches()) {
             return null;
         }
-        String title = matcher.group(2) == null ? "" : matcher.group(2).trim();
-        if (title.length() > 80 || title.contains("。")) {
-            return null;
+        String clauseNo = prefixMatcher.group(1);
+        String rest = prefixMatcher.group(2) == null ? "" : prefixMatcher.group(2).trim();
+        if (!StringUtils.hasText(rest)) {
+            return new Heading(clauseNo, "");
         }
-        return new Heading(matcher.group(1).replaceAll("\\.$", ""), title);
+        String title = rest;
+        int period = rest.indexOf('。');
+        if (period > 0) {
+            title = rest.substring(0, period).trim();
+        }
+        if (title.length() > 80) {
+            title = title.substring(0, 80).trim();
+        }
+        return new Heading(clauseNo, title);
     }
 
     private void addSplitChunks(List<StandardClauseChunk> chunks, ChunkBuilder builder, int maxChars) {
@@ -165,6 +188,30 @@ public class StandardClauseChunker {
             return "";
         }
         return line.replace('\t', ' ').replaceAll(" {2,}", " ").trim();
+    }
+
+    /**
+     * OCR and some PDF extractors return long paragraphs without line breaks.
+     * Insert breaks before numbered clause headings so chunker can split correctly.
+     */
+    private String normalizeClauseBoundaries(String text) {
+        if (!StringUtils.hasText(text)) {
+            return text;
+        }
+        String normalized = text.replace("\r\n", "\n").replace('\r', '\n');
+        normalized = normalized.replaceAll(
+                "([\\u4e00-\\u9fa5])(\\d+(?:\\.\\d+)+)\\s+(?=[\\u4e00-\\u9fa5A-Za-z])",
+                "$1\n$2 ");
+        normalized = normalized.replaceAll(
+                "([。；;.!?！？])(\\d+(?:\\.\\d+)+)\\s+(?=[\\u4e00-\\u9fa5A-Za-z])",
+                "$1\n$2 ");
+        normalized = normalized.replaceAll(
+                "(?<=[。；;.!?！？\\s]|^)(\\d+(?:\\.\\d+)+)\\s+(?=[\\u4e00-\\u9fa5A-Za-z])",
+                "\n$1 ");
+        normalized = normalized.replaceAll(
+                "(?<=\\s|^)([一二三四五六七八九十百千]+[、.])\\s*",
+                "\n$1 ");
+        return normalized.trim();
     }
 
     private static class Heading {

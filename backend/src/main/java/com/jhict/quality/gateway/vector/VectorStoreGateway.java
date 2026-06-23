@@ -30,6 +30,14 @@ public interface VectorStoreGateway {
     VectorDeleteResponse deleteClause(VectorDeleteRequest request);
 
     /**
+     * Delete all indexed clauses belonging to one source document.
+     *
+     * @param request delete-by-document request
+     * @return delete response
+     */
+    VectorDeleteResponse deleteClausesByDocumentId(VectorDeleteByDocumentRequest request);
+
+    /**
      * @return provider name for logs and assessment records
      */
     String provider();

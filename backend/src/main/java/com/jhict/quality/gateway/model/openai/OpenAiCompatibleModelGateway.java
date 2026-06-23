@@ -229,10 +229,8 @@ public class OpenAiCompatibleModelGateway implements ModelGateway {
 
     private ModelChatResponse parseChatResponse(ModelChatRequest request, String responseBody, long start) throws Exception {
         JsonNode root = objectMapper.readTree(responseBody);
-        JsonNode choice = root.path("choices").isArray() && root.path("choices").size() > 0
-                ? root.path("choices").get(0)
-                : null;
-        String content = choice == null ? null : choice.path("message").path("content").asText(null);
+        JsonNode choice = firstChoice(root);
+        String content = extractMessageContent(choice == null ? null : choice.path("message").path("content"));
         JsonNode usage = root.path("usage");
         return ModelChatResponse.builder()
                 .success(StringUtils.hasText(content))
@@ -464,25 +462,79 @@ public class OpenAiCompatibleModelGateway implements ModelGateway {
     private ModelVisionExtractionResponse parseVisionResponse(ModelVisionExtractionRequest request,
                                                               String responseBody, long start) throws Exception {
         JsonNode root = objectMapper.readTree(responseBody);
-        JsonNode choice = root.path("choices").isArray() && root.path("choices").size() > 0
-                ? root.path("choices").get(0)
-                : null;
-        String content = choice == null ? null : choice.path("message").path("content").asText(null);
+        JsonNode choice = firstChoice(root);
+        String content = extractMessageContent(choice == null ? null : choice.path("message").path("content"));
+        String finishReason = choice == null ? null : choice.path("finish_reason").asText(null);
         JsonNode usage = root.path("usage");
+        boolean success = StringUtils.hasText(content);
         return ModelVisionExtractionResponse.builder()
-                .success(StringUtils.hasText(content))
+                .success(success)
                 .traceId(request.getTraceId())
                 .provider(chatProvider())
                 .modelName(root.path("model").asText(choose(request.getModelName(), visionProperties.getModel())))
                 .extractedText(content)
-                .finishReason(choice == null ? null : choice.path("finish_reason").asText(null))
+                .finishReason(finishReason)
                 .promptTokens(intOrNull(usage, "prompt_tokens"))
                 .completionTokens(intOrNull(usage, "completion_tokens"))
                 .totalTokens(intOrNull(usage, "total_tokens"))
                 .latencyMillis(System.currentTimeMillis() - start)
                 .rawResponse(truncate(responseBody))
                 .metadata(request.getMetadata())
+                .errorCategory(success ? null : "EMPTY_OCR_OUTPUT")
+                .errorMessage(success ? null : buildEmptyVisionMessage(finishReason))
                 .build();
+    }
+
+    private JsonNode firstChoice(JsonNode root) {
+        JsonNode choices = root == null ? null : root.path("choices");
+        if (choices != null && choices.isArray() && choices.size() > 0) {
+            return choices.get(0);
+        }
+        return null;
+    }
+
+    private String extractMessageContent(JsonNode contentNode) {
+        if (contentNode == null || contentNode.isMissingNode() || contentNode.isNull()) {
+            return null;
+        }
+        if (contentNode.isTextual()) {
+            return contentNode.asText();
+        }
+        if (contentNode.isArray()) {
+            StringBuilder builder = new StringBuilder();
+            for (JsonNode part : contentNode) {
+                if (part == null || part.isNull()) {
+                    continue;
+                }
+                if (part.isTextual()) {
+                    appendContentPart(builder, part.asText());
+                    continue;
+                }
+                String type = part.path("type").asText("");
+                if ("text".equals(type) || "output_text".equals(type)) {
+                    appendContentPart(builder, part.path("text").asText(null));
+                }
+            }
+            return builder.length() == 0 ? null : builder.toString().trim();
+        }
+        return contentNode.asText(null);
+    }
+
+    private void appendContentPart(StringBuilder builder, String text) {
+        if (!StringUtils.hasText(text)) {
+            return;
+        }
+        if (builder.length() > 0) {
+            builder.append('\n');
+        }
+        builder.append(text.trim());
+    }
+
+    private String buildEmptyVisionMessage(String finishReason) {
+        if (StringUtils.hasText(finishReason)) {
+            return "Vision OCR 未返回有效文本（finish_reason=" + finishReason + "）";
+        }
+        return "Vision OCR 未返回有效文本";
     }
 
     private ModelVisionExtractionResponse buildVisionFailure(ModelVisionExtractionRequest request, long start,

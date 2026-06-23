@@ -5,9 +5,15 @@ import type { ApiResult } from '@/types'
 
 const TOKEN_KEY = 'qc_token'
 
+/** 默认 API 超时（毫秒） */
+export const DEFAULT_REQUEST_TIMEOUT = 15000
+
+/** AI 相关接口超时：需覆盖后端模型调用（默认 60s） */
+export const AI_REQUEST_TIMEOUT = 90000
+
 const service: AxiosInstance = axios.create({
   baseURL: '/api/v1',
-  timeout: 15000,
+  timeout: DEFAULT_REQUEST_TIMEOUT,
   headers: {
     'Content-Type': 'application/json;charset=UTF-8'
   }

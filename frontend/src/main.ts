@@ -43,9 +43,11 @@ async function bootstrap() {
   await router.isReady()
 
   const dictStore = useDictStore()
-  dictStore.loadAll().catch((err) => {
-    console.warn('[Dict] 字典加载失败:', err)
-  })
+  if (authStore.token) {
+    await dictStore.loadAll().catch((err) => {
+      console.warn('[Dict] 字典加载失败:', err)
+    })
+  }
 
   app.mount('#app')
 }

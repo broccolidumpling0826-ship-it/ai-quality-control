@@ -3,6 +3,7 @@ package com.jhict.quality.gateway.vector.elasticsearch;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jhict.quality.gateway.vector.VectorClauseDocument;
+import com.jhict.quality.gateway.vector.VectorDeleteByDocumentRequest;
 import com.jhict.quality.gateway.vector.VectorDeleteRequest;
 import com.jhict.quality.gateway.vector.VectorDeleteResponse;
 import com.jhict.quality.gateway.vector.VectorIndexRequest;
@@ -45,6 +46,7 @@ public class ElasticsearchVectorStoreGateway implements VectorStoreGateway {
     private static final String OPERATION_INDEX = "indexClauses";
     private static final String OPERATION_SEARCH = "searchClauses";
     private static final String OPERATION_DELETE = "deleteClause";
+    private static final String OPERATION_DELETE_BY_DOCUMENT = "deleteClausesByDocumentId";
 
     @Resource
     private ElasticsearchVectorProperties properties;
@@ -166,6 +168,47 @@ public class ElasticsearchVectorStoreGateway implements VectorStoreGateway {
             logGatewayFailure(OPERATION_DELETE, request == null ? null : request.getTraceId(),
                     request == null ? null : request.getClauseId(), "GATEWAY_ERROR", ex);
             return deleteFailure(request, start, "GATEWAY_ERROR", "向量检索网关处理失败");
+        }
+    }
+
+    @Override
+    public VectorDeleteResponse deleteClausesByDocumentId(VectorDeleteByDocumentRequest request) {
+        long start = System.currentTimeMillis();
+        if (!enabled()) {
+            return deleteByDocumentFailure(request, start, notConfiguredCategory(), notConfiguredMessage());
+        }
+        if (request == null || !StringUtils.hasText(request.getDocumentId())) {
+            return deleteByDocumentFailure(request, start, "INVALID_INPUT", "缺少源文档ID");
+        }
+        try {
+            String indexName = indexName(request.getIndexName());
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("query", Collections.singletonMap("term",
+                    Collections.singletonMap("documentId", request.getDocumentId())));
+            ResponseEntity<String> response = exchange(deleteByQueryUrl(indexName), HttpMethod.POST, body,
+                    effectiveTimeout(null));
+            return VectorDeleteResponse.builder()
+                    .success(response.getStatusCode().is2xxSuccessful())
+                    .traceId(request.getTraceId())
+                    .provider(PROVIDER)
+                    .indexName(indexName)
+                    .clauseId(request.getDocumentId())
+                    .latencyMillis(System.currentTimeMillis() - start)
+                    .metadata(request.getMetadata())
+                    .build();
+        } catch (ResourceAccessException ex) {
+            logGatewayFailure(OPERATION_DELETE_BY_DOCUMENT, request.getTraceId(), request.getDocumentId(),
+                    "TIMEOUT_OR_IO", ex);
+            return deleteByDocumentFailure(request, start, "TIMEOUT_OR_IO", "向量检索服务连接超时或不可达");
+        } catch (RestClientResponseException ex) {
+            logProviderFailure(OPERATION_DELETE_BY_DOCUMENT, request.getTraceId(), request.getDocumentId(),
+                    "PROVIDER_ERROR", ex.getRawStatusCode(), ex);
+            return deleteByDocumentFailure(request, start, "PROVIDER_ERROR",
+                    "向量检索服务返回错误：" + ex.getRawStatusCode());
+        } catch (Exception ex) {
+            logGatewayFailure(OPERATION_DELETE_BY_DOCUMENT, request.getTraceId(), request.getDocumentId(),
+                    "GATEWAY_ERROR", ex);
+            return deleteByDocumentFailure(request, start, "GATEWAY_ERROR", "向量检索网关处理失败");
         }
     }
 
@@ -396,12 +439,31 @@ public class ElasticsearchVectorStoreGateway implements VectorStoreGateway {
                 .build();
     }
 
+    private VectorDeleteResponse deleteByDocumentFailure(VectorDeleteByDocumentRequest request, long start,
+                                                         String errorCategory, String errorMessage) {
+        return VectorDeleteResponse.builder()
+                .success(false)
+                .traceId(request == null ? null : request.getTraceId())
+                .provider(PROVIDER)
+                .indexName(indexName(request == null ? null : request.getIndexName()))
+                .clauseId(request == null ? null : request.getDocumentId())
+                .latencyMillis(System.currentTimeMillis() - start)
+                .errorCategory(errorCategory)
+                .errorMessage(errorMessage)
+                .metadata(request == null ? null : request.getMetadata())
+                .build();
+    }
+
     private String searchUrl(String indexName) {
         return normalizedHost() + "/" + encode(indexName) + "/_search";
     }
 
     private String documentUrl(String indexName, String documentId) {
         return normalizedHost() + "/" + encode(indexName) + "/_doc/" + encode(documentId);
+    }
+
+    private String deleteByQueryUrl(String indexName) {
+        return normalizedHost() + "/" + encode(indexName) + "/_delete_by_query";
     }
 
     private String indexName(String requestIndexName) {

@@ -47,7 +47,12 @@
           :closable="false"
           :title="answer.refusalReason || '无法回答'"
         />
-        <p class="answer-text">{{ answer?.answer || '按卷号或批次提问，系统会基于质保书快照和判定依据回答。' }}</p>
+        <p class="answer-text">
+          <template v-for="(part, index) in answerParts" :key="index">
+            <span v-if="part.type === 'text'">{{ part.value }}</span>
+            <span v-else class="citation-mark">[{{ part.index }}]</span>
+          </template>
+        </p>
       </el-card>
 
       <el-card class="basis-card" shadow="never">
@@ -65,7 +70,12 @@
 
     <el-card class="citation-card" shadow="never">
       <template #header>来源引用</template>
-      <el-table :data="answer?.citations || []" border stripe size="small">
+      <el-table :data="answer?.citations || []" border stripe size="small" class="citation-table">
+        <el-table-column label="引用" width="72" align="center" fixed>
+          <template #default="{ $index }">
+            <span class="citation-index">[{{ $index + 1 }}]</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="standardCode" label="标准/协议" min-width="160" />
         <el-table-column prop="clauseNo" label="条款" width="100" />
         <el-table-column prop="pageNo" label="页码" width="80" />
@@ -80,6 +90,7 @@ import { reactive, ref } from 'vue'
 import { ChatLineSquare } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { askCertQa, type CertQaAnswer, type CertQaQuery } from '@/api/cert-data'
+import { useCitationParts } from '@/composables/use-citation-parts'
 
 const loading = ref(false)
 const answer = ref<CertQaAnswer | null>(null)
@@ -88,6 +99,10 @@ const form = reactive<CertQaQuery>({
   batchNo: '',
   question: ''
 })
+
+const DEFAULT_ANSWER_HINT = '按卷号或批次提问，系统会基于质保书快照和判定依据回答。'
+
+const answerParts = useCitationParts(() => answer.value?.answer, DEFAULT_ANSWER_HINT)
 
 async function ask() {
   if (!form.coilNo && !form.batchNo) {
@@ -158,6 +173,20 @@ function confidenceType(label?: string) {
   line-height: 1.7;
   white-space: pre-wrap;
   color: var(--text-primary);
+}
+
+.citation-mark,
+.citation-index {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+
+.citation-table :deep(.citation-index) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 @media (max-width: 1100px) {

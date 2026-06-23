@@ -191,11 +191,13 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useAuthStore } from '@/store/auth'
+import { useDictStore } from '@/store/dict'
 import type { LoginForm } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const dictStore = useDictStore()
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
@@ -236,6 +238,7 @@ async function handleLogin() {
   try {
     await authStore.login(loginForm)
     await authStore.loadSession()
+    await dictStore.reload()
 
     if (rememberMe.value) {
       localStorage.setItem('qc_remember_username', loginForm.username)

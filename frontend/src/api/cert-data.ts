@@ -1,4 +1,4 @@
-import { get, post } from '@/utils/request'
+import { get, post, AI_REQUEST_TIMEOUT } from '@/utils/request'
 import type { PageResult } from '@/types'
 
 export interface CertIndicatorSnapshot {
@@ -118,4 +118,4 @@ export interface CertQaAnswer {
 }
 
 export const askCertQa = (data: CertQaQuery) =>
-  post<CertQaAnswer>('/cert-data/qa', data)
+  post<CertQaAnswer>('/cert-data/qa', data, { timeout: AI_REQUEST_TIMEOUT })

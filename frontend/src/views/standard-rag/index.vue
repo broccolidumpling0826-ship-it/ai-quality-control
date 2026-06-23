@@ -8,59 +8,60 @@
     <div class="rag-layout">
       <!-- 左侧：智能问答 -->
       <section class="chat-panel" v-loading="loading">
-        <div class="chat-body">
-          <el-empty
-            v-if="!submittedQuery && !loading"
-            description="输入问题后开始检索"
-            :image-size="72"
-          />
+        <div class="chat-main" :class="{ 'is-empty': !submittedQuery && !loading }">
+          <div class="chat-messages">
+            <el-empty
+              v-if="!submittedQuery && !loading"
+              description="输入问题后开始检索"
+              :image-size="72"
+            />
 
-          <template v-else>
-            <div v-if="submittedQuery" class="chat-item user-item">
-              <div class="chat-bubble user-bubble">{{ submittedQuery }}</div>
-            </div>
+            <template v-else>
+              <div v-if="submittedQuery" class="chat-item user-item">
+                <div class="chat-bubble user-bubble">{{ submittedQuery }}</div>
+              </div>
 
-            <div v-if="answer || loading" class="chat-item ai-item">
-              <div class="chat-bubble ai-bubble">
-                <div class="ai-head">
-                  <el-tag size="small" :type="degradationTagType(answer?.degradationSource, answer?.cacheHit)">
-                    {{ degradationLabel(answer?.degradationSource, answer?.cacheHit) }}
-                  </el-tag>
-                  <el-tag v-if="answer?.confidenceLabel" size="small" :type="confidenceType(answer.confidenceLabel)">
-                    {{ answer.confidenceLabel }}
-                  </el-tag>
-                </div>
+              <div v-if="answer || loading" class="chat-item ai-item">
+                <div class="chat-bubble ai-bubble">
+                  <div class="ai-head">
+                    <el-tag size="small" :type="degradationTagType(answer?.degradationSource, answer?.cacheHit)">
+                      {{ degradationLabel(answer?.degradationSource, answer?.cacheHit) }}
+                    </el-tag>
+                    <el-tag v-if="answer?.confidenceLabel" size="small" :type="confidenceType(answer.confidenceLabel)">
+                      {{ answer.confidenceLabel }}
+                    </el-tag>
+                  </div>
 
-                <el-alert
-                  v-if="answer?.refused"
-                  class="refusal-alert"
-                  type="warning"
-                  :closable="false"
-                  :title="answer.refusalReason || '在已上传的标准/协议中未找到相关依据'"
-                  show-icon
-                />
+                  <el-alert
+                    v-if="answer?.refused"
+                    class="refusal-alert"
+                    type="warning"
+                    :closable="false"
+                    :title="answer.refusalReason || '在已上传的标准/协议中未找到相关依据'"
+                    show-icon
+                  />
 
-                <div v-else class="answer-text">{{ displayAnswer }}</div>
-                <div v-if="answer?.degradationReason" class="degrade-text">{{ answer.degradationReason }}</div>
+                  <div v-else class="answer-text">{{ displayAnswer }}</div>
+                  <div v-if="answer?.degradationReason" class="degrade-text">{{ answer.degradationReason }}</div>
 
-                <div v-if="sources.length" class="citation-row">
-                  <button
-                    v-for="(item, index) in sources"
-                    :key="sourceKey(item, index)"
-                    type="button"
-                    class="citation-tag"
-                    :class="{ active: activeSourceIndex === index }"
-                    @click="focusSource(index)"
-                  >
-                    {{ buildRagSourceShortTitle(item, index) }}
-                  </button>
+                  <div v-if="sources.length" class="citation-row">
+                    <button
+                      v-for="(item, index) in sources"
+                      :key="sourceKey(item, index)"
+                      type="button"
+                      class="citation-tag"
+                      :class="{ active: activeSourceIndex === index }"
+                      @click="focusSource(index)"
+                    >
+                      {{ buildRagSourceShortTitle(item, index) }}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </template>
-        </div>
+            </template>
+          </div>
 
-        <div class="chat-input">
+          <div class="chat-input">
           <div class="input-toolbar">
             <el-select
               v-model="form.sourceTypes"
@@ -76,9 +77,48 @@
               <el-option label="客协" value="CUSTOMER" />
               <el-option label="案例/投诉" value="COMPLAINT" />
             </el-select>
-            <el-input v-model="form.customerId" clearable placeholder="客户" class="filter-input" />
-            <el-input v-model="form.variety" clearable placeholder="品种" class="filter-input short" />
-            <el-input v-model="form.grade" clearable placeholder="牌号" class="filter-input short" />
+            <el-select
+              v-model="form.customerId"
+              clearable
+              filterable
+              placeholder="客户（全部）"
+              class="filter-select"
+            >
+              <el-option
+                v-for="item in customerOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+            <el-select
+              v-model="form.variety"
+              clearable
+              filterable
+              placeholder="品种（全部）"
+              class="filter-select short"
+            >
+              <el-option
+                v-for="item in dictStore.getItems('PRODUCT_VARIETY')"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+            <el-select
+              v-model="form.grade"
+              clearable
+              filterable
+              placeholder="牌号（全部）"
+              class="filter-select short"
+            >
+              <el-option
+                v-for="item in dictStore.getItems('PRODUCT_GRADE')"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
           </div>
           <div class="input-row">
             <el-input
@@ -94,6 +134,7 @@
             </el-button>
           </div>
           <div class="input-hint">Ctrl + Enter 发送 · 仅依据检索到的标准原文回答，不会编造限值</div>
+          </div>
         </div>
       </section>
 
@@ -147,10 +188,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { ElMessage } from 'element-plus'
 import { queryStandardRag, type RagSource, type StandardRagAnswer, type StandardRagQuery } from '@/api/standard-rag'
+import { useDictStore } from '@/store/dict'
+import type { DictItem } from '@/types'
 import {
   buildRagSourceShortTitle,
   degradationLabel,
@@ -161,6 +204,9 @@ import {
   ragSourceTypeTagType,
   sourceKey
 } from '@/utils/standard-rag-display'
+
+const dictStore = useDictStore()
+const customerOptions = ref<DictItem[]>([])
 
 const loading = ref(false)
 const submittedQuery = ref('')
@@ -236,6 +282,22 @@ function confidenceType(label?: string) {
   if (label === 'LOW') return 'danger'
   return 'warning'
 }
+
+async function loadFilterOptions() {
+  try {
+    if (!dictStore.loaded) {
+      await dictStore.loadAll()
+    }
+    const customers = await dictStore.refreshItems('QC_CUSTOMER')
+    customerOptions.value = customers
+  } catch {
+    customerOptions.value = dictStore.getItems('QC_CUSTOMER')
+  }
+}
+
+onMounted(() => {
+  loadFilterOptions()
+})
 </script>
 
 <style scoped>
@@ -264,7 +326,8 @@ function confidenceType(label?: string) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
   gap: 12px;
-  min-height: 640px;
+  height: calc(100vh - 168px);
+  min-height: 480px;
 }
 
 .chat-panel,
@@ -272,23 +335,49 @@ function confidenceType(label?: string) {
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: 4px;
+  min-height: 0;
 }
 
 .chat-panel {
   display: flex;
   flex-direction: column;
-  min-height: 640px;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.chat-body {
+.chat-main {
   flex: 1;
-  padding: 16px;
-  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.chat-main.is-empty {
+  justify-content: space-between;
+}
+
+.chat-main.is-empty .chat-messages {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-messages {
+  flex: 0 1 auto;
+  max-height: calc(100% - 132px);
+  overflow-y: auto;
+  padding: 12px 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .chat-item {
   display: flex;
-  margin-bottom: 14px;
+  flex-shrink: 0;
 }
 
 .user-item {
@@ -325,7 +414,7 @@ function confidenceType(label?: string) {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .refusal-alert {
@@ -349,8 +438,8 @@ function confidenceType(label?: string) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--border-color);
 }
 
@@ -373,8 +462,11 @@ function confidenceType(label?: string) {
 }
 
 .chat-input {
+  flex-shrink: 0;
+  margin-top: 8px;
   border-top: 1px solid var(--border-color);
-  padding: 12px 14px 14px;
+  padding: 10px 12px 12px;
+  background: var(--bg-panel);
 }
 
 .input-toolbar {
@@ -388,12 +480,12 @@ function confidenceType(label?: string) {
   width: 180px;
 }
 
-.filter-input {
-  width: 120px;
+.filter-select {
+  width: 140px;
 }
 
-.filter-input.short {
-  width: 96px;
+.filter-select.short {
+  width: 120px;
 }
 
 .input-row {
@@ -417,7 +509,7 @@ function confidenceType(label?: string) {
 .source-panel {
   display: flex;
   flex-direction: column;
-  min-height: 640px;
+  min-height: 0;
 }
 
 .source-panel-head {
@@ -546,15 +638,16 @@ function confidenceType(label?: string) {
 @media (max-width: 1100px) {
   .rag-layout {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
   }
 
-  .chat-panel,
-  .source-panel {
-    min-height: auto;
+  .chat-panel {
+    min-height: 420px;
   }
 
   .source-list {
-    max-height: 420px;
+    max-height: 360px;
   }
 }
 </style>

@@ -7,6 +7,8 @@ import com.jhict.quality.dto.AiAssessmentPageQuery;
 import com.jhict.quality.entity.QcAiAssessment;
 import com.jhict.quality.vo.AiAssessmentVO;
 
+import java.util.Optional;
+
 /**
  * AI评估审计服务。该服务是 qc_ai_assessment 表的唯一 Mapper 入口。
  */
@@ -94,4 +96,9 @@ public interface AiAssessmentService {
      * @return 低置信数量
      */
     Long countLowConfidenceAssessments(String timeStart, String timeEnd);
+
+    /**
+     * 查询指定判定最近一条 AI 评估审计（按创建时间倒序）。
+     */
+    Optional<QcAiAssessment> findLatestByRelatedJudgment(String relatedJudgmentId, String assessmentType);
 }

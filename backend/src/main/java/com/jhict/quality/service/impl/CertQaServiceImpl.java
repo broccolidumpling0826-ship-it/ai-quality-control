@@ -3,30 +3,45 @@ package com.jhict.quality.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.jhict.quality.dto.AiAssessmentCreateCmd;
 import com.jhict.quality.dto.CertQaQueryCmd;
 import com.jhict.quality.dto.QcJudgmentPageQuery;
 import com.jhict.quality.entity.QcAiCache;
 import com.jhict.quality.enums.JudgmentType;
+import com.jhict.quality.gateway.model.ModelChatRequest;
+import com.jhict.quality.gateway.model.ModelChatResponse;
+import com.jhict.quality.gateway.model.ModelGateway;
+import com.jhict.quality.gateway.model.ModelMessage;
+import com.jhict.quality.service.api.AiAssessmentService;
 import com.jhict.quality.service.api.AiCacheService;
 import com.jhict.quality.service.api.CertDataService;
 import com.jhict.quality.service.api.CertQaService;
 import com.jhict.quality.service.api.JudgmentService;
+import com.jhict.quality.service.support.rag.CitationReferenceSupport;
+import com.jhict.quality.service.support.rag.CitationReferenceSupport.CitationPromptStyle;
+import com.jhict.quality.vo.AiSourceReferenceVO;
 import com.jhict.quality.vo.CertQaAnswerVO;
 import com.jhict.quality.vo.QcJudgmentListVO;
 import com.jhict.quality.vo.QcJudgmentResultVO;
 import com.jhict.quality.vo.QcQualityCertDataVO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class CertQaServiceImpl implements CertQaService {
+
+    private static final String PROMPT_VERSION = "cert-qa-v3";
+    private static final String ASSESSMENT_TYPE_CERT_QA = "CERT_QA";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -39,15 +54,17 @@ public class CertQaServiceImpl implements CertQaService {
     @Resource
     private JudgmentService judgmentService;
 
+    @Resource
+    private ModelGateway modelGateway;
+
+    @Resource
+    private AiAssessmentService aiAssessmentService;
+
     @Override
     public CertQaAnswerVO answer(CertQaQueryCmd cmd) {
         CertQaAnswerVO answer = initAnswer();
         if (!StringUtils.hasText(cmd.getCoilNo()) && !StringUtils.hasText(cmd.getBatchNo())) {
             return refuse(answer, "必须提供卷号或批次号");
-        }
-        CertQaAnswerVO cached = tryCache(cmd);
-        if (cached != null) {
-            return cached;
         }
 
         QcQualityCertDataVO cert = loadLatestCert(cmd);
@@ -57,26 +74,162 @@ public class CertQaServiceImpl implements CertQaService {
             return refuse(answer, "未找到卷号/批次对应的最终判定");
         }
 
-        answer.setCitations(judgment.getCitations() == null ? Collections.emptyList() : judgment.getCitations());
-        answer.setIndicatorBasis(resolveIndicatorBasis(cmd.getQuestion(), judgment));
+        List<QcJudgmentResultVO.EvidenceVO> basis = resolveIndicatorBasis(cmd.getQuestion(), judgment);
+        List<AiSourceReferenceVO> citations = CitationReferenceSupport.rankAndLimit(
+                judgment.getCitations() == null ? Collections.emptyList() : judgment.getCitations(),
+                basis,
+                8);
+
+        CertQaAnswerVO cached = tryCache(cmd, citations, basis);
+        if (cached != null) {
+            return cached;
+        }
+
+        answer.setCitations(citations);
+        answer.setIndicatorBasis(basis);
         applyStateGate(answer, cert, judgment);
         if (Boolean.TRUE.equals(answer.getRefused())) {
             return answer;
         }
 
-        answer.setAnswer(buildAnswerText(cmd.getQuestion(), cert, judgment, answer.getIndicatorBasis()));
-        if (answer.getCitations().isEmpty()) {
-            answer.setConfidenceLabel("MEDIUM");
-            answer.setDegradationSource("RULE_TEMPLATE");
-            answer.setAnswer(answer.getAnswer() + " 未找到可引用的来源段落，以上仅基于结构化判定快照。");
-        } else {
-            answer.setConfidenceLabel("HIGH");
-            answer.setDegradationSource("RAW_RETRIEVAL");
-        }
+        String ruleAnswer = buildAnswerText(cmd.getQuestion(), cert, judgment, basis);
+        fillGeneratedAnswer(cmd, answer, cert, judgment, ruleAnswer);
         return answer;
     }
 
-    private CertQaAnswerVO tryCache(CertQaQueryCmd cmd) {
+    private void fillGeneratedAnswer(CertQaQueryCmd cmd,
+                                     CertQaAnswerVO answer,
+                                     QcQualityCertDataVO cert,
+                                     QcJudgmentResultVO judgment,
+                                     String ruleAnswer) {
+        answer.setAnswer(ruleAnswer);
+        List<AiSourceReferenceVO> citations = answer.getCitations() == null
+                ? Collections.emptyList() : answer.getCitations();
+        if (!modelGateway.enabled()) {
+            applyRuleDegradation(answer, citations, ruleAnswer);
+            return;
+        }
+        ModelChatResponse response = modelGateway.chat(buildCertQaChatRequest(
+                cmd, cert, judgment, answer.getIndicatorBasis(), citations, ruleAnswer));
+        String trusted = CitationReferenceSupport.acceptTrustedCitedOutput(
+                response != null ? response.getContent() : null, citations, answer.getIndicatorBasis());
+        if (StringUtils.hasText(trusted)) {
+            answer.setAnswer(trusted);
+            answer.setConfidenceLabel(citations.isEmpty() ? "MEDIUM" : "HIGH");
+            answer.setDegradationSource("GENERATED");
+            persistCertQaAssessment(cmd, judgment, answer, true);
+            return;
+        }
+        if (response != null && response.isSuccess()) {
+            log.warn("质保书问答引用校验未通过，coilNo={}, batchNo={}", cmd.getCoilNo(), cmd.getBatchNo());
+        } else if (response != null) {
+            log.warn("质保书问答生成失败，coilNo={}, batchNo={}, error={}",
+                    cmd.getCoilNo(), cmd.getBatchNo(), response.getErrorMessage());
+        }
+        applyRuleDegradation(answer, citations, ruleAnswer);
+        persistCertQaAssessment(cmd, judgment, answer, false);
+    }
+
+    private void applyRuleDegradation(CertQaAnswerVO answer,
+                                      List<AiSourceReferenceVO> citations,
+                                      String ruleAnswer) {
+        answer.setAnswer(ruleAnswer);
+        if (citations.isEmpty()) {
+            answer.setConfidenceLabel("MEDIUM");
+            answer.setDegradationSource("RULE_TEMPLATE");
+            answer.setAnswer(ruleAnswer + " 未找到可引用的来源段落，以上仅基于结构化判定快照。");
+        } else {
+            answer.setConfidenceLabel("MEDIUM");
+            answer.setDegradationSource("RAW_RETRIEVAL");
+        }
+    }
+
+    private ModelChatRequest buildCertQaChatRequest(CertQaQueryCmd cmd,
+                                                    QcQualityCertDataVO cert,
+                                                    QcJudgmentResultVO judgment,
+                                                    List<QcJudgmentResultVO.EvidenceVO> basis,
+                                                    List<AiSourceReferenceVO> citations,
+                                                    String ruleAnswer) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("用户问题：").append(cmd.getQuestion()).append("\n\n");
+        prompt.append("结构化事实摘要：\n").append(ruleAnswer).append("\n\n");
+        if (cert != null) {
+            prompt.append("质保书快照状态：").append(cert.getStatus()).append("\n");
+        }
+        prompt.append("最终判定：").append(judgment.getJudgmentType()).append("\n");
+        prompt.append("是否非最终态：").append(Boolean.TRUE.equals(answerNonFinal(cert, judgment)) ? "是" : "否").append("\n");
+        if (basis != null && !basis.isEmpty()) {
+            prompt.append("\n指标依据：\n");
+            for (QcJudgmentResultVO.EvidenceVO evidence : basis) {
+                prompt.append("- ")
+                        .append(nullToEmpty(evidence.getIndicatorName()))
+                        .append(" 实测=").append(evidence.getTestValue())
+                        .append(" 下限=").append(evidence.getLowerLimit())
+                        .append(" 上限=").append(evidence.getUpperLimit())
+                        .append(" 偏差=").append(evidence.getDeviation())
+                        .append(" 规则=").append(nullToEmpty(evidence.getTriggerRule()))
+                        .append("\n");
+            }
+        }
+        CitationReferenceSupport.appendNumberedCitationBlock(prompt, citations);
+        CitationReferenceSupport.appendCitationAnswerRules(prompt, CitationPromptStyle.CERT_QA);
+        if (Boolean.TRUE.equals(answerNonFinal(cert, judgment))) {
+            prompt.append("当前为不可正式出证或非最终状态，回答中必须明确说明。");
+        }
+        return ModelChatRequest.builder()
+                .businessType(ASSESSMENT_TYPE_CERT_QA)
+                .businessId(judgment.getJudgmentId())
+                .promptVersion(PROMPT_VERSION)
+                .systemPrompt("你是钢铁质保书问答助手。只能依据给定的事实与来源条款回答，不得超出证据推断。")
+                .messages(Collections.singletonList(ModelMessage.builder()
+                        .role("user")
+                        .content(prompt.toString())
+                        .build()))
+                .temperature(0.1D)
+                .maxTokens(700)
+                .build();
+    }
+
+    private boolean answerNonFinal(QcQualityCertDataVO cert, QcJudgmentResultVO judgment) {
+        if (JudgmentType.CAN_CONCESSION.getCode().equals(judgment.getJudgmentType())
+                && (cert == null || !"SUCCESS".equals(cert.getStatus()))) {
+            return true;
+        }
+        return cert == null;
+    }
+
+    private void persistCertQaAssessment(CertQaQueryCmd cmd,
+                                         QcJudgmentResultVO judgment,
+                                         CertQaAnswerVO answer,
+                                         boolean aiGenerated) {
+        try {
+            AiAssessmentCreateCmd createCmd = new AiAssessmentCreateCmd();
+            createCmd.setAssessmentType(ASSESSMENT_TYPE_CERT_QA);
+            createCmd.setBusinessType(StringUtils.hasText(cmd.getCoilNo()) ? "COIL" : "BATCH");
+            createCmd.setBusinessId(StringUtils.hasText(cmd.getCoilNo()) ? cmd.getCoilNo() : cmd.getBatchNo());
+            createCmd.setRelatedJudgmentId(judgment.getJudgmentId());
+            createCmd.setInputSnapshot(objectMapper.writeValueAsString(cmd));
+            createCmd.setReferencesJson(objectMapper.writeValueAsString(answer.getCitations()));
+            createCmd.setModelProvider(aiGenerated ? modelGateway.provider() : null);
+            createCmd.setPromptVersion(PROMPT_VERSION);
+            createCmd.setRawOutput(answer.getAnswer());
+            createCmd.setStructuredOutput(objectMapper.writeValueAsString(answer));
+            createCmd.setConfidenceLabel(answer.getConfidenceLabel());
+            createCmd.setConfidenceScore("HIGH".equals(answer.getConfidenceLabel())
+                    ? BigDecimal.valueOf(0.85D)
+                    : BigDecimal.valueOf(0.65D));
+            createCmd.setDegradationSource(answer.getDegradationSource());
+            createCmd.setCacheHit(0);
+            aiAssessmentService.create(createCmd);
+        } catch (Exception e) {
+            log.warn("保存质保书问答AI评估失败，coilNo={}, batchNo={}, error={}",
+                    cmd.getCoilNo(), cmd.getBatchNo(), e.getMessage());
+        }
+    }
+
+    private CertQaAnswerVO tryCache(CertQaQueryCmd cmd,
+                                    List<AiSourceReferenceVO> citations,
+                                    List<QcJudgmentResultVO.EvidenceVO> basis) {
         QcAiCache cache = null;
         if (StringUtils.hasText(cmd.getCoilNo())) {
             cache = aiCacheService.findActive("CERT_QA", "COIL", cmd.getCoilNo());
@@ -87,14 +240,21 @@ public class CertQaServiceImpl implements CertQaService {
         if (cache == null) {
             return null;
         }
+        String answerText = parseCacheAnswer(cache.getCachedOutput());
+        String trusted = CitationReferenceSupport.acceptTrustedCitedOutput(answerText, citations, basis);
+        if (!StringUtils.hasText(trusted)) {
+            log.warn("质保书问答缓存引用校验未通过，coilNo={}, batchNo={}",
+                    cmd.getCoilNo(), cmd.getBatchNo());
+            return null;
+        }
         CertQaAnswerVO answer = initAnswer();
         answer.setCacheHit(true);
         answer.setConfidenceLabel(cache.getConfidenceLabel());
         answer.setDegradationSource("CACHE");
-        answer.setCitations(parseCacheCitations(cache.getReferencesJson()));
-        answer.setAnswer(parseCacheAnswer(cache.getCachedOutput()));
-        answer.setNonFinal(answer.getAnswer() != null
-                && (answer.getAnswer().contains("不能生成正式质保书") || answer.getAnswer().contains("预览")));
+        answer.setCitations(citations);
+        answer.setIndicatorBasis(basis);
+        answer.setAnswer(trusted);
+        answer.setNonFinal(trusted.contains("不能生成正式质保书") || trusted.contains("预览"));
         return answer;
     }
 
@@ -107,37 +267,6 @@ public class CertQaServiceImpl implements CertQaService {
             return answer != null ? answer.toString() : (summary == null ? cachedOutput : summary.toString());
         } catch (Exception e) {
             return cachedOutput;
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<com.jhict.quality.vo.AiSourceReferenceVO> parseCacheCitations(String referencesJson) {
-        if (!StringUtils.hasText(referencesJson)) {
-            return Collections.emptyList();
-        }
-        try {
-            Map<String, Object> map = objectMapper.readValue(referencesJson, new TypeReference<Map<String, Object>>() {
-            });
-            Object citations = map.get("citations");
-            if (!(citations instanceof List)) {
-                return Collections.emptyList();
-            }
-            List<com.jhict.quality.vo.AiSourceReferenceVO> refs = new ArrayList<>();
-            for (Object item : (List<Object>) citations) {
-                if (!(item instanceof Map)) {
-                    continue;
-                }
-                Map<String, Object> citation = (Map<String, Object>) item;
-                com.jhict.quality.vo.AiSourceReferenceVO ref = new com.jhict.quality.vo.AiSourceReferenceVO();
-                ref.setClauseId(String.valueOf(citation.get("clauseId")));
-                ref.setStandardCode(String.valueOf(citation.get("standardCode")));
-                ref.setClauseNo(String.valueOf(citation.get("clauseNo")));
-                ref.setScore(1.0D);
-                refs.add(ref);
-            }
-            return refs;
-        } catch (Exception e) {
-            return Collections.emptyList();
         }
     }
 

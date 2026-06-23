@@ -10,6 +10,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -33,8 +34,8 @@ public class AuditLogAspect {
         String ipAddress = getClientIp();
         Object result = pjp.proceed();
 
-        // 异步写日志（不影响主流程）
-        auditLogWriter.writeAsync(pjp.getArgs(), auditLog, ipAddress);
+        // 异步写日志（不影响主流程）；传入方法返回值以便 CREATE 类操作取生成后的 id
+        auditLogWriter.writeAsync(pjp.getArgs(), auditLog, ipAddress, result);
         return result;
     }
 
@@ -72,9 +73,9 @@ public class AuditLogAspect {
         private QcAuditLogMapper auditLogMapper;
 
         @Async
-        public void writeAsync(Object[] args, AuditLog auditLog, String ipAddress) {
+        public void writeAsync(Object[] args, AuditLog auditLog, String ipAddress, Object result) {
             try {
-                String targetId = extractTargetId(args);
+                String targetId = resolveTargetId(args, result);
                 String operatorNo = getLoginUserNo();
                 String remark = buildRemark(auditLog, args);
 
@@ -95,26 +96,58 @@ public class AuditLogAspect {
         }
 
         /**
-         * 从方法参数中提取 targetId：
-         * 优先取第一个 String 参数；若为对象则反射取 id 字段
+         * 解析 targetId：优先方法返回值（CREATE 后已有 id），再从参数提取。
          */
-        private String extractTargetId(Object[] args) {
-            if (args == null || args.length == 0) return null;
-            Object first = args[0];
-            if (first instanceof String) return (String) first;
-            if (first != null) {
-                try {
-                    Field idField = findField(first.getClass(), "id");
-                    if (idField != null) {
-                        idField.setAccessible(true);
-                        Object idVal = idField.get(first);
-                        return idVal != null ? idVal.toString() : null;
-                    }
-                } catch (Exception e) {
-                    log.debug("反射获取 targetId 失败", e);
+        static String resolveTargetId(Object[] args, Object result) {
+            String fromResult = extractIdFromObject(result);
+            if (StringUtils.hasText(fromResult)) {
+                return fromResult;
+            }
+            if (args == null || args.length == 0) {
+                return "UNKNOWN";
+            }
+            for (Object arg : args) {
+                if (arg instanceof String && StringUtils.hasText((String) arg)) {
+                    return (String) arg;
                 }
             }
-            return null;
+            for (Object arg : args) {
+                if (arg == null) {
+                    continue;
+                }
+                String id = extractIdFromObject(arg);
+                if (StringUtils.hasText(id)) {
+                    return id;
+                }
+                for (String fieldName : new String[]{"businessId", "relatedJudgmentId", "judgmentId", "recordId"}) {
+                    String value = extractStringField(arg, fieldName);
+                    if (StringUtils.hasText(value)) {
+                        return value;
+                    }
+                }
+            }
+            return "UNKNOWN";
+        }
+
+        private static String extractIdFromObject(Object source) {
+            return extractStringField(source, "id");
+        }
+
+        private static String extractStringField(Object source, String fieldName) {
+            if (source == null || !StringUtils.hasText(fieldName)) {
+                return null;
+            }
+            try {
+                Field field = findField(source.getClass(), fieldName);
+                if (field == null) {
+                    return null;
+                }
+                field.setAccessible(true);
+                Object value = field.get(source);
+                return value != null ? value.toString() : null;
+            } catch (Exception e) {
+                return null;
+            }
         }
 
         /**
@@ -148,7 +181,7 @@ public class AuditLogAspect {
             return false;
         }
 
-        private Field findField(Class<?> clazz, String fieldName) {
+        private static Field findField(Class<?> clazz, String fieldName) {
             Class<?> current = clazz;
             while (current != null && current != Object.class) {
                 try {

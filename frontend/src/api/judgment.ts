@@ -1,4 +1,4 @@
-import { get, post } from '@/utils/request'
+import { get, post, AI_REQUEST_TIMEOUT } from '@/utils/request'
 import type { PageResult } from '@/types'
 
 export interface JudgmentListItem {
@@ -30,7 +30,8 @@ export interface JudgmentPageQuery {
 }
 
 export const getJudgmentByRecord = (recordId: string) => get(`/judgments/record/${recordId}`)
-export const getJudgmentExplanation = (id: string) => get(`/judgments/${id}/explanation`)
+export const getJudgmentExplanation = (id: string) =>
+  get(`/judgments/${id}/explanation`, undefined, { timeout: AI_REQUEST_TIMEOUT })
 export const pageJudgments = (data: JudgmentPageQuery) =>
   post<PageResult<JudgmentListItem>>('/judgments/page', data)
 export const getDashboardSummary = () => get('/judgments/dashboard/summary')

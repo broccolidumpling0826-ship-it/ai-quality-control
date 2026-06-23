@@ -17,7 +17,9 @@ import com.jhict.quality.gateway.model.ModelEmbeddingRequest;
 import com.jhict.quality.gateway.model.ModelEmbeddingResponse;
 import com.jhict.quality.gateway.model.ModelGateway;
 import com.jhict.quality.gateway.vector.VectorClauseDocument;
+import com.jhict.quality.gateway.vector.VectorDeleteByDocumentRequest;
 import com.jhict.quality.gateway.vector.VectorDeleteRequest;
+import com.jhict.quality.gateway.vector.VectorDeleteResponse;
 import com.jhict.quality.gateway.vector.VectorIndexRequest;
 import com.jhict.quality.gateway.vector.VectorIndexResponse;
 import com.jhict.quality.gateway.vector.VectorStoreGateway;
@@ -35,6 +37,7 @@ import com.jhict.quality.vo.StandardClauseVO;
 import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardDocumentVO;
 import com.jhict.quality.vo.StandardSourceDocumentVO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -52,6 +55,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class StandardDocumentServiceImpl implements StandardDocumentService {
 
     @Resource
@@ -507,9 +511,24 @@ public class StandardDocumentServiceImpl implements StandardDocumentService {
     }
 
     private void deleteExistingClauses(String documentId, String indexName) {
+        if (vectorStoreGateway.enabled()) {
+            VectorDeleteByDocumentRequest deleteRequest = VectorDeleteByDocumentRequest.builder()
+                    .documentId(documentId)
+                    .indexName(indexName)
+                    .build();
+            VectorDeleteResponse deleteResponse = vectorStoreGateway.deleteClausesByDocumentId(deleteRequest);
+            if (deleteResponse == null || !deleteResponse.isSuccess()) {
+                log.warn("按 documentId 清理 ES 条款失败，documentId={}, error={}",
+                        documentId,
+                        deleteResponse == null ? "empty response" : deleteResponse.getErrorMessage());
+            }
+        }
         List<QcStandardClause> existingClauses = standardClauseMapper.selectList(
                 new LambdaQueryWrapper<QcStandardClause>().eq(QcStandardClause::getDocumentId, documentId));
         for (QcStandardClause clause : existingClauses) {
+            if (!vectorStoreGateway.enabled()) {
+                break;
+            }
             vectorStoreGateway.deleteClause(VectorDeleteRequest.builder()
                     .indexName(indexName)
                     .clauseId(clause.getId())

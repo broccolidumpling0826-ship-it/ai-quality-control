@@ -17,6 +17,8 @@ import com.jhict.quality.service.api.ConcessionRiskService;
 import com.jhict.quality.service.api.CustomerUsageProfileService;
 import com.jhict.quality.service.api.JudgmentService;
 import com.jhict.quality.service.api.StandardDocumentService;
+import com.jhict.quality.service.support.rag.CitationReferenceLoader;
+import com.jhict.quality.service.support.rag.CitationReferenceSupport;
 import com.jhict.quality.vo.AiSourceReferenceVO;
 import com.jhict.quality.vo.AlternativeStockVO;
 import com.jhict.quality.vo.ConcessionRiskAssessmentVO;
@@ -53,6 +55,9 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
 
     @Resource
     private AlternativeStockService alternativeStockService;
+
+    @Resource
+    private CitationReferenceLoader citationReferenceLoader;
 
     @Resource
     private StandardDocumentService standardDocumentService;
@@ -141,18 +146,14 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
         complaintQuery.setPageNum(1);
         complaintQuery.setPageSize(5);
         addRefs(refs, complaintQuery);
-        return refs.values().stream().limit(8).collect(Collectors.toList());
+        return CitationReferenceSupport.rankAndLimit(
+                new ArrayList<>(refs.values()),
+                judgment.getEvidences(),
+                8);
     }
 
     private void seedCitationRefs(Map<String, AiSourceReferenceVO> refs, List<AiSourceReferenceVO> citations) {
-        if (citations == null) {
-            return;
-        }
-        for (AiSourceReferenceVO citation : citations) {
-            if (citation != null && StringUtils.hasText(citation.getClauseId())) {
-                refs.putIfAbsent(citation.getClauseId(), citation);
-            }
-        }
+        citationReferenceLoader.mergeByClauseId(refs, citations);
     }
 
     private List<String> resolveStandardIdsForClauseLookup(QcJudgmentResultVO judgment) {
@@ -184,25 +185,7 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
     }
 
     private void addRefs(Map<String, AiSourceReferenceVO> refs, StandardClausePageQuery query) {
-        try {
-            for (StandardClauseVO clause : standardDocumentService.pageClauses(query).getRecords()) {
-                AiSourceReferenceVO ref = new AiSourceReferenceVO();
-                ref.setClauseId(clause.getId());
-                ref.setDocumentId(clause.getDocumentId());
-                ref.setSourceType(clause.getSourceType());
-                ref.setStandardCode(clause.getStandardCode());
-                ref.setStandardName(clause.getStandardName());
-                ref.setVersionNo(clause.getVersionNo());
-                ref.setClauseNo(clause.getClauseNo());
-                ref.setPageNo(clause.getPageNo());
-                ref.setParagraphText(clause.getParagraphText());
-                ref.setScore(1.0D);
-                refs.putIfAbsent(clause.getId(), ref);
-            }
-        } catch (Exception e) {
-            log.warn("查询让步风险证据失败，sourceType={}, standardId={}, error={}",
-                    query.getSourceType(), query.getStandardId(), e.getMessage());
-        }
+        citationReferenceLoader.queryAndMerge(refs, query);
     }
 
     private void applyBaselineRules(QcJudgmentResultVO judgment, ConcessionRiskAssessmentVO result) {

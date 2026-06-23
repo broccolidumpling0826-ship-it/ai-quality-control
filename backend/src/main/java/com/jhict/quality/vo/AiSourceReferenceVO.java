@@ -26,5 +26,9 @@ public class AiSourceReferenceVO {
 
     private String paragraphText;
 
+    private String indicatorCode;
+
+    private String indicatorName;
+
     private Double score;
 }

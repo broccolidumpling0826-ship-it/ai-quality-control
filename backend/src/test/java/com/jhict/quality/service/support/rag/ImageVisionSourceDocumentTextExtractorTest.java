@@ -41,4 +41,28 @@ class ImageVisionSourceDocumentTextExtractorTest {
         assertThat(document.getSegments()).hasSize(1);
         assertThat(document.getSegments().get(0).getText()).contains("屈服强度");
     }
+
+    @Test
+    void extractShouldStripVisionOcrGroundingTags() throws Exception {
+        Path png = tempDir.resolve("scan-grounding.png");
+        Files.write(png, new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00});
+
+        String rawOcr = "<|ref|>text<|/ref|><|det|>[[57, 329, 588, 349]]<|/det|> Q345B热轧板厚度公差应控制在 470 MPa 至 630 MPa。";
+        ModelGateway modelGateway = mock(ModelGateway.class);
+        when(modelGateway.extractImageText(any(ModelVisionExtractionRequest.class)))
+                .thenReturn(ModelVisionExtractionResponse.builder()
+                        .success(true)
+                        .extractedText(rawOcr)
+                        .build());
+
+        ImageVisionSourceDocumentTextExtractor extractor = new ImageVisionSourceDocumentTextExtractor(modelGateway);
+        ExtractedStandardDocument document = extractor.extract(
+                png.getFileName().toString(),
+                png.toString(),
+                png,
+                "png");
+
+        assertThat(document.getSegments().get(0).getText())
+                .isEqualTo("Q345B热轧板厚度公差应控制在 470 MPa 至 630 MPa。");
+    }
 }

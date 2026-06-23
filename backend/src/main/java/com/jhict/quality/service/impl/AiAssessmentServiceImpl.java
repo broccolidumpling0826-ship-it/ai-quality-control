@@ -20,6 +20,7 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -154,6 +155,19 @@ public class AiAssessmentServiceImpl implements AiAssessmentService {
                         .eq(QcAiAssessment::getConfidenceLabel, CONFIDENCE_LOW),
                 timeStart, timeEnd));
         return count == null ? 0L : count;
+    }
+
+    @Override
+    public Optional<QcAiAssessment> findLatestByRelatedJudgment(String relatedJudgmentId, String assessmentType) {
+        if (!StringUtils.hasText(relatedJudgmentId) || !StringUtils.hasText(assessmentType)) {
+            return Optional.empty();
+        }
+        QcAiAssessment assessment = aiAssessmentMapper.selectOne(new LambdaQueryWrapper<QcAiAssessment>()
+                .eq(QcAiAssessment::getRelatedJudgmentId, relatedJudgmentId)
+                .eq(QcAiAssessment::getAssessmentType, assessmentType)
+                .orderByDesc(QcAiAssessment::getCreateDateTime)
+                .last("LIMIT 1"));
+        return Optional.ofNullable(assessment);
     }
 
     private LambdaQueryWrapper<QcAiAssessment> applyTimeRange(LambdaQueryWrapper<QcAiAssessment> wrapper,

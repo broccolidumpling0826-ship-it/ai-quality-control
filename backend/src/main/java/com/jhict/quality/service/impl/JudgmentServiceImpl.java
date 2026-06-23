@@ -11,7 +11,6 @@ import com.jhict.quality.common.exception.ServiceException;
 import com.jhict.quality.dto.AiAssessmentCreateCmd;
 import com.jhict.quality.dto.StandardConflictCreateCmd;
 import com.jhict.quality.dto.StandardCandidateQuery;
-import com.jhict.quality.dto.StandardClausePageQuery;
 import com.jhict.quality.dto.StandardConflictPageQuery;
 import com.jhict.quality.enums.JudgmentType;
 import com.jhict.quality.enums.StandardType;
@@ -24,9 +23,9 @@ import com.jhict.quality.gateway.model.ModelGateway;
 import com.jhict.quality.gateway.model.ModelMessage;
 import com.jhict.quality.mapper.*;
 import com.jhict.quality.service.api.AiAssessmentService;
+import com.jhict.quality.service.api.AiCacheService;
 import com.jhict.quality.service.api.JudgmentService;
 import com.jhict.quality.service.api.NotificationService;
-import com.jhict.quality.service.api.StandardDocumentService;
 import com.jhict.quality.service.api.StandardConflictService;
 import com.jhict.quality.service.api.StandardService;
 import com.jhict.quality.entity.SysUser;
@@ -35,10 +34,12 @@ import com.jhict.quality.vo.DashboardSummaryVO;
 import com.jhict.quality.vo.QcJudgmentListVO;
 import com.jhict.quality.vo.QcJudgmentResultVO;
 import com.jhict.quality.vo.AiSourceReferenceVO;
-import com.jhict.quality.vo.StandardClauseVO;
 import com.jhict.quality.vo.StandardCandidateSetVO;
 import com.jhict.quality.vo.StandardCandidateVO;
 import com.jhict.quality.vo.StandardConflictVO;
+import com.jhict.quality.service.support.rag.CitationReferenceLoader;
+import com.jhict.quality.service.support.rag.CitationReferenceSupport;
+import com.jhict.quality.service.support.rag.CitationReferenceSupport.CitationPromptStyle;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -63,7 +64,16 @@ public class JudgmentServiceImpl implements JudgmentService {
     private static final String DASHBOARD_CACHE_KEY_PREFIX = "dashboard:summary:v2:";
     private static final String DEFAULT_COMPANY_ID = "DEFAULT";
     private static final long DASHBOARD_TTL_SECONDS = 60L;
-    private static final String EXPLANATION_PROMPT_VERSION = "judgment-explanation-v1";
+    private static final String EXPLANATION_PROMPT_VERSION = "judgment-explanation-v3";
+    private static final String ASSESSMENT_TYPE_JUDGMENT_EXPLANATION = "JUDGMENT_EXPLANATION";
+
+    private enum AiExplanationSource {
+        SKIPPED,
+        CACHE,
+        ASSESSMENT,
+        GENERATED,
+        STRUCTURED
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -101,13 +111,16 @@ public class JudgmentServiceImpl implements JudgmentService {
     private StandardService standardService;
 
     @Resource
-    private StandardDocumentService standardDocumentService;
+    private CitationReferenceLoader citationReferenceLoader;
 
     @Resource
     private ModelGateway modelGateway;
 
     @Resource
     private AiAssessmentService aiAssessmentService;
+
+    @Resource
+    private AiCacheService aiCacheService;
 
     /** 懒注入，避免循环依赖 */
     @Lazy
@@ -232,7 +245,7 @@ public class JudgmentServiceImpl implements JudgmentService {
         }
 
         QcInspectionRecord record = inspectionRecordMapper.selectById(recordId);
-        return buildJudgmentResultVO(result, record, true, false);
+        return buildJudgmentResultVO(result, record, true, false, false);
     }
 
     @Override
@@ -243,7 +256,7 @@ public class JudgmentServiceImpl implements JudgmentService {
         }
 
         QcInspectionRecord record = inspectionRecordMapper.selectById(result.getRecordId());
-        return buildJudgmentResultVO(result, record, true, true);
+        return buildJudgmentResultVO(result, record, true, true, true);
     }
 
     @Override
@@ -254,7 +267,7 @@ public class JudgmentServiceImpl implements JudgmentService {
         }
 
         QcInspectionRecord record = inspectionRecordMapper.selectById(result.getRecordId());
-        return buildJudgmentResultVO(result, record, true, false);
+        return buildJudgmentResultVO(result, record, true, false, false);
     }
 
     @Override
@@ -318,14 +331,16 @@ public class JudgmentServiceImpl implements JudgmentService {
      * 构建判定解释 VO（检验信息、标准匹配、指标明细分步填充）
      */
     private QcJudgmentResultVO buildJudgmentResultVO(QcJudgmentResult result, QcInspectionRecord record,
-                                                     boolean loadEvidences, boolean persistAiAssessment) {
+                                                     boolean loadEvidences,
+                                                     boolean generateAiExplanation,
+                                                     boolean loadExtendedContext) {
         QcJudgmentResultVO vo = new QcJudgmentResultVO();
         vo.setJudgmentId(result.getId());
         vo.setRecordId(result.getRecordId());
         fillInspectionFieldsOnVo(vo, result, record);
         fillStandardFieldsOnVo(vo, result);
         fillEvidenceFieldsOnVo(vo, result, loadEvidences);
-        fillAiExplanationFieldsOnVo(vo, result, record, loadEvidences, persistAiAssessment);
+        fillAiExplanationFieldsOnVo(vo, result, record, loadEvidences, generateAiExplanation, loadExtendedContext);
         return vo;
     }
 
@@ -378,21 +393,32 @@ public class JudgmentServiceImpl implements JudgmentService {
 
     private void fillAiExplanationFieldsOnVo(QcJudgmentResultVO vo, QcJudgmentResult result,
                                              QcInspectionRecord record, boolean loadEvidences,
-                                             boolean persistAiAssessment) {
+                                             boolean generateAiExplanation, boolean loadExtendedContext) {
         List<QcJudgmentEvidence> evidenceList = loadEvidences
                 ? judgmentEvidenceMapper.findByJudgmentId(result.getId())
                 : Collections.emptyList();
-        fillCandidateStandardFields(vo, record, evidenceList);
+        if (loadExtendedContext) {
+            fillCandidateStandardFields(vo, record, evidenceList);
+        } else {
+            vo.setCandidateStandards(Collections.emptyList());
+            vo.setSuppressedStandards(Collections.emptyList());
+        }
         List<StandardConflictVO> conflicts = loadConflictsByJudgmentId(result.getId());
         vo.setConflicts(conflicts);
         vo.setConflictWarnings(buildConflictWarnings(result, conflicts));
         List<AiSourceReferenceVO> citations = loadCitationReferences(result, vo.getEvidences());
         vo.setCitations(citations);
         vo.setCitationMissing(citations.isEmpty());
-        vo.setRuleExplanation(buildRuleTemplateExplanation(result, vo.getEvidences(), conflicts));
-        fillGeneratedExplanationIfPossible(vo, result, citations);
-        applyConfidenceAndDegradation(vo, result, conflicts);
-        if (persistAiAssessment) {
+        vo.setRuleExplanation(CitationReferenceSupport.buildJudgmentRuleExplanation(
+                result.getJudgmentType(),
+                vo.getEvidences(),
+                citations,
+                conflicts == null ? 0 : conflicts.size()));
+        AiExplanationSource aiSource = generateAiExplanation
+                ? fillGeneratedExplanationIfPossible(vo, result, citations)
+                : AiExplanationSource.SKIPPED;
+        applyConfidenceAndDegradation(vo, result, conflicts, aiSource);
+        if (aiSource == AiExplanationSource.GENERATED || aiSource == AiExplanationSource.STRUCTURED) {
             persistJudgmentExplanationAssessment(vo, result);
         }
     }
@@ -449,39 +475,9 @@ public class JudgmentServiceImpl implements JudgmentService {
         return warnings;
     }
 
-    private String buildRuleTemplateExplanation(QcJudgmentResult result,
-                                                List<QcJudgmentResultVO.EvidenceVO> evidences,
-                                                List<StandardConflictVO> conflicts) {
-        if (JudgmentType.STANDARD_CONFLICT.getCode().equals(result.getJudgmentType())) {
-            return "当前记录触发同优先级标准冲突，系统已阻断合格/不合格/让步类结论，需人工裁决控制标准后重新判定。";
-        }
-        if (evidences == null || evidences.isEmpty()) {
-            return "未找到判定依据快照，无法生成完整规则解释，请人工复核检验记录和标准配置。";
-        }
-        long failedCount = evidences.stream().filter(e -> !Integer.valueOf(1).equals(e.getIsPassed())).count();
-        long concessionCount = evidences.stream()
-                .filter(e -> JudgmentExplainConstants.isConcessionTriggerRule(e.getTriggerRule()))
-                .count();
-        StringBuilder explanation = new StringBuilder();
-        explanation.append("系统按结构化标准完成规则判定，最终结论为 ")
-                .append(result.getJudgmentType())
-                .append("。共检查 ")
-                .append(evidences.size())
-                .append(" 个指标，未通过指标 ")
-                .append(failedCount)
-                .append(" 个");
-        if (concessionCount > 0) {
-            explanation.append("，其中 ").append(concessionCount).append(" 个指标落入让步范围");
-        }
-        if (conflicts != null && !conflicts.isEmpty()) {
-            explanation.append("，并记录 ").append(conflicts.size()).append(" 条标准差异提示");
-        }
-        explanation.append("。");
-        return explanation.toString();
-    }
-
     private void applyConfidenceAndDegradation(QcJudgmentResultVO vo, QcJudgmentResult result,
-                                               List<StandardConflictVO> conflicts) {
+                                               List<StandardConflictVO> conflicts,
+                                               AiExplanationSource aiSource) {
         List<String> factors = new ArrayList<>();
         factors.add("已使用结构化判定依据生成规则解释");
         if (Boolean.TRUE.equals(vo.getCitationMissing())) {
@@ -505,7 +501,11 @@ public class JudgmentServiceImpl implements JudgmentService {
         } else if (!Boolean.TRUE.equals(vo.getCitationMissing()) && StringUtils.hasText(vo.getAiExplanation())) {
             vo.setConfidenceLabel("HIGH");
             vo.setConfidenceScore(0.85D);
-            factors.add("AI解释已通过来源编号校验");
+            if (aiSource == AiExplanationSource.STRUCTURED) {
+                factors.add("结构化依据解释已附来源编号并通过校验");
+            } else {
+                factors.add("AI解释已通过来源编号校验");
+            }
         } else if (!Boolean.TRUE.equals(vo.getCitationMissing())) {
             vo.setConfidenceLabel("MEDIUM");
             vo.setConfidenceScore(0.7D);
@@ -517,8 +517,13 @@ public class JudgmentServiceImpl implements JudgmentService {
         }
         vo.setConfidenceFactors(factors);
         if (StringUtils.hasText(vo.getAiExplanation())) {
-            vo.setDegradationSource("GENERATED");
-            vo.setDegradationReason("AI解释已基于来源条款生成并通过引用校验");
+            if (aiSource == AiExplanationSource.STRUCTURED) {
+                vo.setDegradationSource("RULE_TEMPLATE");
+                vo.setDegradationReason("模型解释未通过校验，已展示含指标依据与来源编号的结构化解释");
+            } else {
+                vo.setDegradationSource("GENERATED");
+                vo.setDegradationReason("AI解释已基于来源条款生成并通过引用校验");
+            }
         } else if (!Boolean.TRUE.equals(vo.getCitationMissing())) {
             vo.setDegradationSource("RAW_RETRIEVAL");
             vo.setDegradationReason("已返回来源条款和规则模板，AI解释不可用或引用校验未通过");
@@ -530,81 +535,104 @@ public class JudgmentServiceImpl implements JudgmentService {
 
     private List<AiSourceReferenceVO> loadCitationReferences(QcJudgmentResult result,
                                                             List<QcJudgmentResultVO.EvidenceVO> evidences) {
-        List<String> standardIds = parseMatchedStandardIds(result.getMatchedStandardIds());
-        if (standardIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        Map<String, AiSourceReferenceVO> references = new LinkedHashMap<>();
-        List<String> indicatorCodes = evidences == null ? Collections.emptyList() : evidences.stream()
-                .map(QcJudgmentResultVO.EvidenceVO::getIndicatorCode)
-                .filter(StringUtils::hasText)
-                .distinct()
-                .collect(Collectors.toList());
-        for (String standardId : standardIds) {
-            if (indicatorCodes.isEmpty()) {
-                addClauseReferences(references, standardId, null, 3);
-            } else {
-                for (String indicatorCode : indicatorCodes) {
-                    addClauseReferences(references, standardId, indicatorCode, 3);
-                }
-                if (references.isEmpty()) {
-                    addClauseReferences(references, standardId, null, 3);
-                }
-            }
-            if (references.size() >= 8) {
-                break;
-            }
-        }
-        return references.values().stream().limit(8).collect(Collectors.toList());
+        return citationReferenceLoader.loadForJudgment(parseMatchedStandardIds(result.getMatchedStandardIds()), evidences);
     }
 
-    private void addClauseReferences(Map<String, AiSourceReferenceVO> references,
-                                     String standardId,
-                                     String indicatorCode,
-                                     int pageSize) {
-        StandardClausePageQuery query = new StandardClausePageQuery();
-        query.setStandardId(standardId);
-        query.setIndicatorCode(indicatorCode);
-        query.setPageNum(1);
-        query.setPageSize(pageSize);
-        try {
-            for (StandardClauseVO clause : standardDocumentService.pageClauses(query).getRecords()) {
-                references.putIfAbsent(clause.getId(), toSourceReference(clause));
-            }
-        } catch (Exception e) {
-            log.warn("查询判定解释来源条款失败，standardId={}, indicatorCode={}, error={}",
-                    standardId, indicatorCode, e.getMessage());
-        }
-    }
-
-    private AiSourceReferenceVO toSourceReference(StandardClauseVO clause) {
-        AiSourceReferenceVO ref = new AiSourceReferenceVO();
-        ref.setClauseId(clause.getId());
-        ref.setDocumentId(clause.getDocumentId());
-        ref.setSourceType(clause.getSourceType());
-        ref.setStandardCode(clause.getStandardCode());
-        ref.setStandardName(clause.getStandardName());
-        ref.setVersionNo(clause.getVersionNo());
-        ref.setClauseNo(clause.getClauseNo());
-        ref.setPageNo(clause.getPageNo());
-        ref.setParagraphText(clause.getParagraphText());
-        ref.setScore(1.0D);
-        return ref;
-    }
-
-    private void fillGeneratedExplanationIfPossible(QcJudgmentResultVO vo,
-                                                    QcJudgmentResult result,
-                                                    List<AiSourceReferenceVO> citations) {
+    private AiExplanationSource fillGeneratedExplanationIfPossible(QcJudgmentResultVO vo,
+                                                                   QcJudgmentResult result,
+                                                                   List<AiSourceReferenceVO> citations) {
         vo.setAiExplanation(null);
-        if (citations == null || citations.isEmpty() || !modelGateway.enabled()) {
-            return;
+        if (citations == null || citations.isEmpty()) {
+            return tryStructuredExplanation(vo, citations);
+        }
+        if (!modelGateway.enabled()) {
+            return tryStructuredExplanation(vo, citations);
+        }
+        String cachedExplanation = loadCachedExplanation(result.getId(), citations, vo.getEvidences());
+        if (StringUtils.hasText(cachedExplanation)) {
+            vo.setAiExplanation(cachedExplanation);
+            return AiExplanationSource.CACHE;
+        }
+        String assessedExplanation = loadAssessedExplanation(result.getId(), citations, vo.getEvidences());
+        if (StringUtils.hasText(assessedExplanation)) {
+            vo.setAiExplanation(assessedExplanation);
+            return AiExplanationSource.ASSESSMENT;
         }
         ModelChatResponse response = modelGateway.chat(buildExplanationChatRequest(vo, result, citations));
-        if (response != null && response.isSuccess() && isGroundedExplanation(response.getContent(), citations)) {
-            vo.setAiExplanation(response.getContent());
-        } else if (response != null && response.isSuccess()) {
-            log.warn("AI判定解释缺少来源标记，judgmentId={}", result.getId());
+        String trusted = CitationReferenceSupport.acceptTrustedCitedOutput(
+                response != null ? response.getContent() : null, citations, vo.getEvidences());
+        if (StringUtils.hasText(trusted)) {
+            vo.setAiExplanation(trusted);
+            return AiExplanationSource.GENERATED;
         }
+        if (response != null && response.isSuccess()) {
+            log.warn("AI判定解释引用校验未通过，judgmentId={}", result.getId());
+        } else if (response != null) {
+            log.warn("AI判定解释生成失败，judgmentId={}, error={}", result.getId(), response.getErrorMessage());
+        }
+        return tryStructuredExplanation(vo, citations);
+    }
+
+    private AiExplanationSource tryStructuredExplanation(QcJudgmentResultVO vo,
+                                                         List<AiSourceReferenceVO> citations) {
+        if (citations == null || citations.isEmpty()) {
+            return AiExplanationSource.SKIPPED;
+        }
+        String structured = CitationReferenceSupport.acceptTrustedCitedOutput(
+                vo.getRuleExplanation(), citations, vo.getEvidences());
+        if (StringUtils.hasText(structured)) {
+            vo.setAiExplanation(structured);
+            return AiExplanationSource.STRUCTURED;
+        }
+        return AiExplanationSource.SKIPPED;
+    }
+
+    private String loadCachedExplanation(String judgmentId,
+                                         List<AiSourceReferenceVO> citations,
+                                         List<QcJudgmentResultVO.EvidenceVO> evidences) {
+        QcAiCache cache = aiCacheService.findActive(ASSESSMENT_TYPE_JUDGMENT_EXPLANATION, "JUDGMENT", judgmentId);
+        if (cache == null || !StringUtils.hasText(cache.getCachedOutput())) {
+            return null;
+        }
+        String cachedText = parseCachedExplanationText(cache.getCachedOutput());
+        String trusted = CitationReferenceSupport.acceptTrustedCitedOutput(cachedText, citations, evidences);
+        if (!StringUtils.hasText(trusted)) {
+            log.warn("判定解释缓存引用校验未通过，judgmentId={}", judgmentId);
+            return null;
+        }
+        return trusted;
+    }
+
+    private String loadAssessedExplanation(String judgmentId,
+                                           List<AiSourceReferenceVO> citations,
+                                           List<QcJudgmentResultVO.EvidenceVO> evidences) {
+        return aiAssessmentService.findLatestByRelatedJudgment(judgmentId, ASSESSMENT_TYPE_JUDGMENT_EXPLANATION)
+                .filter(assessment -> EXPLANATION_PROMPT_VERSION.equals(assessment.getPromptVersion()))
+                .map(QcAiAssessment::getRawOutput)
+                .map(content -> CitationReferenceSupport.acceptTrustedCitedOutput(content, citations, evidences))
+                .filter(StringUtils::hasText)
+                .orElse(null);
+    }
+
+    private String parseCachedExplanationText(String cachedOutput) {
+        if (!StringUtils.hasText(cachedOutput)) {
+            return null;
+        }
+        try {
+            Map<String, Object> map = objectMapper.readValue(cachedOutput, new TypeReference<Map<String, Object>>() {
+            });
+            Object summary = map.get("summary");
+            if (summary != null) {
+                return summary.toString();
+            }
+            Object answer = map.get("answer");
+            if (answer != null) {
+                return answer.toString();
+            }
+        } catch (Exception e) {
+            log.debug("判定解释缓存非 JSON，按纯文本使用，error={}", e.getMessage());
+        }
+        return cachedOutput;
     }
 
     private ModelChatRequest buildExplanationChatRequest(QcJudgmentResultVO vo,
@@ -626,18 +654,8 @@ public class JudgmentServiceImpl implements JudgmentService {
                         .append("\n");
             }
         }
-        prompt.append("\n来源条款：\n");
-        for (int i = 0; i < citations.size(); i++) {
-            AiSourceReferenceVO ref = citations.get(i);
-            prompt.append("[").append(i + 1).append("] ")
-                    .append(nullToEmpty(ref.getStandardCode()))
-                    .append(" ")
-                    .append(nullToEmpty(ref.getClauseNo()))
-                    .append("：")
-                    .append(nullToEmpty(ref.getParagraphText()))
-                    .append("\n");
-        }
-        prompt.append("\n请只依据规则解释和来源条款说明判定原因，必须在关键句后标注来源编号如[1]。");
+        CitationReferenceSupport.appendNumberedCitationBlock(prompt, citations);
+        CitationReferenceSupport.appendCitationAnswerRules(prompt, CitationPromptStyle.JUDGMENT_EXPLANATION);
         return ModelChatRequest.builder()
                 .businessType("JUDGMENT_EXPLANATION")
                 .businessId(result.getId())
@@ -648,25 +666,8 @@ public class JudgmentServiceImpl implements JudgmentService {
                         .content(prompt.toString())
                         .build()))
                 .temperature(0.1D)
-                .maxTokens(900)
+                .maxTokens(600)
                 .build();
-    }
-
-    private boolean isGroundedExplanation(String content, List<AiSourceReferenceVO> citations) {
-        if (!StringUtils.hasText(content)) {
-            return false;
-        }
-        for (int i = 0; i < citations.size(); i++) {
-            if (content.contains("[" + (i + 1) + "]")) {
-                return true;
-            }
-        }
-        for (AiSourceReferenceVO ref : citations) {
-            if (StringUtils.hasText(ref.getClauseNo()) && content.contains(ref.getClauseNo())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private String nullToEmpty(String value) {

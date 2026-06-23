@@ -855,9 +855,24 @@ async function loadCustomerOptions() {
   }
 }
 
+const FORM_DICT_CODES = ['STANDARD_TYPE', 'PRODUCT_VARIETY', 'STANDARD_STATUS'] as const
+
+/** 标准维护表单依赖的字典：登录前 loadAll 可能失败，此处按需补拉 */
+async function ensureFormDictOptions() {
+  if (!dictStore.loaded) {
+    await dictStore.loadAll().catch(() => {})
+  }
+  await Promise.all(
+    FORM_DICT_CODES.map(async (code) => {
+      if (dictStore.getItems(code).length > 0) return
+      await dictStore.refreshItems(code).catch(() => {})
+    })
+  )
+}
+
 async function openDrawer(mode: 'add' | 'edit' | 'view', row?: any) {
   drawerMode.value = mode
-  await Promise.all([loadIndicatorOptions(), loadCustomerOptions()])
+  await Promise.all([loadIndicatorOptions(), loadCustomerOptions(), ensureFormDictOptions()])
   if (mode === 'add') {
     Object.assign(formData, defaultForm())
     applySourceDocuments()
@@ -1114,6 +1129,7 @@ async function handleSubmit() {
 onMounted(() => {
   loadData()
   loadCustomerOptions()
+  ensureFormDictOptions()
 })
 </script>
 

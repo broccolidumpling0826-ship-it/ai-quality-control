@@ -22,4 +22,19 @@ final class DocumentExtractionUtils {
                 .replace('\u00A0', ' ')
                 .trim();
     }
+
+    /**
+     * Strip DeepSeek-OCR grounding markup such as {@code <|ref|>...<|/ref|>} and
+     * {@code <|det|>[[x,y,w,h]]<|/det|>}, keeping only readable text for chunking/RAG.
+     */
+    static String cleanVisionOcrText(String text) {
+        String cleaned = cleanText(text);
+        if (!cleaned.contains("<|")) {
+            return cleaned;
+        }
+        cleaned = cleaned.replaceAll("(?s)<\\|[^|]+\\|>.*?<\\|/[^|]+\\|>", "");
+        cleaned = cleaned.replaceAll("<\\|[^|]*\\|>", "");
+        cleaned = cleaned.replaceAll("(?m)^[ \\t]+", "");
+        return cleaned.trim();
+    }
 }

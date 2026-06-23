@@ -7,6 +7,7 @@ import com.jhict.quality.gateway.model.ModelVisionExtractionRequest;
 import com.jhict.quality.gateway.model.ModelVisionExtractionResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +15,7 @@ import java.util.Base64;
 import java.util.UUID;
 
 @Component
+@Slf4j
 public class ImageVisionSourceDocumentTextExtractor implements SourceDocumentTextExtractor {
 
     private static final String DEFAULT_SYSTEM_PROMPT =
@@ -54,11 +56,26 @@ public class ImageVisionSourceDocumentTextExtractor implements SourceDocumentTex
             String message = response != null && StringUtils.hasText(response.getErrorMessage())
                     ? response.getErrorMessage()
                     : "Vision OCR 未返回有效文本";
+            if (response != null && StringUtils.hasText(response.getRawResponse())) {
+                log.warn("Vision OCR 无有效文本，businessId={}, model={}, finishReason={}, raw={}",
+                        sourceFilePath,
+                        response.getModelName(),
+                        response.getFinishReason(),
+                        response.getRawResponse().length() > 500
+                                ? response.getRawResponse().substring(0, 500) + "..."
+                                : response.getRawResponse());
+            }
             throw new ServiceException(ApiResult.CODE_SERVER_ERROR, message);
         }
 
+        String cleanedText = DocumentExtractionUtils.cleanVisionOcrText(response.getExtractedText());
+        if (!StringUtils.hasText(cleanedText)) {
+            throw new ServiceException(ApiResult.CODE_SERVER_ERROR,
+                    "Vision OCR 返回内容经清洗后为空，请检查 OCR 模型输出或图片质量");
+        }
+
         ExtractedStandardDocument document = DocumentExtractionUtils.baseDocument(sourceFileName, sourceFilePath, fileType);
-        document.getSegments().add(new DocumentTextSegment(1, DocumentExtractionUtils.cleanText(response.getExtractedText())));
+        document.getSegments().add(new DocumentTextSegment(1, cleanedText));
         return document;
     }
 
