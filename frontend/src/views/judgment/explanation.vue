@@ -1,5 +1,11 @@
 <template>
-  <div class="explanation-page" v-loading="loading">
+  <div
+    class="explanation-page"
+    :class="{ 'is-ai-loading': loading }"
+    v-loading="loading"
+    :element-loading-text="AI_LOADING_TEXT.judgmentExplanation"
+    :element-loading-custom-class="AI_LOADING_CLASS"
+  >
     <!-- 顶部英雄区 -->
     <el-card shadow="never" class="hero-card" v-if="detail">
       <div class="hero-content">
@@ -261,47 +267,62 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="adviceDialogVisible" :title="adviceTitle" width="760px" destroy-on-close>
-      <div v-loading="adviceLoading" v-if="advice">
-        <el-alert
-          v-if="advice.withheld"
-          type="warning"
-          :closable="false"
-          show-icon
-          class="advice-alert"
-          :title="advice.suggestedReason"
-        />
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="建议动作">{{ advice.recommendedAction || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="置信度">
-            <el-tag :type="confidenceType(advice.confidenceLabel)" size="small">{{ advice.confidenceLabel }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="目标结论">{{ advice.targetJudgmentType || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="人工复核">{{ advice.mustManualReview ? '是' : '否' }}</el-descriptions-item>
-          <el-descriptions-item label="影响范围" :span="2">{{ advice.affectedScope || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="证据摘要" :span="2">{{ advice.evidenceSummary || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="建议原因" :span="2">{{ advice.suggestedReason || '-' }}</el-descriptions-item>
-        </el-descriptions>
+    <el-dialog
+      v-model="adviceDialogVisible"
+      :title="adviceTitle"
+      width="760px"
+      destroy-on-close
+      :close-on-click-modal="!adviceLoading"
+      :close-on-press-escape="!adviceLoading"
+      :show-close="!adviceLoading"
+    >
+      <div
+        v-loading="adviceLoading"
+        class="advice-dialog-body"
+        :element-loading-text="adviceLoadingText"
+        :element-loading-custom-class="AI_LOADING_CLASS"
+      >
+        <template v-if="!adviceLoading && advice">
+          <el-alert
+            v-if="advice.withheld"
+            type="warning"
+            :closable="false"
+            show-icon
+            class="advice-alert"
+            :title="advice.suggestedReason"
+          />
+          <el-descriptions :column="2" border size="small">
+            <el-descriptions-item label="建议动作">{{ advice.recommendedAction || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="置信度">
+              <el-tag :type="confidenceType(advice.confidenceLabel)" size="small">{{ advice.confidenceLabel }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="目标结论">{{ advice.targetJudgmentType || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="人工复核">{{ advice.mustManualReview ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="影响范围" :span="2">{{ advice.affectedScope || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="证据摘要" :span="2">{{ advice.evidenceSummary || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="建议原因" :span="2">{{ advice.suggestedReason || '-' }}</el-descriptions-item>
+          </el-descriptions>
 
-        <div v-if="advice.triggerIndicators?.length" class="advice-tags">
-          <span class="advice-tags-label">触发指标</span>
-          <el-tag v-for="item in advice.triggerIndicators" :key="item" type="warning" size="small">{{ item }}</el-tag>
-        </div>
-        <div v-if="advice.missingInfo?.length" class="advice-tags">
-          <span class="advice-tags-label">缺失信息</span>
-          <el-tag v-for="item in advice.missingInfo" :key="item" type="info" size="small">{{ item }}</el-tag>
-        </div>
+          <div v-if="advice.triggerIndicators?.length" class="advice-tags">
+            <span class="advice-tags-label">触发指标</span>
+            <el-tag v-for="item in advice.triggerIndicators" :key="item" type="warning" size="small">{{ item }}</el-tag>
+          </div>
+          <div v-if="advice.missingInfo?.length" class="advice-tags">
+            <span class="advice-tags-label">缺失信息</span>
+            <el-tag v-for="item in advice.missingInfo" :key="item" type="info" size="small">{{ item }}</el-tag>
+          </div>
 
-        <el-table v-if="advice.evidenceRefs?.length" :data="advice.evidenceRefs" border size="small" class="advice-table">
-          <el-table-column prop="standardCode" label="来源" min-width="150" />
-          <el-table-column prop="clauseNo" label="条款" width="90" />
-          <el-table-column prop="paragraphText" label="段落" min-width="320" show-overflow-tooltip />
-        </el-table>
+          <el-table v-if="advice.evidenceRefs?.length" :data="advice.evidenceRefs" border size="small" class="advice-table">
+            <el-table-column prop="standardCode" label="来源" min-width="150" />
+            <el-table-column prop="clauseNo" label="条款" width="90" />
+            <el-table-column prop="paragraphText" label="段落" min-width="320" show-overflow-tooltip />
+          </el-table>
+        </template>
       </div>
       <template #footer>
-        <el-button @click="adviceDialogVisible = false">关闭</el-button>
-        <el-button :loading="adviceActionLoading" @click="ignoreAdvice">忽略建议</el-button>
-        <el-button type="primary" :disabled="advice?.withheld" @click="adoptAdvice">采纳并预填</el-button>
+        <el-button :disabled="adviceLoading" @click="adviceDialogVisible = false">关闭</el-button>
+        <el-button :loading="adviceActionLoading" :disabled="adviceLoading || !advice" @click="ignoreAdvice">忽略建议</el-button>
+        <el-button type="primary" :disabled="adviceLoading || advice?.withheld" @click="adoptAdvice">采纳并预填</el-button>
       </template>
     </el-dialog>
   </div>
@@ -320,6 +341,7 @@ import { getJudgmentExplanation, getJudgmentByRecord } from '@/api/judgment'
 import { getReinspectionAdvice, initiateReinspection, type WorkflowAdvice } from '@/api/reinspection'
 import { getRejudgmentAdvice } from '@/api/rejudgment'
 import { handleAiAssessment } from '@/api/ai-assessment'
+import { AI_LOADING_TEXT, AI_LOADING_CLASS } from '@/constants/ai-loading-text'
 
 const route = useRoute()
 const router = useRouter()
@@ -349,6 +371,11 @@ const advice = ref<WorkflowAdvice | null>(null)
 const adviceKind = ref<'reinspection' | 'rejudgment'>('reinspection')
 
 const adviceTitle = computed(() => adviceKind.value === 'reinspection' ? 'AI复检建议' : 'AI改判建议')
+const adviceLoadingText = computed(() =>
+  adviceKind.value === 'reinspection'
+    ? AI_LOADING_TEXT.reinspectionAdvice
+    : AI_LOADING_TEXT.rejudgmentAdvice
+)
 
 function isConcessionJudgment(type?: string) {
   return type === 'CAN_CONCESSION' || type === 'CONCESSION'
@@ -468,12 +495,16 @@ async function openAdvice(kind: 'reinspection' | 'rejudgment') {
     return
   }
   adviceKind.value = kind
+  advice.value = null
   adviceDialogVisible.value = true
   adviceLoading.value = true
   try {
     advice.value = kind === 'reinspection'
       ? await getReinspectionAdvice(judgmentId)
       : await getRejudgmentAdvice(judgmentId)
+  } catch {
+    ElMessage.error(kind === 'reinspection' ? 'AI 复检建议获取失败，请稍后重试' : 'AI 改判建议获取失败，请稍后重试')
+    adviceDialogVisible.value = false
   } finally {
     adviceLoading.value = false
   }
@@ -574,6 +605,9 @@ onMounted(loadDetail)
   padding: 16px;
   max-width: 1200px;
 }
+.explanation-page.is-ai-loading {
+  min-height: 55vh;
+}
 .hero-card {
   margin-bottom: 12px;
 }
@@ -668,6 +702,11 @@ onMounted(loadDetail)
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.advice-dialog-body {
+  min-height: 280px;
+  position: relative;
 }
 
 .advice-alert,

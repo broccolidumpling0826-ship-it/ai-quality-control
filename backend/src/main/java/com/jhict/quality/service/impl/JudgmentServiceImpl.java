@@ -23,7 +23,6 @@ import com.jhict.quality.gateway.model.ModelGateway;
 import com.jhict.quality.gateway.model.ModelMessage;
 import com.jhict.quality.mapper.*;
 import com.jhict.quality.service.api.AiAssessmentService;
-import com.jhict.quality.service.api.AiCacheService;
 import com.jhict.quality.service.api.JudgmentService;
 import com.jhict.quality.service.api.NotificationService;
 import com.jhict.quality.service.api.StandardConflictService;
@@ -65,12 +64,9 @@ public class JudgmentServiceImpl implements JudgmentService {
     private static final String DEFAULT_COMPANY_ID = "DEFAULT";
     private static final long DASHBOARD_TTL_SECONDS = 60L;
     private static final String EXPLANATION_PROMPT_VERSION = "judgment-explanation-v3";
-    private static final String ASSESSMENT_TYPE_JUDGMENT_EXPLANATION = "JUDGMENT_EXPLANATION";
 
     private enum AiExplanationSource {
         SKIPPED,
-        CACHE,
-        ASSESSMENT,
         GENERATED,
         STRUCTURED
     }
@@ -118,9 +114,6 @@ public class JudgmentServiceImpl implements JudgmentService {
 
     @Resource
     private AiAssessmentService aiAssessmentService;
-
-    @Resource
-    private AiCacheService aiCacheService;
 
     /** 懒注入，避免循环依赖 */
     @Lazy
@@ -426,7 +419,7 @@ public class JudgmentServiceImpl implements JudgmentService {
                 conflictRejudge));
         AiExplanationSource aiSource;
         if (generateAiExplanation) {
-            aiSource = fillGeneratedExplanationIfPossible(vo, result, citations, conflictRejudge);
+            aiSource = fillGeneratedExplanationIfPossible(vo, result, citations);
         } else {
             aiSource = tryStructuredExplanation(vo, citations);
             vo.setAiExplanationTrace(aiSource == AiExplanationSource.STRUCTURED
@@ -606,10 +599,6 @@ public class JudgmentServiceImpl implements JudgmentService {
             vo.setConfidenceScore(0.85D);
             if (aiSource == AiExplanationSource.STRUCTURED) {
                 factors.add("结构化依据解释已附来源编号并通过校验");
-            } else if (aiSource == AiExplanationSource.ASSESSMENT) {
-                factors.add("解释复用历史评估记录，本次未调用模型");
-            } else if (aiSource == AiExplanationSource.CACHE) {
-                factors.add("解释来自缓存，本次未调用模型");
             } else {
                 factors.add("AI解释已通过来源编号校验");
             }
@@ -631,12 +620,6 @@ public class JudgmentServiceImpl implements JudgmentService {
             } else if (aiSource == AiExplanationSource.STRUCTURED) {
                 vo.setDegradationSource("RULE_TEMPLATE");
                 vo.setDegradationReason("模型解释未通过校验，已展示含指标依据与来源编号的结构化解释");
-            } else if (aiSource == AiExplanationSource.ASSESSMENT) {
-                vo.setDegradationSource("ASSESSMENT_REUSE");
-                vo.setDegradationReason("复用历史评估记录中的可信解释，本次未调用模型");
-            } else if (aiSource == AiExplanationSource.CACHE) {
-                vo.setDegradationSource("CACHE");
-                vo.setDegradationReason("命中解释缓存，本次未调用模型");
             } else {
                 vo.setDegradationSource("GENERATED");
                 vo.setDegradationReason("AI解释已基于来源条款生成并通过引用校验");
@@ -657,8 +640,7 @@ public class JudgmentServiceImpl implements JudgmentService {
 
     private AiExplanationSource fillGeneratedExplanationIfPossible(QcJudgmentResultVO vo,
                                                                    QcJudgmentResult result,
-                                                                   List<AiSourceReferenceVO> citations,
-                                                                   boolean conflictRejudge) {
+                                                                   List<AiSourceReferenceVO> citations) {
         vo.setAiExplanation(null);
         vo.setAiExplanationTrace(null);
         String judgmentId = result.getId();
@@ -671,24 +653,6 @@ public class JudgmentServiceImpl implements JudgmentService {
             vo.setAiExplanationTrace("MODEL_DISABLED");
             log.info("判定解释未调模型，judgmentId={}，trace=MODEL_DISABLED", judgmentId);
             return tryStructuredExplanation(vo, citations);
-        }
-        if (!conflictRejudge) {
-            String cachedExplanation = loadCachedExplanation(judgmentId, citations, vo.getEvidences());
-            if (StringUtils.hasText(cachedExplanation)) {
-                vo.setAiExplanation(cachedExplanation);
-                vo.setAiExplanationTrace("CACHE_HIT");
-                log.info("判定解释未调模型，judgmentId={}，trace=CACHE_HIT", judgmentId);
-                return AiExplanationSource.CACHE;
-            }
-            String assessedExplanation = loadAssessedExplanation(judgmentId, citations, vo.getEvidences());
-            if (StringUtils.hasText(assessedExplanation)) {
-                vo.setAiExplanation(assessedExplanation);
-                vo.setAiExplanationTrace("ASSESSMENT_REUSE");
-                log.info("判定解释未调模型，judgmentId={}，trace=ASSESSMENT_REUSE", judgmentId);
-                return AiExplanationSource.ASSESSMENT;
-            }
-        } else {
-            log.info("判定解释跳过缓存/历史复用，judgmentId={}，原因=标准冲突裁决后重判", judgmentId);
         }
         log.info("判定解释开始调用模型，judgmentId={}，businessType=JUDGMENT_EXPLANATION", judgmentId);
         ModelChatResponse response = modelGateway.chat(buildExplanationChatRequest(vo, result, citations));
@@ -731,54 +695,6 @@ public class JudgmentServiceImpl implements JudgmentService {
             return AiExplanationSource.STRUCTURED;
         }
         return AiExplanationSource.SKIPPED;
-    }
-
-    private String loadCachedExplanation(String judgmentId,
-                                         List<AiSourceReferenceVO> citations,
-                                         List<QcJudgmentResultVO.EvidenceVO> evidences) {
-        QcAiCache cache = aiCacheService.findActive(ASSESSMENT_TYPE_JUDGMENT_EXPLANATION, "JUDGMENT", judgmentId);
-        if (cache == null || !StringUtils.hasText(cache.getCachedOutput())) {
-            return null;
-        }
-        String cachedText = parseCachedExplanationText(cache.getCachedOutput());
-        String trusted = CitationReferenceSupport.acceptTrustedCitedOutput(cachedText, citations, evidences);
-        if (!StringUtils.hasText(trusted)) {
-            log.warn("判定解释缓存引用校验未通过，judgmentId={}", judgmentId);
-            return null;
-        }
-        return trusted;
-    }
-
-    private String loadAssessedExplanation(String judgmentId,
-                                           List<AiSourceReferenceVO> citations,
-                                           List<QcJudgmentResultVO.EvidenceVO> evidences) {
-        return aiAssessmentService.findLatestByRelatedJudgment(judgmentId, ASSESSMENT_TYPE_JUDGMENT_EXPLANATION)
-                .filter(assessment -> EXPLANATION_PROMPT_VERSION.equals(assessment.getPromptVersion()))
-                .map(QcAiAssessment::getRawOutput)
-                .map(content -> CitationReferenceSupport.acceptTrustedCitedOutput(content, citations, evidences))
-                .filter(StringUtils::hasText)
-                .orElse(null);
-    }
-
-    private String parseCachedExplanationText(String cachedOutput) {
-        if (!StringUtils.hasText(cachedOutput)) {
-            return null;
-        }
-        try {
-            Map<String, Object> map = objectMapper.readValue(cachedOutput, new TypeReference<Map<String, Object>>() {
-            });
-            Object summary = map.get("summary");
-            if (summary != null) {
-                return summary.toString();
-            }
-            Object answer = map.get("answer");
-            if (answer != null) {
-                return answer.toString();
-            }
-        } catch (Exception e) {
-            log.debug("判定解释缓存非 JSON，按纯文本使用，error={}", e.getMessage());
-        }
-        return cachedOutput;
     }
 
     private ModelChatRequest buildExplanationChatRequest(QcJudgmentResultVO vo,

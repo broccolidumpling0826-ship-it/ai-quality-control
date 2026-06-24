@@ -3,7 +3,16 @@
     <el-page-header @back="router.back()" content="发起改判申请" style="margin-bottom:16px" />
 
     <!-- 原判定信息 -->
-    <el-card shadow="never" style="margin-bottom:12px" v-if="originalJudgment">
+    <el-card
+      shadow="never"
+      class="judgment-info-card"
+      :class="{ 'is-ai-loading': judgmentLoading }"
+      style="margin-bottom:12px"
+      v-loading="judgmentLoading"
+      :element-loading-text="AI_LOADING_TEXT.judgmentExplanation"
+      :element-loading-custom-class="AI_LOADING_CLASS"
+      v-if="originalJudgment || judgmentLoading || fromRouteJudgment"
+    >
       <template #header>
         <span style="font-weight:600">原判定信息</span>
         <el-button
@@ -239,6 +248,7 @@ import { applyRejudgment } from '@/api/rejudgment'
 import { getJudgmentExplanation, pageJudgments, type JudgmentListItem } from '@/api/judgment'
 import { uploadFile } from '@/api/file'
 import type { PageResult } from '@/types'
+import { AI_LOADING_TEXT, AI_LOADING_CLASS } from '@/constants/ai-loading-text'
 
 const route = useRoute()
 const router = useRouter()
@@ -251,6 +261,7 @@ const fromRouteJudgment = computed(
 const formRef = ref<FormInstance>()
 const uploadRef = ref<any>()
 const submitLoading = ref(false)
+const judgmentLoading = ref(false)
 const originalJudgment = ref<any>(null)
 const fileList = ref<UploadFile[]>([])
 
@@ -340,11 +351,14 @@ function applySelectedJudgment(row: JudgmentListItem) {
 
 async function loadOriginalJudgment() {
   if (!formData.judgmentId) return
+  judgmentLoading.value = true
   try {
     const res = await getJudgmentExplanation(formData.judgmentId) as any
     originalJudgment.value = res
   } catch {
     /* 列表已选时保留简要信息 */
+  } finally {
+    judgmentLoading.value = false
   }
 }
 
@@ -482,6 +496,10 @@ onMounted(async () => {
 .rejudgment-form-page {
   padding: 16px;
   max-width: 960px;
+}
+.judgment-info-card.is-ai-loading {
+  min-height: 200px;
+  position: relative;
 }
 .reverse-warning-banner {
   background: #fff0f0;

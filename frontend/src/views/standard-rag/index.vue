@@ -7,7 +7,12 @@
 
     <div class="rag-layout">
       <!-- 左侧：智能问答 -->
-      <section class="chat-panel" v-loading="loading">
+      <section
+        class="chat-panel"
+        v-loading="loading"
+        :element-loading-text="AI_LOADING_TEXT.standardRag"
+        :element-loading-custom-class="AI_LOADING_CLASS"
+      >
         <div class="chat-main" :class="{ 'is-empty': !submittedQuery && !loading }">
           <div class="chat-messages">
             <el-empty
@@ -22,8 +27,8 @@
               </div>
 
               <div v-if="answer || loading" class="chat-item ai-item">
-                <div class="chat-bubble ai-bubble">
-                  <div class="ai-head">
+                <div class="chat-bubble ai-bubble" :class="{ 'is-loading': loading && !answer }">
+                  <div v-if="answer" class="ai-head">
                     <el-tag size="small" :type="degradationTagType(answer?.degradationSource, answer?.cacheHit)">
                       {{ degradationLabel(answer?.degradationSource, answer?.cacheHit) }}
                     </el-tag>
@@ -204,6 +209,7 @@ import {
   ragSourceTypeTagType,
   sourceKey
 } from '@/utils/standard-rag-display'
+import { AI_LOADING_TEXT, AI_LOADING_CLASS } from '@/constants/ai-loading-text'
 
 const dictStore = useDictStore()
 const customerOptions = ref<DictItem[]>([])
@@ -230,7 +236,7 @@ const highlightKeywords = computed(() => {
 })
 
 const displayAnswer = computed(() => {
-  if (!answer.value) return loading.value ? '正在检索标准条款...' : ''
+  if (!answer.value) return loading.value ? AI_LOADING_TEXT.standardRag : ''
   if (answer.value.refused) return ''
   return answer.value.answer || '未生成回答，请查看右侧引用来源。'
 })
@@ -408,6 +414,18 @@ onMounted(() => {
   max-width: 100%;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
+}
+
+.ai-bubble.is-loading {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-bubble.is-loading .answer-text {
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 .ai-head {

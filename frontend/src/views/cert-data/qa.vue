@@ -32,7 +32,13 @@
     </el-card>
 
     <div class="qa-grid">
-      <el-card class="answer-card" shadow="never" v-loading="loading">
+      <el-card
+        class="answer-card"
+        shadow="never"
+        v-loading="loading"
+        :element-loading-text="AI_LOADING_TEXT.certQa"
+        :element-loading-custom-class="AI_LOADING_CLASS"
+      >
         <template #header>
           <div class="head">
             <span>回答</span>
@@ -63,10 +69,13 @@
           :title="answer.guidanceMessage"
           style="margin-bottom: 12px"
         />
-        <p class="answer-text">
-          <template v-for="(part, index) in answerParts" :key="index">
-            <span v-if="part.type === 'text'">{{ part.value }}</span>
-            <span v-else class="citation-mark">[{{ part.index }}]</span>
+        <p class="answer-text" :class="{ 'is-loading': loading }">
+          <span v-if="loading" class="answer-loading-hint">{{ AI_LOADING_TEXT.certQa }}</span>
+          <template v-else>
+            <template v-for="(part, index) in answerParts" :key="index">
+              <span v-if="part.type === 'text'">{{ part.value }}</span>
+              <span v-else class="citation-mark">[{{ part.index }}]</span>
+            </template>
           </template>
         </p>
       </el-card>
@@ -108,6 +117,7 @@ import { ChatLineSquare } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { askCertQa, type CertQaAnswer, type CertQaQuery } from '@/api/cert-data'
 import { useCitationParts } from '@/composables/use-citation-parts'
+import { AI_LOADING_TEXT, AI_LOADING_CLASS } from '@/constants/ai-loading-text'
 
 const route = useRoute()
 const router = useRouter()
@@ -250,6 +260,18 @@ onMounted(() => {
   line-height: 1.7;
   white-space: pre-wrap;
   color: var(--text-primary);
+}
+
+.answer-text.is-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.answer-loading-hint {
+  color: var(--text-secondary, #909399);
+  max-width: 320px;
 }
 
 .citation-mark,

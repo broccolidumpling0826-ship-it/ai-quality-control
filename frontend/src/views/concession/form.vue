@@ -1,5 +1,11 @@
 <template>
-  <div class="concession-form-page">
+  <div
+    class="concession-form-page"
+    :class="{ 'is-ai-loading': judgmentLoading }"
+    v-loading="judgmentLoading"
+    :element-loading-text="AI_LOADING_TEXT.judgmentExplanation"
+    :element-loading-custom-class="AI_LOADING_CLASS"
+  >
     <el-page-header @back="router.back()" content="发起让步申请" style="margin-bottom:16px" />
 
     <el-card shadow="never" style="margin-bottom:12px" v-if="judgmentDetail">
@@ -75,6 +81,7 @@ import type { FormInstance } from 'element-plus'
 import { useDictStore } from '@/store/dict'
 import { getJudgmentExplanation } from '@/api/judgment'
 import { applyConcession } from '@/api/concession'
+import { AI_LOADING_TEXT, AI_LOADING_CLASS } from '@/constants/ai-loading-text'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,6 +89,7 @@ const dictStore = useDictStore()
 
 const formRef = ref<FormInstance>()
 const submitLoading = ref(false)
+const judgmentLoading = ref(false)
 const judgmentDetail = ref<any>(null)
 
 const formData = reactive({
@@ -128,6 +136,7 @@ async function loadJudgment() {
     ElMessage.warning('缺少判定结论 ID')
     return
   }
+  judgmentLoading.value = true
   try {
     const res = await getJudgmentExplanation(formData.judgmentId)
     judgmentDetail.value = res
@@ -136,6 +145,8 @@ async function loadJudgment() {
     }
   } catch {
     /* handled by interceptor */
+  } finally {
+    judgmentLoading.value = false
   }
 }
 
@@ -175,6 +186,9 @@ onMounted(() => {
 .concession-form-page {
   padding: 16px;
   max-width: 900px;
+}
+.concession-form-page.is-ai-loading {
+  min-height: 45vh;
 }
 .bottom-bar {
   margin-top: 16px;

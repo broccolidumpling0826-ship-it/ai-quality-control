@@ -71,6 +71,12 @@
             </el-select>
           </el-form-item>
         </el-form>
+        <div
+          class="risk-body"
+          v-loading="riskLoading"
+          :element-loading-text="AI_LOADING_TEXT.concessionRisk"
+          :element-loading-custom-class="AI_LOADING_CLASS"
+        >
         <template v-if="riskResult">
           <div class="risk-tags">
             <el-tag :type="riskType(riskResult.riskLevel)" size="small">{{ riskResult.riskLevel }}</el-tag>
@@ -94,6 +100,8 @@
             </el-tag>
           </div>
         </template>
+        <p v-else-if="!riskLoading" class="risk-empty-hint">填写客户用途后点击「评估」，AI 将结合判定依据生成风险分析。</p>
+        </div>
       </el-card>
 
       <!-- 客户确认附件区域 -->
@@ -208,6 +216,7 @@ import {
   assessConcessionRisk,
   type ConcessionRiskAssessment
 } from '@/api/concession'
+import { AI_LOADING_TEXT, AI_LOADING_CLASS } from '@/constants/ai-loading-text'
 
 const route = useRoute()
 const router = useRouter()
@@ -415,6 +424,16 @@ onMounted(loadDetail)
 }
 .risk-head {
   justify-content: space-between;
+}
+.risk-body {
+  min-height: 160px;
+  margin-top: 4px;
+  position: relative;
+}
+.risk-empty-hint {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary, #909399);
 }
 .risk-tags,
 .risk-list {
