@@ -147,3 +147,10 @@ The system SHALL retrieve and cite clauses from all successfully indexed source 
 - **WHEN** a published standard has multiple source files and one file failed indexing while others succeeded
 - **THEN** RAG queries SHALL retrieve clauses only from successfully indexed source files
 - **AND** the system SHALL NOT invent content from the failed source file
+
+### Requirement: Standard RAG retrieval shows centered loading feedback
+The frontend SHALL show centered, scenario-specific loading feedback while RAG query API calls are pending, as defined by `ai-interaction-ux`.
+
+#### Scenario: RAG query loading
+- **WHEN** a user submits a standard RAG question
+- **THEN** the UI SHALL show a centered loading overlay and in-bubble waiting copy until the answer returns or fails

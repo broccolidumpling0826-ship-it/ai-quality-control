@@ -78,3 +78,10 @@ The system SHALL persist concession risk assessment inputs, sources, model metad
 #### Scenario: User handles assessment
 - **WHEN** a user adopts or ignores a concession assessment
 - **THEN** the system SHALL store the adoption status and human opinion without modifying the original AI output
+
+### Requirement: Concession risk assessment shows centered loading feedback
+The frontend SHALL show centered, scenario-specific loading feedback while concession risk assessment API calls are pending, as defined by `ai-interaction-ux`.
+
+#### Scenario: Risk assessment loading
+- **WHEN** a user clicks assess on the concession detail page
+- **THEN** the UI SHALL show a centered loading overlay with concession-risk loading copy until the assessment response returns or fails

@@ -45,3 +45,10 @@ The system SHALL support cached Q&A answers for demo scenarios while retaining e
 #### Scenario: Cached answer used
 - **WHEN** the model service is unavailable and a matching certificate Q&A cache entry exists
 - **THEN** the system SHALL return the cached answer with citations and mark the response as cache-backed
+
+### Requirement: Certificate Q&A shows centered loading feedback
+The frontend SHALL show centered, scenario-specific loading feedback while certificate Q&A API calls are pending, as defined by `ai-interaction-ux`.
+
+#### Scenario: Q&A request loading
+- **WHEN** a user submits a certificate Q&A question
+- **THEN** the UI SHALL show a centered loading overlay with certificate Q&A loading copy until the answer returns or fails

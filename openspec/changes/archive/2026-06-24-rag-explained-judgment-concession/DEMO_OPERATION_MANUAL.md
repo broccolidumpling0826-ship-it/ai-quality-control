@@ -262,7 +262,7 @@ flowchart LR
    - 适用标准：`GB/T 912-2008`  
    - 指标表：Rm 430 在 370–510；A 30.5% ≥ 26%  
    - AI 解释区：带条款引用（5.1 / 5.2）  
-   - 关注 `degradationSource`：`CACHE` / `GENERATED` / `RULE` 等  
+   - 关注 `degradationSource`：`GENERATED` / `RULE_TEMPLATE` 等（判定解释每次请求调用模型，不走 CACHE 复用）  
 
 3. **质保书问答**  
    - 路径：数据汇总 → 质保书问答  
@@ -630,13 +630,16 @@ node openspec/changes/rag-explained-judgment-concession/evaluation/run-module-ve
 | 现象 | 排查 |
 | --- | --- |
 | RAG 无来源 / 全拒绝 | 执行 `index-p0-clauses.mjs --force`；检查 `ES_VECTOR_ENABLED`、`EMBEDDING_API_KEY` |
-| 判定解释无 AI 内容 | 检查 `AI_MODEL_API_KEY`；无 key 时应出现 CACHE/RULE 降级 |
+| 判定解释无 AI 内容 | 检查 `AI_MODEL_API_KEY`；无 key 时应出现 RULE 降级；有 key 时每次打开判定解释都会调用模型 |
 | jud003 让步风险 BLOCKED | 确认已合入 triggerRule / evidenceRefs 修复；重启后端 |
 | 冲突场景无法重复演示 | 执行 §2.7 重置 SQL |
 | 8080 无响应 | `cd backend && mvn spring-boot:run -Dspring.profiles.active=dev` |
 | 规格下拉为空 | 检查标准库 `GB/T 912-2008` 是否已发布；客户是否选对 |
 
-**AI 降级顺序**（讲解备用）：缓存 → 规则模板 → ES 原始检索 → 明确不可用。
+**AI 降级顺序**（讲解备用）：
+
+- **判定解释**：模型调用 → 规则模板 → 明确不可用（不走预生成缓存/历史评估复用）
+- **其他 AI 能力**（如质保书问答）：缓存 → 规则模板 → ES 原始检索 → 明确不可用
 
 ---
 

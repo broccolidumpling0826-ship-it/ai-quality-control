@@ -32,11 +32,12 @@ Seed objects:
 - Expected judgment: `QUALIFIED`
 - Expected citations: `p0_clause_gb_rm`, `p0_clause_gb_a`
 - Expected confidence: `HIGH`
-- Expected degradation: `CACHE` when offline cache is used
+- Expected degradation: `GENERATED` when model is enabled; `RULE_TEMPLATE` when model is unavailable
 
 Demo steps:
 
 1. Open `判定解释` and search/open `jud001`.
+2. Confirm the page shows centered AI loading copy while the explanation request is pending.
 2. Confirm selected standard is `GB/T 912-2008`.
 3. Confirm structured limits show Rm `370-510 MPa` and A lower limit `26%`.
 4. Confirm explanation states the measured values are inside limits and cites clauses `5.1` and `5.2`.

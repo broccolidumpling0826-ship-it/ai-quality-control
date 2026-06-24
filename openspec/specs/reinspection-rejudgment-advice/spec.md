@@ -37,3 +37,10 @@ The system SHALL persist reinspection and rejudgment AI advice outputs, referenc
 #### Scenario: Advice generated
 - **WHEN** AI advice is generated for a judgment or record
 - **THEN** the system SHALL store an AI assessment record linked to the source judgment or inspection record
+
+### Requirement: AI advice requests show centered loading feedback
+The frontend SHALL show centered, scenario-specific loading feedback while reinspection or rejudgment advice API calls are pending, as defined by `ai-interaction-ux`.
+
+#### Scenario: Advice modal loading
+- **WHEN** a user opens AI reinspection or rejudgment advice from the judgment explanation page
+- **THEN** the UI SHALL show a centered loading overlay with scenario-specific copy until the advice response returns or fails

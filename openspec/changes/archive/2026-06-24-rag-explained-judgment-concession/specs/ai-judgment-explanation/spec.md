@@ -44,8 +44,16 @@ The system SHALL surface standard conflicts and structured-document inconsistenc
 - **WHEN** the judgment result is `STANDARD_CONFLICT`
 - **THEN** the explanation SHALL show conflict details and SHALL NOT present a final pass/fail release conclusion
 
+### Requirement: Judgment explanation invokes model on each explanation request
+The system SHALL call the model gateway to generate judgment explanation whenever the explanation API is invoked, relevant source citations exist, and the model gateway is enabled.
+
+#### Scenario: Explanation request with model enabled
+- **WHEN** a user requests `GET /judgments/{id}/explanation` and relevant source citations exist
+- **THEN** the system SHALL invoke the model for explanation generation on that request
+- **AND** it SHALL NOT return a pre-generated cache entry or reuse a prior assessment output instead of calling the model
+
 ### Requirement: AI explanation output is persisted
-The system SHALL persist AI judgment explanation output, citations, confidence, model metadata, and input snapshot when generated or served from cache.
+The system SHALL persist AI judgment explanation output, citations, confidence, model metadata, and input snapshot when generated successfully or when structured fallback is returned after a model invocation attempt.
 
 #### Scenario: Explanation generated
 - **WHEN** an AI judgment explanation is generated for a judgment

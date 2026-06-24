@@ -215,21 +215,18 @@ flowchart TD
     C --> D[BE: 检查冲突/标准缺口/结构化文档不一致]
     D --> E[BE: RAG 检索匹配条款]
     E --> F[BE: 计算规则化置信度 band]
-    F --> G{是否命中预生成缓存}
-    G -- 是 --> H[BE: 返回 cache-backed explanation]
-    G -- 否 --> I{LLM 是否可用}
-    I -- 是 --> J[BE: 生成引用式解释]
-    I -- 否 --> K{结构化依据是否完整}
-    K -- 是 --> L[BE: 返回 rule-template explanation]
-    K -- 否 --> M{ES 检索是否可用}
-    M -- 是 --> N[BE: 返回 raw-clause retrieval]
-    M -- 否 --> O[BE: 返回 unavailable state]
-    H --> P[DB/AUD: 保存或复用 AI assessment]
-    J --> P
-    L --> P
-    N --> P
-    O --> Q[FE: 展示不可用且保留规则判定]
-    P --> R[FE: 展示结构化规则/AI文本/引用/置信度/降级标签]
+    F --> G{LLM 是否可用且有来源引用}
+    G -- 是 --> H[BE: 每次请求调用模型生成引用式解释]
+    G -- 否 --> I{结构化依据是否完整}
+    I -- 是 --> J[BE: 返回 rule-template explanation]
+    I -- 否 --> K{ES 检索是否可用}
+    K -- 是 --> L[BE: 返回 raw-clause retrieval]
+    K -- 否 --> M[BE: 返回 unavailable state]
+    H --> N[DB/AUD: 保存 AI assessment]
+    J --> N
+    L --> N
+    M --> O[FE: 展示不可用且保留规则判定]
+    N --> P[FE: 展示结构化规则/AI文本/引用/置信度/降级标签]
 ```
 
 Frontend requirements:
@@ -237,6 +234,8 @@ Frontend requirements:
 - Always show structured rule details before generated prose.
 - Show confidence and degradation tags using the mapping in `frontend/DESIGN.md`.
 - `STANDARD_CONFLICT` must not show a final release conclusion.
+- While `GET /judgments/{id}/explanation` is pending, show centered AI loading copy per `ai-interaction-ux`; do not present an empty page or modal body.
+- Judgment explanation SHALL NOT short-circuit to pre-generated cache or prior assessment reuse when the model gateway is enabled.
 
 Backend requirements:
 

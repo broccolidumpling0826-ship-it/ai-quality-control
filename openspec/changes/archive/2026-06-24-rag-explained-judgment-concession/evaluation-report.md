@@ -69,7 +69,10 @@ Every case must define:
 
 ## Current External-Service Notes
 
-- Live model calls are optional for P0 acceptance because cache and rule-template degradation are implemented.
+- Live model calls are optional for P0 acceptance because rule-template and cache degradation are implemented for non-judgment-explanation features.
+- Judgment explanation (`GET /judgments/{id}/explanation`) SHALL invoke the model on each request when the model gateway is enabled and citations exist; it does not short-circuit to pre-generated cache or prior assessment reuse.
 - Elasticsearch retrieval should be validated separately when ES credentials are available.
 - MySQL/Redis availability is required for live end-to-end API verification.
-- If model/vector services are unavailable, the expected P0 degradation path is `CACHE -> RULE_TEMPLATE -> RAW_RETRIEVAL -> UNAVAILABLE`.
+- If model/vector services are unavailable, the expected P0 degradation path is:
+  - Judgment explanation: `MODEL -> RULE_TEMPLATE -> UNAVAILABLE`
+  - Other AI features: `CACHE -> RULE_TEMPLATE -> RAW_RETRIEVAL -> UNAVAILABLE`
