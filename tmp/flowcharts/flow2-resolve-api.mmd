@@ -1,0 +1,11 @@
+graph TD
+    A[POST standard-conflicts resolve] --> B[resolveAndRejudge]
+    B --> C[resolveDecision]
+    C --> D[读取 standard_conflict]
+    D --> E{校验 BLOCKING 且 PENDING}
+    E -->|失败| F[返回业务异常]
+    E -->|通过| G[更新冲突为 RESOLVED]
+    G --> H[rejudgeWithStandard]
+    H --> I[执行重判流程]
+    I --> J[bindRejudgeJudgment]
+    J --> K[回写 rejudge_judgment_id]

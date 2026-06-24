@@ -1,0 +1,21 @@
+{
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#000000",
+    "lineColor": "#000000",
+    "secondaryColor": "#ffffff",
+    "tertiaryColor": "#ffffff",
+    "clusterBkg": "#ffffff",
+    "clusterBorder": "#000000",
+    "titleColor": "#000000",
+    "edgeLabelBackground": "#ffffff",
+    "nodeTextColor": "#000000"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear"
+  }
+}

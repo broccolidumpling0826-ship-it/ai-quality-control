@@ -1,0 +1,19 @@
+graph TD
+    A[检验录入 addInspection] --> B[写入检验记录和检验值]
+    B --> C[JudgmentEngine.judge]
+    C --> D[findCandidateStandards]
+    D --> E[SQL查询已发布候选标准]
+    E --> F[detectCandidateConflicts]
+    F --> G[同优先级标准两两比对规则]
+    G --> H[StandardCompareUtils.compareRules]
+    H --> I{是否阻断冲突}
+    I -->|是| J[返回 STANDARD_CONFLICT]
+    I -->|否| K[judgeAgainstStandard 指标比对]
+    J --> L[saveJudgmentResult]
+    K --> L
+    L --> M[旧判定 is_final 置0]
+    M --> N[插入新判定和证据快照]
+    N --> O{是否有冲突项}
+    O -->|是| P[写入 standard_conflict]
+    O -->|否| Q[结束]
+    P --> Q

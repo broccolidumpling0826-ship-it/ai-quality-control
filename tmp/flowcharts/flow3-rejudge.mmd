@@ -1,0 +1,13 @@
+graph TD
+    A[rejudgeWithStandard] --> B[读取检验记录和检验值]
+    B --> C[组装 JudgmentInput]
+    C --> D[judgeWithStandard]
+    D --> E[judgeAgainstStandard 单标准]
+    E --> F[加载控制标准指标配置]
+    F --> G[逐指标比对上下限和让步带]
+    G --> H[聚合判定结论]
+    H --> I[saveJudgmentResult]
+    I --> J[旧判定 is_final 置0]
+    J --> K[插入新最终判定]
+    K --> L[插入证据快照]
+    L --> M[返回新 judgmentId]
