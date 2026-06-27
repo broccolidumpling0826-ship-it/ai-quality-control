@@ -32,6 +32,9 @@ export interface JudgmentPageQuery {
 export const getJudgmentByRecord = (recordId: string) => get(`/judgments/record/${recordId}`)
 export const getJudgmentExplanation = (id: string) =>
   get(`/judgments/${id}/explanation`, undefined, { timeout: AI_REQUEST_TIMEOUT })
+/** 流程页加载原判定摘要，不触发 AI 解释；404 时不弹全局错误（由调用方降级） */
+export const getJudgmentSnapshot = (id: string) =>
+  get(`/judgments/${id}/snapshot`, undefined, { skipGlobalErrorHandler: true })
 export const pageJudgments = (data: JudgmentPageQuery) =>
   post<PageResult<JudgmentListItem>>('/judgments/page', data)
 export const getDashboardSummary = () => get('/judgments/dashboard/summary')
