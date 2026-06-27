@@ -1,0 +1,128 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "normalizer": {
+        "lowercase_normalizer": {
+          "type": "custom",
+          "filter": ["lowercase", "asciifolding"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": true,
+    "properties": {
+      "clauseId": { "type": "keyword" },
+      "documentId": { "type": "keyword" },
+      "clauseKey": { "type": "keyword" },
+      "clauseNo": {
+        "type": "text",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } }
+      },
+      "pageNo": { "type": "integer" },
+      "paragraphText": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 512 } }
+      },
+      "sourceType": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 64,
+            "normalizer": "lowercase_normalizer"
+          }
+        }
+      },
+      "standardType": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 64,
+            "normalizer": "lowercase_normalizer"
+          }
+        }
+      },
+      "standardCode": {
+        "type": "text",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 128 } }
+      },
+      "standardName": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } }
+      },
+      "versionNo": {
+        "type": "text",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 128 } }
+      },
+      "customerId": {
+        "type": "text",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 128 } }
+      },
+      "variety": {
+        "type": "text",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 128 } }
+      },
+      "grade": {
+        "type": "text",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 128 } }
+      },
+      "specRange": {
+        "type": "text",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 128 } }
+      },
+      "usageScope": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } }
+      },
+      "indicatorId": { "type": "keyword" },
+      "indicatorCode": {
+        "type": "text",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 128 } }
+      },
+      "indicatorName": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } }
+      },
+      "effectiveDate": {
+        "type": "date",
+        "format": "yyyy-MM-dd||yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+      },
+      "expiryDate": {
+        "type": "date",
+        "format": "yyyy-MM-dd||yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+      },
+      "retrievalKeywords": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 512 } }
+      },
+      "sourceFileName": {
+        "type": "text",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } }
+      },
+      "metadata": { "type": "object", "enabled": true },
+      "embedding": {
+        "type": "dense_vector",
+        "dims": 1024,
+        "index": true,
+        "similarity": "cosine"
+      },
+      "createdAt": {
+        "type": "date",
+        "format": "yyyy-MM-dd||yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+      },
+      "updatedAt": {
+        "type": "date",
+        "format": "yyyy-MM-dd||yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+      }
+    }
+  }
+}

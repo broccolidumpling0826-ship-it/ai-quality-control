@@ -101,7 +101,7 @@ app:
       host: ${ES_HOST:http://localhost:9200}
       username: ${ES_USERNAME:elastic}
       password: ${ES_PASSWORD:sisHuNo.1}
-      standard-index: ${ES_STANDARD_INDEX:quality-standard-clauses}
+      standard-index: ${ES_STANDARD_INDEX:quality-standard-clauses2}
       timeout-millis: ${ES_TIMEOUT_MILLIS:5000}
 
 logging:

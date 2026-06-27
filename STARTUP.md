@@ -73,7 +73,21 @@ mysql -u "$DB_USER" -p"$DB_PASSWORD" -h 127.0.0.1 -P 3307 ai_quality_control < b
 
 ## 4. 初始化 Elasticsearch
 
-在 Kibana Dev Tools 或 Elasticsearch Console 中执行：
+推荐一键脚本（建索引 + P0 条款种子数据）：
+
+```bash
+bash backend/scripts/es/init-es-from-empty.sh
+```
+
+仅灌数据（索引已存在）：
+
+```bash
+bash backend/scripts/es/init-es-seed-data-only.sh
+```
+
+详细说明见 [backend/scripts/es/README.md](backend/scripts/es/README.md)。
+
+也可在 Kibana Dev Tools 中执行（仅建索引 + 验证查询）：
 
 [backend/scripts/init-es-standard-clauses.devtools](backend/scripts/init-es-standard-clauses.devtools)
 
