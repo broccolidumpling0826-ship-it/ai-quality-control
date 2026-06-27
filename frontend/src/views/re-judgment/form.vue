@@ -9,8 +9,7 @@
       :class="{ 'is-ai-loading': judgmentLoading }"
       style="margin-bottom:12px"
       v-loading="judgmentLoading"
-      :element-loading-text="AI_LOADING_TEXT.judgmentExplanation"
-      :element-loading-custom-class="AI_LOADING_CLASS"
+      element-loading-text="正在加载原判定信息…"
       v-if="originalJudgment || judgmentLoading || fromRouteJudgment"
     >
       <template #header>
@@ -23,7 +22,7 @@
           @click="openJudgmentPicker"
         >重新选择</el-button>
       </template>
-      <el-descriptions :column="3" border>
+      <el-descriptions v-if="originalJudgment" :column="3" border>
         <el-descriptions-item label="卷号">{{ originalJudgment.coilNo }}</el-descriptions-item>
         <el-descriptions-item label="批次号">{{ originalJudgment.batchNo }}</el-descriptions-item>
         <el-descriptions-item label="炉号">{{ originalJudgment.heatNo }}</el-descriptions-item>
@@ -245,28 +244,31 @@ import type { FormInstance, TableInstance, UploadFile } from 'element-plus'
 import { WarningFilled, UploadFilled } from '@element-plus/icons-vue'
 import { useDictStore } from '@/store/dict'
 import { applyRejudgment } from '@/api/rejudgment'
-import { getJudgmentExplanation, pageJudgments, type JudgmentListItem } from '@/api/judgment'
+import { getJudgmentByRecord, getJudgmentSnapshot, pageJudgments, type JudgmentListItem } from '@/api/judgment'
 import { uploadFile } from '@/api/file'
 import type { PageResult } from '@/types'
-import { AI_LOADING_TEXT, AI_LOADING_CLASS } from '@/constants/ai-loading-text'
 
 const route = useRoute()
 const router = useRouter()
 const dictStore = useDictStore()
 
+const initialJudgmentId = (route.query.judgmentId as string) || (route.query.id as string) || ''
+const initialRecordId = (route.query.recordId as string) || ''
+
 const fromRouteJudgment = computed(
-  () => !!(route.query.judgmentId || route.query.id)
+  () => !!(initialJudgmentId || initialRecordId)
 )
 
 const formRef = ref<FormInstance>()
 const uploadRef = ref<any>()
 const submitLoading = ref(false)
-const judgmentLoading = ref(false)
+const judgmentLoading = ref(!!(initialJudgmentId || initialRecordId))
 const originalJudgment = ref<any>(null)
 const fileList = ref<UploadFile[]>([])
 
 const formData = reactive({
-  judgmentId: (route.query.judgmentId as string) || (route.query.id as string) || '',
+  judgmentId: initialJudgmentId,
+  recordId: initialRecordId,
   targetJudgmentType: (route.query.targetJudgmentType as string) || '',
   reason: (route.query.reason as string) || '',
   impactScope: (route.query.impactScope as string) || '',
@@ -346,15 +348,29 @@ function applySelectedJudgment(row: JudgmentListItem) {
     judgeTime: row.judgmentTime
   }
   formData.judgmentId = row.id
+  formData.recordId = row.recordId || ''
   pickerSelectedId.value = row.id
 }
 
 async function loadOriginalJudgment() {
-  if (!formData.judgmentId) return
+  if (!formData.judgmentId && !formData.recordId) return
   judgmentLoading.value = true
   try {
-    const res = await getJudgmentExplanation(formData.judgmentId) as any
-    originalJudgment.value = res
+    let res: any
+    if (formData.recordId) {
+      res = await getJudgmentByRecord(formData.recordId)
+    } else if (formData.judgmentId) {
+      res = await getJudgmentSnapshot(formData.judgmentId).catch(() => null)
+    }
+    if (res) {
+      originalJudgment.value = res
+      if (res.judgmentId) {
+        formData.judgmentId = res.judgmentId
+      }
+      if (res.recordId) {
+        formData.recordId = res.recordId
+      }
+    }
   } catch {
     /* 列表已选时保留简要信息 */
   } finally {
@@ -450,7 +466,11 @@ function confirmPickerSelection() {
 }
 
 async function handleSubmit() {
-  await formRef.value?.validate()
+  try {
+    await formRef.value?.validate()
+  } catch {
+    return
+  }
   if (!formData.judgmentId) {
     ElMessage.warning('请选择原判定记录')
     return
@@ -486,7 +506,7 @@ async function handleSubmit() {
 
 onMounted(async () => {
   await dictStore.refreshItems('QC_CUSTOMER')
-  if (formData.judgmentId) {
+  if (formData.judgmentId || formData.recordId) {
     await loadOriginalJudgment()
   }
 })

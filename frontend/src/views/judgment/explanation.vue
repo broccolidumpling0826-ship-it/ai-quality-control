@@ -551,6 +551,7 @@ async function adoptAdvice() {
     path: '/re-judgment/form',
     query: {
       judgmentId: jid,
+      recordId: detail.value?.recordId || undefined,
       targetJudgmentType: advice.value.targetJudgmentType || '',
       reason: advice.value.suggestedReason || '',
       impactScope: advice.value.affectedScope || ''
@@ -589,7 +590,17 @@ async function confirmReinspection() {
 
 function handleRejudgment() {
   const jid = detail.value?.judgmentId ?? detail.value?.id
-  router.push(`/re-judgment/form?judgmentId=${jid}`)
+  if (!jid) {
+    ElMessage.warning('缺少判定ID，无法发起改判')
+    return
+  }
+  router.push({
+    path: '/re-judgment/form',
+    query: {
+      judgmentId: jid,
+      recordId: detail.value?.recordId || undefined
+    }
+  })
 }
 
 function handleConcession() {
