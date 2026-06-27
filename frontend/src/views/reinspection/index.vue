@@ -428,12 +428,16 @@ onMounted(async () => {
 .complete-context-alert {
   margin-bottom: 16px;
 }
+.complete-context-alert :deep(.el-alert__content) {
+  width: 100%;
+}
 .complete-context-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 4px 16px;
   margin-top: 4px;
   font-size: 13px;
+  color: var(--text-secondary);
 }
 .candidate-filter-form {
   margin-bottom: 8px;
