@@ -1,5 +1,5 @@
 <template>
-  <div class="audit-page">
+  <div class="audit-page page-list-full">
     <!-- 搜索 -->
     <el-card class="search-card" shadow="never">
       <el-form :model="searchForm" inline>
@@ -61,7 +61,7 @@
         <el-table-column
           prop="targetEntity"
           label="目标实体"
-          width="140"
+          min-width="160"
           :filters="getFilters('targetEntity')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
@@ -69,7 +69,7 @@
         <el-table-column
           prop="targetId"
           label="对象ID"
-          width="140"
+          min-width="180"
           show-overflow-tooltip
           :filters="getFilters('targetId')"
           :filter-method="filterMethod"
@@ -94,7 +94,7 @@
         <el-table-column
           prop="ipAddress"
           label="IP地址"
-          width="140"
+          min-width="140"
           :filters="getFilters('ipAddress')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
@@ -227,7 +227,8 @@ onMounted(loadData)
 
 <style scoped>
 .audit-page {
-  padding: 16px;
+  width: 100%;
+  max-width: none;
 }
 .search-card :deep(.el-card__body) {
   padding: 16px 16px 0;

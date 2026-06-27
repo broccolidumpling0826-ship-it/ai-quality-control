@@ -1,6 +1,6 @@
 <template>
   <div
-    class="explanation-page"
+    class="explanation-page page-list-full"
     :class="{ 'is-ai-loading': loading }"
     v-loading="loading"
     :element-loading-text="AI_LOADING_TEXT.judgmentExplanation"
@@ -157,7 +157,7 @@
     <!-- 指标明细 -->
     <el-card shadow="never" style="margin-top:12px" v-if="detail">
       <template #header><span style="font-weight:600">指标明细</span></template>
-      <el-table :data="detail.indicatorDetails" border>
+      <el-table :data="detail.indicatorDetails" border style="width:100%">
         <el-table-column
           prop="indicatorName"
           label="指标名称"
@@ -613,8 +613,8 @@ onMounted(loadDetail)
 
 <style scoped>
 .explanation-page {
-  padding: 16px;
-  max-width: 1200px;
+  width: 100%;
+  max-width: none;
 }
 .explanation-page.is-ai-loading {
   min-height: 55vh;

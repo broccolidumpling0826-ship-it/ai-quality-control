@@ -164,6 +164,17 @@ body {
   scrollbar-color: var(--border-bright) transparent;
 }
 
+/* ── 列表页全宽布局 ───────────────────────────────────────── */
+.page-list-full {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+.page-list-full .el-table {
+  width: 100%;
+}
+
 /* ══════════════════════════════════════════════════════════════
    Element Plus 组件深色主题覆盖
 ══════════════════════════════════════════════════════════════ */
@@ -203,6 +214,16 @@ body {
 
 .el-table__inner-wrapper::before {
   background-color: #1A3352 !important;
+}
+
+.el-table__empty-block {
+  background-color: #0B1929 !important;
+}
+
+.el-table__empty-text {
+  color: var(--text-muted) !important;
+  font-family: var(--font-data) !important;
+  font-size: 12px !important;
 }
 
 .el-table--border::after,
@@ -607,6 +628,7 @@ body {
   --el-pagination-button-disabled-color: var(--el-disabled-text-color) !important;
   --el-pagination-button-disabled-bg-color: #0B1929 !important;
   color: var(--text-muted) !important;
+  background-color: transparent !important;
 }
 
 .el-pagination .el-pager li {
@@ -649,6 +671,11 @@ body {
   color: var(--text-secondary) !important;
   font-family: var(--font-data) !important;
   font-size: 11px !important;
+  background-color: transparent !important;
+}
+
+.el-pagination.is-background .el-pagination__total {
+  background-color: transparent !important;
 }
 
 .el-pagination .el-pagination__jump .el-input__wrapper {
@@ -853,6 +880,73 @@ body {
 .el-message--warning .el-message__icon { color: #FF8C00 !important; }
 .el-message--info { border-color: #234569 !important; }
 .el-message--info .el-message__icon { color: var(--text-muted) !important; }
+
+/* ── el-alert ──────────────────────────────────────────────── */
+.el-alert {
+  border-radius: 4px !important;
+  border: 1px solid #1A3352 !important;
+}
+
+.el-alert.is-light {
+  background-color: #0F2137 !important;
+}
+
+.el-alert.is-light .el-alert__title {
+  color: #E8F0FA !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+.el-alert.is-light .el-alert__description {
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+.el-alert--info.is-light {
+  background-color: rgba(61, 158, 255, 0.1) !important;
+  border-color: rgba(61, 158, 255, 0.35) !important;
+}
+
+.el-alert--info.is-light .el-alert__icon {
+  color: #3D9EFF !important;
+}
+
+.el-alert--success.is-light {
+  background-color: rgba(22, 201, 116, 0.1) !important;
+  border-color: rgba(22, 201, 116, 0.35) !important;
+}
+
+.el-alert--success.is-light .el-alert__icon {
+  color: #16C974 !important;
+}
+
+.el-alert--warning.is-light {
+  background-color: rgba(255, 140, 0, 0.1) !important;
+  border-color: rgba(255, 140, 0, 0.35) !important;
+}
+
+.el-alert--warning.is-light .el-alert__icon {
+  color: #FF8C00 !important;
+}
+
+.el-alert--error.is-light {
+  background-color: rgba(255, 59, 92, 0.1) !important;
+  border-color: rgba(255, 59, 92, 0.35) !important;
+}
+
+.el-alert--error.is-light .el-alert__icon {
+  color: #FF3B5C !important;
+}
+
+.el-alert.is-dark {
+  border-color: #234569 !important;
+}
+
+.el-alert.is-dark .el-alert__title,
+.el-alert.is-dark .el-alert__description {
+  color: #E8F0FA !important;
+}
 
 /* ── el-tooltip ────────────────────────────────────────────── */
 .el-tooltip__popper {
