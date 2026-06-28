@@ -72,6 +72,8 @@ app:
     # 发布/保存已发布标准时，校验同体系生效区间不得重叠
     enforce-effective-window-overlap: ${STANDARD_ENFORCE_EFFECTIVE_WINDOW_OVERLAP:true}
   ai:
+    prompts:
+      base-path: classpath:ai-prompts/
     # 模型/向量配置统一在此维护；dev 环境通过 profile 覆盖开关与本地密钥默认值，勿在 application-dev.yml 重复
     model:
       provider: ${AI_MODEL_PROVIDER:SILICONFLOW}
@@ -101,7 +103,7 @@ app:
       host: ${ES_HOST:http://localhost:9200}
       username: ${ES_USERNAME:elastic}
       password: ${ES_PASSWORD:sisHuNo.1}
-      standard-index: ${ES_STANDARD_INDEX:quality-standard-clauses2}
+      standard-index: ${ES_STANDARD_INDEX:quality-standard-clauses}
       timeout-millis: ${ES_TIMEOUT_MILLIS:5000}
 
 logging:

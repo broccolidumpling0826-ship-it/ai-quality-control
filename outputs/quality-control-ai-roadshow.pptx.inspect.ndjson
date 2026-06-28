@@ -1,0 +1,500 @@
+{"kind":"deck","id":"pr/noqn0d","name":"Deck"}
+{"kind":"layout","layoutId":"107ef8b6-6700-40ce-8b4f-1678b85f6937","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"d5edcae4-ad62-4d9e-a4ac-02532aafe1d7","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/icinpy","slide":1,"title":"钢铁质量管理系统","textShapes":9}
+{"kind":"shape","id":"sh/eloj2t83","slide":1,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/lc7u54zi","slide":1,"text":"钢铁质量管理系统","textPreview":"钢铁质量管理系统","textChars":8,"textLines":1,"bbox":[42,58,730,70]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":1,"text":"规则判定为底座，AI 做可追溯的检索、解释、建议与风险评估","textPreview":"规则判定为底座，AI 做可追溯的检索、解释、建议与风险评估","textChars":29,"textLines":1,"bbox":[42,146,960,44]}
+{"kind":"textbox","id":"sh/7u54zido","slide":1,"text":"路演说明稿 / 基于项目 OpenSpec、参考材料与代码核对生成","textPreview":"路演说明稿 / 基于项目 OpenSpec、参考材料与代码核对生成","textChars":33,"textLines":1,"bbox":[42,556,820,32]}
+{"kind":"shape","id":"sh/ed8bat47","slide":1,"bbox":[900,214,286,122]}
+{"kind":"textbox","id":"sh/l0rqd4vm","slide":1,"text":"13","textPreview":"13","textChars":2,"textLines":1,"bbox":[920,238,246,50]}
+{"kind":"textbox","id":"sh/wfyxobm5","slide":1,"text":"OpenSpec capability specs","textPreview":"OpenSpec capability specs","textChars":25,"textLines":1,"bbox":[922,296,242,28]}
+{"kind":"shape","id":"sh/7mp0bi9s","slide":1,"bbox":[900,356,286,122]}
+{"kind":"textbox","id":"sh/e1w7mp0b","slide":1,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[920,380,246,50]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":1,"text":"AI 业务场景","textPreview":"AI 业务场景","textChars":7,"textLines":1,"bbox":[922,438,242,28]}
+{"kind":"textbox","id":"sh/tcj6tova","slide":1,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/il0rqd4v","slide":1,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"notes","id":"nt/icinpy","slide":1,"text":"开场先强调这不是一个空壳 AI Demo。\n系统主线是钢铁质量业务闭环，AI 是增强层，不替代规则引擎和人工审批。"}
+{"kind":"slide","id":"sl/y8x97z","slide":2,"title":"01 / 总览","textShapes":4}
+{"kind":"shape","id":"sh/z61032ls","slide":2,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/orytsvu9","slide":2,"text":"01 / 总览","textPreview":"01 / 总览","textChars":7,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/hcrmhk3q","slide":2,"text":"按评分维度组织路演叙事","textPreview":"按评分维度组织路演叙事","textChars":11,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/a9w3m94f","slide":2,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/zupwb2hw","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"table","id":"tb/5o7qpg3e","slide":2,"name":"","rows":6,"cols":3,"preview":"评分维度 | 分值 | 本稿对应内容","bbox":[60,150,1160,388]}
+{"kind":"notes","id":"nt/y8x97z","slide":2,"text":"这一页对应需求文档里的评分表。\n讲法采用自顶向下：先业务角色和闭环，再 AI 场景，再技术与运营。"}
+{"kind":"slide","id":"sl/gua2th","slide":3,"title":"02 / 业务问题","textShapes":11}
+{"kind":"shape","id":"sh/rmhk3q5o","slide":3,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/g7adsji5","slide":3,"text":"02 / 业务问题","textPreview":"02 / 业务问题","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/9s36hcrm","slide":3,"text":"业务痛点：质量判定不是只有“合格/不合格”","textPreview":"业务痛点：质量判定不是只有“合格/不合格”","textChars":21,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/yd0z6103","slide":3,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/rytsvu9k","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/gfmlkjm1","slide":3,"bbox":[60,165,350,260]}
+{"kind":"textbox","id":"sh/90je9cvi","slide":3,"text":"多标准并行","textPreview":"多标准并行","textChars":5,"textLines":1,"bbox":[82,187,306,30]}
+{"kind":"textbox","id":"sh/ylc7u54z","slide":3,"text":"同一产品可能同时受国标、企标、客户协议约束；人工查标准慢，且容易漏版本、生效期和适用范围。","textPreview":"同一产品可能同时受国标、企标、客户协议约束；人工查标准慢，且容易漏版本、生效期和适用范围。","textChars":45,"textLines":1,"bbox":[82,231,306,182]}
+{"kind":"shape","id":"sh/r65wjudg","slide":3,"bbox":[465,165,350,260]}
+{"kind":"textbox","id":"sh/vahoza1g","slide":3,"text":"判定依据难解释","textPreview":"判定依据难解释","textChars":7,"textLines":1,"bbox":[487,187,306,30]}
+{"kind":"textbox","id":"sh/6tovahoz","slide":3,"text":"自动判定只给结论时，销售、生产、质量经理很难快速确认：用的哪条标准、偏差多少、触发了什么规则。","textPreview":"自动判定只给结论时，销售、生产、质量经理很难快速确认：用的哪条标准、偏差多少、触发了什么规则。","textChars":47,"textLines":1,"bbox":[487,231,306,182]}
+{"kind":"shape","id":"sh/dg7adsji","slide":3,"bbox":[870,165,350,260]}
+{"kind":"textbox","id":"sh/ovahoza1","slide":3,"text":"异常评审缺沉淀","textPreview":"异常评审缺沉淀","textChars":7,"textLines":1,"bbox":[892,187,306,30]}
+{"kind":"textbox","id":"sh/z25kb6xk","slide":3,"text":"复检、改判、让步接收和标准冲突都依赖人工经验，历史投诉、案例和替代资源不易复用。","textPreview":"复检、改判、让步接收和标准冲突都依赖人工经验，历史投诉、案例和替代资源不易复用。","textChars":40,"textLines":1,"bbox":[892,231,306,182]}
+{"kind":"textbox","id":"sh/6hcrmhk3","slide":3,"text":"系统目标：让规则判定可解释、让异常流程可追溯、让 AI 建议可审计。","textPreview":"系统目标：让规则判定可解释、让异常流程可追溯、让 AI 建议可审计。","textChars":34,"textLines":1,"bbox":[118,486,1040,52]}
+{"kind":"notes","id":"nt/gua2th","slide":3,"text":"业务痛点不要先讲模型，而是讲标准、解释和评审效率。\n这三个痛点分别对应 RAG、判定解释和异常处置 AI 建议。"}
+{"kind":"slide","id":"sl/qh2wro","slide":4,"title":"03 / 角色边界","textShapes":13}
+{"kind":"shape","id":"sh/loj2t83i","slide":4,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/ex0nuxc3","slide":4,"text":"03 / 角色边界","textPreview":"03 / 角色边界","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/3itgfmlk","slide":4,"text":"系统角色：规则给结论，AI 给解释与建议","textPreview":"系统角色：规则给结论，AI 给解释与建议","textChars":20,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/wb2hwfyx","slide":4,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/lwval87e","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/e9cvixcz","slide":4,"bbox":[60,160,350,252]}
+{"kind":"textbox","id":"sh/3q5o7qpg","slide":4,"text":"规则引擎","textPreview":"规则引擎","textChars":4,"textLines":1,"bbox":[82,182,306,30]}
+{"kind":"textbox","id":"sh/sneloj2t","slide":4,"text":"唯一产生合格、不合格、需复检、可让步、标准冲突等业务结论。","textPreview":"唯一产生合格、不合格、需复检、可让步、标准冲突等业务结论。","textChars":29,"textLines":1,"bbox":[82,226,306,174]}
+{"kind":"shape","id":"sh/l87ed8ba","slide":4,"bbox":[465,160,350,252]}
+{"kind":"textbox","id":"sh/5kb6xkf6","slide":4,"text":"AI 能力层","textPreview":"AI 能力层","textChars":6,"textLines":1,"bbox":[487,182,306,30]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":4,"text":"基于结构化事实和 RAG 来源生成解释、问答、建议、风险说明；低置信时拒绝确定性建议。","textPreview":"基于结构化事实和 RAG 来源生成解释、问答、建议、风险说明；低置信时拒绝确定性建议。","textChars":43,"textLines":1,"bbox":[487,226,306,174]}
+{"kind":"shape","id":"sh/neloj2t8","slide":4,"bbox":[870,160,350,252]}
+{"kind":"textbox","id":"sh/ytsvu9kn","slide":4,"text":"人工流程","textPreview":"人工流程","textChars":4,"textLines":1,"bbox":[892,182,306,30]}
+{"kind":"textbox","id":"sh/5sneloj2","slide":4,"text":"复检、改判、让步审批、标准冲突裁决必须由授权角色操作，AI 只能预填或提示。","textPreview":"复检、改判、让步审批、标准冲突裁决必须由授权角色操作，AI 只能预填或提示。","textChars":38,"textLines":1,"bbox":[892,226,306,174]}
+{"kind":"textbox","id":"sh/cbulwval","slide":4,"text":"→ 结构化标准数据是判定真相源","textPreview":"→ 结构化标准数据是判定真相源","textChars":15,"textLines":1,"bbox":[100,470,1040,30]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":4,"text":"→ RAG 原文用于引用、解释和核查，不覆盖结构化限值","textPreview":"→ RAG 原文用于引用、解释和核查，不覆盖结构化限值","textChars":27,"textLines":1,"bbox":[100,508,1040,30]}
+{"kind":"textbox","id":"sh/u54zidon","slide":4,"text":"→ AI 输出必须可追溯、可降级、可审计","textPreview":"→ AI 输出必须可追溯、可降级、可审计","textChars":20,"textLines":1,"bbox":[100,546,1040,30]}
+{"kind":"notes","id":"nt/qh2wro","slide":4,"text":"强调红线：AI 不直接改判、不审批、不创建流程记录。\n这是赛题里最容易被追问的合规边界。"}
+{"kind":"slide","id":"sl/3qhi19","slide":5,"title":"04 / 业务闭环","textShapes":23}
+{"kind":"shape","id":"sh/lszqtcj6","slide":5,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/a5gbq1or","slide":5,"text":"04 / 业务闭环","textPreview":"04 / 业务闭环","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/3m94fu18","slide":5,"text":"传统业务闭环：从标准到质保书，不依赖 AI 也能跑通","textPreview":"传统业务闭环：从标准到质保书，不依赖 AI 也能跑通","textChars":26,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/sji5snel","slide":5,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/adsji5sn","slide":5,"bbox":[74,170,330,126]}
+{"kind":"textbox","id":"sh/3ylc7u54","slide":5,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[92,188,54,44]}
+{"kind":"textbox","id":"sh/svu9knih","slide":5,"text":"标准准备","textPreview":"标准准备","textChars":4,"textLines":1,"bbox":[150,190,234,30]}
+{"kind":"textbox","id":"sh/hgn29gr2","slide":5,"text":"标准维护、指标项目、源文件上传","textPreview":"标准维护、指标项目、源文件上传","textChars":15,"textLines":1,"bbox":[150,228,234,56]}
+{"kind":"shape","id":"sh/tgfmlkjm","slide":5,"bbox":[464,170,330,126]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":5,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[482,188,54,44]}
+{"kind":"textbox","id":"sh/bat47y1k","slide":5,"text":"检验录入","textPreview":"检验录入","textChars":4,"textLines":1,"bbox":[540,190,234,30]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":5,"text":"卷号/批次、客户、品种、规格、实测值","textPreview":"卷号/批次、客户、品种、规格、实测值","textChars":18,"textLines":1,"bbox":[540,228,234,56]}
+{"kind":"shape","id":"sh/tsvu9kni","slide":5,"bbox":[854,170,330,126]}
+{"kind":"textbox","id":"sh/47y1kre1","slide":5,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[872,188,54,44]}
+{"kind":"textbox","id":"sh/bm58z25k","slide":5,"text":"规则判定","textPreview":"规则判定","textChars":4,"textLines":1,"bbox":[930,190,234,30]}
+{"kind":"textbox","id":"sh/m1cfa9w3","slide":5,"text":"匹配优先级：客户协议 > 企标 > 国标","textPreview":"匹配优先级：客户协议 > 企标 > 国标","textChars":20,"textLines":1,"bbox":[930,228,234,56]}
+{"kind":"shape","id":"sh/twra5gbq","slide":5,"bbox":[74,340,330,126]}
+{"kind":"textbox","id":"sh/4byhgn29","slide":5,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[92,358,54,44]}
+{"kind":"textbox","id":"sh/0je9cvix","slide":5,"text":"异常处置","textPreview":"异常处置","textChars":4,"textLines":1,"bbox":[150,360,234,30]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":5,"text":"复检、改判、让步、冲突裁决","textPreview":"复检、改判、让步、冲突裁决","textChars":13,"textLines":1,"bbox":[150,398,234,56]}
+{"kind":"shape","id":"sh/idonyd0z","slide":5,"bbox":[464,340,330,126]}
+{"kind":"textbox","id":"sh/byhgn29g","slide":5,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[482,358,54,44]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":5,"text":"数据发放","textPreview":"数据发放","textChars":4,"textLines":1,"bbox":[540,360,234,30]}
+{"kind":"textbox","id":"sh/tcj6tova","slide":5,"text":"质保书数据、PDF、状态门禁","textPreview":"质保书数据、PDF、状态门禁","textChars":14,"textLines":1,"bbox":[540,398,234,56]}
+{"kind":"shape","id":"sh/il0rqd4v","slide":5,"bbox":[854,340,330,126]}
+{"kind":"textbox","id":"sh/b6xkf6dc","slide":5,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[872,358,54,44]}
+{"kind":"textbox","id":"sh/032lszqt","slide":5,"text":"统计审计","textPreview":"统计审计","textChars":4,"textLines":1,"bbox":[930,360,234,30]}
+{"kind":"textbox","id":"sh/tovahoza","slide":5,"text":"质量统计、权限审计、AI 审计","textPreview":"质量统计、权限审计、AI 审计","textChars":15,"textLines":1,"bbox":[930,398,234,56]}
+{"kind":"textbox","id":"sh/z61032ls","slide":5,"text":"证明系统不是“AI 外壳”：标准库、判定引擎、异常工作流、质保书和审计先构成真实质量管理底座。","textPreview":"证明系统不是“AI 外壳”：标准库、判定引擎、异常工作流、质保书和审计先构成真实质量管理底座。","textChars":47,"textLines":1,"bbox":[86,512,1100,58]}
+{"kind":"notes","id":"nt/3qhi19","slide":5,"text":"这一页直接回应评分维度中的传统业务流程闭环。\nAI 不可用时，规则判定、审批、质保书状态门禁仍然可用。"}
+{"kind":"slide","id":"sl/sdnom6","slide":6,"title":"05 / 系统模块","textShapes":4}
+{"kind":"shape","id":"sh/za1gvy90","slide":6,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/svu9knih","slide":6,"text":"05 / 系统模块","textPreview":"05 / 系统模块","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/hgn29gr2","slide":6,"text":"模块全景：业务模块与 AI 增强点对应","textPreview":"模块全景：业务模块与 AI 增强点对应","textChars":19,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/a1gvy90j","slide":6,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/zidonyd0","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"table","id":"tb/lwval87e","slide":6,"name":"","rows":6,"cols":4,"preview":"模块群 | 传统职责 | AI 增强 | 路演证明点","bbox":[42,138,1196,430]}
+{"kind":"notes","id":"nt/sdnom6","slide":6,"text":"模块全景来自参考材料和 OpenSpec specs。\n注意把 AI 放到模块旁边讲，避免给人一种独立 Chatbot 的印象。"}
+{"kind":"slide","id":"sl/wf2t5h","slide":7,"title":"06 / AI 场景","textShapes":18}
+{"kind":"shape","id":"sh/g3ex0nux","slide":7,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/nih4byhg","slide":7,"text":"06 / AI 场景","textPreview":"06 / AI 场景","textChars":10,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/yxobm58z","slide":7,"text":"核心 AI 场景：围绕判定依据，不围绕模型炫技","textPreview":"核心 AI 场景：围绕判定依据，不围绕模型炫技","textChars":23,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/9cvixcze","slide":7,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/gr2p8nqx","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/r65wjudg","slide":7,"bbox":[50,155,260,126]}
+{"kind":"textbox","id":"sh/ylc7u54z","slide":7,"text":"RAG","textPreview":"RAG","textChars":3,"textLines":1,"bbox":[70,179,220,50]}
+{"kind":"textbox","id":"sh/90je9cvi","slide":7,"text":"标准条款检索\n来源可追溯","textPreview":"标准条款检索 | 来源可追溯","textChars":12,"textLines":2,"bbox":[72,237,216,32]}
+{"kind":"shape","id":"sh/gfmlkjm1","slide":7,"bbox":[330,155,260,126]}
+{"kind":"textbox","id":"sh/65wjudg7","slide":7,"text":"解释","textPreview":"解释","textChars":2,"textLines":1,"bbox":[350,179,220,50]}
+{"kind":"textbox","id":"sh/zqtcj6to","slide":7,"text":"标准、限值、偏差\n与触发规则","textPreview":"标准、限值、偏差 | 与触发规则","textChars":14,"textLines":2,"bbox":[352,237,216,32]}
+{"kind":"shape","id":"sh/obm58z25","slide":7,"bbox":[610,155,260,126]}
+{"kind":"textbox","id":"sh/hwfyxobm","slide":7,"text":"建议","textPreview":"建议","textChars":2,"textLines":1,"bbox":[630,179,220,50]}
+{"kind":"textbox","id":"sh/6xkf6dcb","slide":7,"text":"复检/改判预填\n不自动建单","textPreview":"复检/改判预填 | 不自动建单","textChars":13,"textLines":2,"bbox":[632,237,216,32]}
+{"kind":"shape","id":"sh/zed8v6ps","slide":7,"bbox":[50,315,260,126]}
+{"kind":"textbox","id":"sh/oza1gvy9","slide":7,"text":"让步","textPreview":"让步","textChars":2,"textLines":1,"bbox":[70,339,220,50]}
+{"kind":"textbox","id":"sh/hk3q5o7q","slide":7,"text":"用途、偏差、案例\n和替代资源","textPreview":"用途、偏差、案例 | 和替代资源","textChars":14,"textLines":2,"bbox":[72,397,216,32]}
+{"kind":"shape","id":"sh/al87ed8b","slide":7,"bbox":[330,315,260,126]}
+{"kind":"textbox","id":"sh/z61032ls","slide":7,"text":"冲突","textPreview":"冲突","textChars":2,"textLines":1,"bbox":[350,339,220,50]}
+{"kind":"textbox","id":"sh/bi9s36hc","slide":7,"text":"同级标准冲突\n阻断放行","textPreview":"同级标准冲突 | 阻断放行","textChars":11,"textLines":2,"bbox":[352,397,216,32]}
+{"kind":"shape","id":"sh/ixczed8v","slide":7,"bbox":[610,315,260,126]}
+{"kind":"textbox","id":"sh/tovahoza","slide":7,"text":"质保","textPreview":"质保","textChars":2,"textLines":1,"bbox":[630,339,220,50]}
+{"kind":"textbox","id":"sh/032lszqt","slide":7,"text":"数据、PDF、问答\n状态门禁","textPreview":"数据、PDF、问答 | 状态门禁","textChars":14,"textLines":2,"bbox":[632,397,216,32]}
+{"kind":"shape","id":"sh/bulwval8","slide":7,"bbox":[920,155,275,286]}
+{"kind":"textbox","id":"sh/i9s36hcr","slide":7,"text":"共同约束","textPreview":"共同约束","textChars":4,"textLines":1,"bbox":[942,177,231,30]}
+{"kind":"textbox","id":"sh/p0bi9s36","slide":7,"text":"所有 AI 输出都要围绕结构化事实、来源引用、置信度、降级来源和审计记录；缺证据时拒绝编造。","textPreview":"所有 AI 输出都要围绕结构化事实、来源引用、置信度、降级来源和审计记录；缺证据时拒绝编造。","textChars":46,"textLines":1,"bbox":[942,221,231,208]}
+{"kind":"notes","id":"nt/wf2t5h","slide":7,"text":"这一页进入 AI 能力展示。\n每个场景都要强调和业务对象的绑定关系：标准、判定、让步、质保书。"}
+{"kind":"slide","id":"sl/dv2wy9","slide":8,"title":"07 / RAG 入库","textShapes":23}
+{"kind":"shape","id":"sh/3ex0nuxc","slide":8,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/szqtcj6t","slide":8,"text":"07 / RAG 入库","textPreview":"07 / RAG 入库","textChars":11,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/lkjm1cfa","slide":8,"text":"标准 RAG：文档进入知识库前先变成可引用条款","textPreview":"标准 RAG：文档进入知识库前先变成可引用条款","textChars":23,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/ahoza1gv","slide":8,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/32lszqtc","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/sneloj2t","slide":8,"bbox":[74,165,330,126]}
+{"kind":"textbox","id":"sh/l87ed8ba","slide":8,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[92,183,54,44]}
+{"kind":"textbox","id":"sh/e9cvixcz","slide":8,"text":"源文件","textPreview":"源文件","textChars":3,"textLines":1,"bbox":[150,185,234,30]}
+{"kind":"textbox","id":"sh/3q5o7qpg","slide":8,"text":"PDF、Excel、图片\n多文件挂到同一标准","textPreview":"PDF、Excel、图片 | 多文件挂到同一标准","textChars":22,"textLines":2,"bbox":[150,223,234,56]}
+{"kind":"shape","id":"sh/neloj2t8","slide":8,"bbox":[464,165,330,126]}
+{"kind":"textbox","id":"sh/ytsvu9kn","slide":8,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[482,183,54,44]}
+{"kind":"textbox","id":"sh/5kb6xkf6","slide":8,"text":"文本提取","textPreview":"文本提取","textChars":4,"textLines":1,"bbox":[540,185,234,30]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":8,"text":"PDFBox / POI\n图片走 OCR","textPreview":"PDFBox / POI | 图片走 OCR","textChars":20,"textLines":2,"bbox":[540,223,234,56]}
+{"kind":"shape","id":"sh/nqxs72x4","slide":8,"bbox":[854,165,330,126]}
+{"kind":"textbox","id":"sh/u54zidon","slide":8,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[872,183,54,44]}
+{"kind":"textbox","id":"sh/5sneloj2","slide":8,"text":"确定性分块","textPreview":"确定性分块","textChars":5,"textLines":1,"bbox":[930,185,234,30]}
+{"kind":"textbox","id":"sh/cbulwval","slide":8,"text":"按条款号、标题、页码\n保留引用锚点","textPreview":"按条款号、标题、页码 | 保留引用锚点","textChars":17,"textLines":2,"bbox":[930,223,234,56]}
+{"kind":"shape","id":"sh/nuxc3ylc","slide":8,"bbox":[74,333,330,126]}
+{"kind":"textbox","id":"sh/y90je9cv","slide":8,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[92,351,54,44]}
+{"kind":"textbox","id":"sh/2lszqtcj","slide":8,"text":"MySQL 条款","textPreview":"MySQL 条款","textChars":8,"textLines":1,"bbox":[150,353,234,30]}
+{"kind":"textbox","id":"sh/v6psfil0","slide":8,"text":"保存条款正文\n和业务元数据","textPreview":"保存条款正文 | 和业务元数据","textChars":13,"textLines":2,"bbox":[150,391,234,56]}
+{"kind":"shape","id":"sh/knih4byh","slide":8,"bbox":[464,333,330,126]}
+{"kind":"textbox","id":"sh/d8bat47y","slide":8,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[482,351,54,44]}
+{"kind":"textbox","id":"sh/29gr2p8n","slide":8,"text":"向量化","textPreview":"向量化","textChars":3,"textLines":1,"bbox":[540,353,234,30]}
+{"kind":"textbox","id":"sh/vu9knih4","slide":8,"text":"bge-m3 生成向量\n用于语义检索","textPreview":"bge-m3 生成向量 | 用于语义检索","textChars":18,"textLines":2,"bbox":[540,391,234,56]}
+{"kind":"shape","id":"sh/kf6dcbul","slide":8,"bbox":[854,333,330,126]}
+{"kind":"textbox","id":"sh/d0z61032","slide":8,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[872,351,54,44]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":8,"text":"ES 索引","textPreview":"ES 索引","textChars":5,"textLines":1,"bbox":[930,353,234,30]}
+{"kind":"textbox","id":"sh/vixczed8","slide":8,"text":"向量 + 关键词\n混合检索","textPreview":"向量 + 关键词 | 混合检索","textChars":13,"textLines":2,"bbox":[930,391,234,56]}
+{"kind":"textbox","id":"sh/hoza1gvy","slide":8,"text":"关键设计：文档原文只负责检索、引用和解释；不会反向修改结构化指标限值。","textPreview":"关键设计：文档原文只负责检索、引用和解释；不会反向修改结构化指标限值。","textChars":35,"textLines":1,"bbox":[112,494,1050,50]}
+{"kind":"notes","id":"nt/dv2wy9","slide":8,"text":"讲清楚两条链：入库索引链和检索问答链。\n对图片 OCR 要强调参考证据属性，不覆盖结构化指标。"}
+{"kind":"slide","id":"sl/7qu6sa","slide":9,"title":"08 / RAG 效果","textShapes":13}
+{"kind":"shape","id":"sh/re1w7mp0","slide":9,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/kzupwb2h","slide":9,"text":"08 / RAG 效果","textPreview":"08 / RAG 效果","textChars":11,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/9knih4by","slide":9,"text":"RAG 效用：从“人工翻标准”到“带引用回答”","textPreview":"RAG 效用：从“人工翻标准”到“带引用回答”","textChars":23,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/25kb6xkf","slide":9,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/rqd4vmtw","slide":9,"text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/kb6xkf6d","slide":9,"bbox":[60,168,515,170]}
+{"kind":"textbox","id":"sh/9w3m94fu","slide":9,"text":"传统基线","textPreview":"传统基线","textChars":4,"textLines":1,"bbox":[82,190,471,30]}
+{"kind":"textbox","id":"sh/2hwfyxob","slide":9,"text":"人工按品种、牌号、客户、版本逐份查标准；容易漏掉生效期、适用范围和条款上下文。","textPreview":"人工按品种、牌号、客户、版本逐份查标准；容易漏掉生效期、适用范围和条款上下文。","textChars":39,"textLines":1,"bbox":[82,234,471,92]}
+{"kind":"shape","id":"sh/r2p8nqxs","slide":9,"bbox":[705,168,515,170]}
+{"kind":"textbox","id":"sh/7ed8bat4","slide":9,"text":"AI 增强","textPreview":"AI 增强","textChars":5,"textLines":1,"bbox":[727,190,471,30]}
+{"kind":"textbox","id":"sh/itgfmlkj","slide":9,"text":"输入自然语言问题，系统执行 query embedding、向量/关键词检索、来源过滤、Grounded Chat，并返回来源段落。","textPreview":"输入自然语言问题，系统执行 query embedding、向量/关键词检索、来源过滤、Grounded Chat，并返回来源段落。","textChars":66,"textLines":1,"bbox":[727,234,471,92]}
+{"kind":"textbox","id":"sh/pkzupwb2","slide":9,"text":"示例问题：GB/T SIM 912-2026 中 Q235B 冷轧板 Rm 范围是多少？","textPreview":"示例问题：GB/T SIM 912-2026 中 Q235B 冷轧板 Rm 范围是多少？","textChars":44,"textLines":1,"bbox":[80,382,1080,36]}
+{"kind":"shape","id":"sh/0z61032l","slide":9,"bbox":[178,452,230,32]}
+{"kind":"textbox","id":"sh/72x4nap4","slide":9,"text":"答案必须引用条款号","textPreview":"答案必须引用条款号","textChars":9,"textLines":1,"bbox":[192,458,202,20]}
+{"kind":"shape","id":"sh/ih4byhgn","slide":9,"bbox":[448,452,230,32]}
+{"kind":"textbox","id":"sh/p8nqxs72","slide":9,"text":"低相关只展示原文","textPreview":"低相关只展示原文","textChars":8,"textLines":1,"bbox":[462,458,202,20]}
+{"kind":"shape","id":"sh/0nuxc3yl","slide":9,"bbox":[718,452,190,32]}
+{"kind":"textbox","id":"sh/7y1kre1w","slide":9,"text":"无证据拒答","textPreview":"无证据拒答","textChars":5,"textLines":1,"bbox":[732,458,162,20]}
+{"kind":"shape","id":"sh/ed8v6psf","slide":9,"bbox":[948,452,220,32]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":9,"text":"注入请求不调模型","textPreview":"注入请求不调模型","textChars":8,"textLines":1,"bbox":[962,458,192,20]}
+{"kind":"notes","id":"nt/7qu6sa","slide":9,"text":"这里可以现场展示标准 RAG 页面。\n重点不是模型回答多自然，而是回答带来源、能拒答、能防 prompt 注入。"}
+{"kind":"slide","id":"sl/7mchbq","slide":10,"title":"09 / 判定解释","textShapes":13}
+{"kind":"shape","id":"sh/crmhk3q5","slide":10,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/j6tovaho","slide":10,"text":"09 / 判定解释","textPreview":"09 / 判定解释","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/ulwval87","slide":10,"text":"判定解释：把规则引擎结果翻译成可复核证据链","textPreview":"判定解释：把规则引擎结果翻译成可复核证据链","textChars":21,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/1kre1w7m","slide":10,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/c3ylc7u5","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/ji5snelo","slide":10,"bbox":[70,180,330,190]}
+{"kind":"textbox","id":"sh/uxc3ylc7","slide":10,"text":"结构化事实","textPreview":"结构化事实","textChars":5,"textLines":1,"bbox":[92,202,286,30]}
+{"kind":"textbox","id":"sh/1w7mp0bi","slide":10,"text":"判定结论、检验值、上下限、偏差、触发规则","textPreview":"判定结论、检验值、上下限、偏差、触发规则","textChars":20,"textLines":1,"bbox":[92,246,286,112]}
+{"kind":"shape","id":"sh/8bat47y1","slide":10,"bbox":[400,274,50,0]}
+{"kind":"shape","id":"sh/ytsvu9kn","slide":10,"bbox":[460,180,330,190]}
+{"kind":"textbox","id":"sh/neloj2t8","slide":10,"text":"来源引用","textPreview":"来源引用","textChars":4,"textLines":1,"bbox":[482,202,286,30]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":10,"text":"标准名称、版本、条款号、页码、来源段落","textPreview":"标准名称、版本、条款号、页码、来源段落","textChars":19,"textLines":1,"bbox":[482,246,286,112]}
+{"kind":"shape","id":"sh/5kb6xkf6","slide":10,"bbox":[790,274,50,0]}
+{"kind":"shape","id":"sh/u54zidon","slide":10,"bbox":[850,180,330,190]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":10,"text":"AI 解释","textPreview":"AI 解释","textChars":5,"textLines":1,"bbox":[872,202,286,30]}
+{"kind":"textbox","id":"sh/cbulwval","slide":10,"text":"只依据规则解释与来源条款组织语言","textPreview":"只依据规则解释与来源条款组织语言","textChars":16,"textLines":1,"bbox":[872,246,286,112]}
+{"kind":"textbox","id":"sh/5sneloj2","slide":10,"text":"→ 合格：逐指标展示实测值、合格上下限和通过结果","textPreview":"→ 合格：逐指标展示实测值、合格上下限和通过结果","textChars":24,"textLines":1,"bbox":[105,430,1030,30]}
+{"kind":"textbox","id":"sh/y90je9cv","slide":10,"text":"→ 可让步：展示正常限、让步限、偏差和 CAN_CONCESSION 触发规则","textPreview":"→ 可让步：展示正常限、让步限、偏差和 CAN_CONCESSION 触发规则","textChars":39,"textLines":1,"bbox":[105,468,1030,30]}
+{"kind":"textbox","id":"sh/nuxc3ylc","slide":10,"text":"→ 冲突：展示冲突详情，不给最终放行类结论","textPreview":"→ 冲突：展示冲突详情，不给最终放行类结论","textChars":21,"textLines":1,"bbox":[105,506,1030,30]}
+{"kind":"notes","id":"nt/7mchbq","slide":10,"text":"判定解释页是多个 AI 场景的输入底座。\n复检/改判建议会读取解释快照里的置信度、引用和冲突信息。"}
+{"kind":"slide","id":"sl/se822p","slide":11,"title":"10 / 输出校验","textShapes":19}
+{"kind":"shape","id":"sh/ex0nuxc3","slide":11,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/loj2t83i","slide":11,"text":"10 / 输出校验","textPreview":"10 / 输出校验","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/w3m94fu1","slide":11,"text":"AI 解释为什么可信：输出必须通过 grounded 校验","textPreview":"AI 解释为什么可信：输出必须通过 grounded 校验","textChars":29,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/3q5o7qpg","slide":11,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/e9cvixcz","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/lwval87e","slide":11,"bbox":[88,150,1080,62]}
+{"kind":"textbox","id":"sh/wb2hwfyx","slide":11,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[106,168,54,44]}
+{"kind":"textbox","id":"sh/32lszqtc","slide":11,"text":"非空与引用完整","textPreview":"非空与引用完整","textChars":7,"textLines":1,"bbox":[164,170,984,30]}
+{"kind":"textbox","id":"sh/ahoza1gv","slide":11,"text":"模型输出、citation 列表、段落正文都必须存在","textPreview":"模型输出、citation 列表、段落正文都必须存在","textChars":26,"textLines":1,"bbox":[164,208,984,-8]}
+{"kind":"shape","id":"sh/cj6tovah","slide":11,"bbox":[88,232,1080,62]}
+{"kind":"textbox","id":"sh/54zidony","slide":11,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[106,250,54,44]}
+{"kind":"textbox","id":"sh/udg7adsj","slide":11,"text":"出现引用标记","textPreview":"出现引用标记","textChars":6,"textLines":1,"bbox":[164,252,984,30]}
+{"kind":"textbox","id":"sh/nyd0z610","slide":11,"text":"关键句必须包含 [1][2] 或条款号","textPreview":"关键句必须包含 [1][2] 或条款号","textChars":19,"textLines":1,"bbox":[164,290,984,-8]}
+{"kind":"shape","id":"sh/cvixczed","slide":11,"bbox":[88,314,1080,62]}
+{"kind":"textbox","id":"sh/5gbq1ory","slide":11,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[106,332,54,44]}
+{"kind":"textbox","id":"sh/upwb2hwf","slide":11,"text":"数值可回溯","textPreview":"数值可回溯","textChars":5,"textLines":1,"bbox":[164,334,984,30]}
+{"kind":"textbox","id":"sh/nap4r65w","slide":11,"text":"370 MPa、26% 等数字必须在被引用段落中找到","textPreview":"370 MPa、26% 等数字必须在被引用段落中找到","textChars":26,"textLines":1,"bbox":[164,372,984,-8]}
+{"kind":"shape","id":"sh/c7u54zid","slide":11,"bbox":[88,396,1080,62]}
+{"kind":"textbox","id":"sh/1orytsvu","slide":11,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[106,414,54,44]}
+{"kind":"textbox","id":"sh/5kb6xkf6","slide":11,"text":"禁止误引范围/定义","textPreview":"禁止误引范围/定义","textChars":9,"textLines":1,"bbox":[164,416,984,30]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":11,"text":"适用范围、术语定义不能冒充限值依据","textPreview":"适用范围、术语定义不能冒充限值依据","textChars":17,"textLines":1,"bbox":[164,454,984,-8]}
+{"kind":"shape","id":"sh/neloj2t8","slide":11,"bbox":[88,478,1080,62]}
+{"kind":"textbox","id":"sh/ytsvu9kn","slide":11,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[106,496,54,44]}
+{"kind":"textbox","id":"sh/5sneloj2","slide":11,"text":"失败即降级","textPreview":"失败即降级","textChars":5,"textLines":1,"bbox":[164,498,984,30]}
+{"kind":"textbox","id":"sh/cbulwval","slide":11,"text":"MODEL_REJECTED → 规则模板或原始检索","textPreview":"MODEL_REJECTED → 规则模板或原始检索","textChars":26,"textLines":1,"bbox":[164,536,984,-8]}
+{"kind":"notes","id":"nt/se822p","slide":11,"text":"HIGH 置信度不是模型自评，而是引用命中、无冲突、输出校验通过。\n引用校验本质是在防止模型编造标准、限值和条款。"}
+{"kind":"slide","id":"sl/qrz7bd","slide":12,"title":"11 / 流程建议","textShapes":11}
+{"kind":"shape","id":"sh/47y1kre1","slide":12,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/bm58z25k","slide":12,"text":"11 / 流程建议","textPreview":"11 / 流程建议","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/m1cfa9w3","slide":12,"text":"复检 / 改判建议：AI 只辅助决策，不替代流程","textPreview":"复检 / 改判建议：AI 只辅助决策，不替代流程","textChars":24,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/tgfmlkjm","slide":12,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":12,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/bat47y1k","slide":12,"bbox":[60,170,350,260]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":12,"text":"复检建议","textPreview":"复检建议","textChars":4,"textLines":1,"bbox":[82,192,306,30]}
+{"kind":"textbox","id":"sh/t83itgfm","slide":12,"text":"读取判定解释快照。若存在异常指标且非冲突、非低置信，建议发起复检并预填原因。","textPreview":"读取判定解释快照。若存在异常指标且非冲突、非低置信，建议发起复检并预填原因。","textChars":38,"textLines":1,"bbox":[82,236,306,182]}
+{"kind":"shape","id":"sh/4nap4r65","slide":12,"bbox":[465,170,350,260]}
+{"kind":"textbox","id":"sh/u9knih4b","slide":12,"text":"改判建议","textPreview":"改判建议","textChars":4,"textLines":1,"bbox":[487,192,306,30]}
+{"kind":"textbox","id":"sh/judg7ads","slide":12,"text":"主要覆盖让步带证据场景，可建议目标结论 CAN_CONCESSION；用户仍需手动提交。","textPreview":"主要覆盖让步带证据场景，可建议目标结论 CAN_CONCESSION；用户仍需手动提交。","textChars":44,"textLines":1,"bbox":[487,236,306,182]}
+{"kind":"shape","id":"sh/cfa9w3m9","slide":12,"bbox":[870,170,350,260]}
+{"kind":"textbox","id":"sh/1032lszq","slide":12,"text":"阻断规则","textPreview":"阻断规则","textChars":4,"textLines":1,"bbox":[892,192,306,30]}
+{"kind":"textbox","id":"sh/u18jqh0f","slide":12,"text":"STANDARD_CONFLICT、LOW 置信度或引用缺失时 withhold，禁用“采纳并预填”。","textPreview":"STANDARD_CONFLICT、LOW 置信度或引用缺失时 withhold，禁用“采纳并预填”。","textChars":51,"textLines":1,"bbox":[892,236,306,182]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":12,"text":"采纳 ≠ 执行：AI 评估记录标记 ADOPTED / IGNORED，流程记录仍由人创建和审批。","textPreview":"采纳 ≠ 执行：AI 评估记录标记 ADOPTED / IGNORED，流程记录仍由人创建和审批。","textChars":49,"textLines":1,"bbox":[112,500,1050,42]}
+{"kind":"notes","id":"nt/qrz7bd","slide":12,"text":"这页要打消评委对自动误操作的担心。\n当前复检/改判建议是规则模板，不是让模型自由推理。"}
+{"kind":"slide","id":"sl/f4nmzd","slide":13,"title":"12 / 让步接收","textShapes":11}
+{"kind":"shape","id":"sh/5kb6xkf6","slide":13,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/ytsvu9kn","slide":13,"text":"12 / 让步接收","textPreview":"12 / 让步接收","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/neloj2t8","slide":13,"text":"让步风险评估：规则定风险，模型只润色说明","textPreview":"让步风险评估：规则定风险，模型只润色说明","textChars":20,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/cbulwval","slide":13,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/5sneloj2","slide":13,"text":"13","textPreview":"13","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/u54zidon","slide":13,"bbox":[60,168,350,270]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":13,"text":"输入维度","textPreview":"输入维度","textChars":4,"textLines":1,"bbox":[82,190,306,30]}
+{"kind":"textbox","id":"sh/gbq1oryt","slide":13,"text":"客户用途、偏差程度、让步条款、历史投诉/案例、替代库存、当前判定证据。","textPreview":"客户用途、偏差程度、让步条款、历史投诉/案例、替代库存、当前判定证据。","textChars":35,"textLines":1,"bbox":[82,234,306,192]}
+{"kind":"shape","id":"sh/5wjudg7a","slide":13,"bbox":[465,168,350,270]}
+{"kind":"textbox","id":"sh/54zidony","slide":13,"text":"规则基线","textPreview":"规则基线","textChars":4,"textLines":1,"bbox":[487,190,306,30]}
+{"kind":"textbox","id":"sh/cj6tovah","slide":13,"text":"非可让步结论、未裁决冲突、缺用途或缺让步依据直接阻断；高风险用途至少高风险。","textPreview":"非可让步结论、未裁决冲突、缺用途或缺让步依据直接阻断；高风险用途至少高风险。","textChars":38,"textLines":1,"bbox":[487,234,306,192]}
+{"kind":"shape","id":"sh/nyd0z610","slide":13,"bbox":[870,168,350,270]}
+{"kind":"textbox","id":"sh/udg7adsj","slide":13,"text":"输出结构","textPreview":"输出结构","textChars":4,"textLines":1,"bbox":[892,190,306,30]}
+{"kind":"textbox","id":"sh/5gbq1ory","slide":13,"text":"风险等级、是否必须复核、缺失信息、建议条件、阻断原因、证据引用和置信度。","textPreview":"风险等级、是否必须复核、缺失信息、建议条件、阻断原因、证据引用和置信度。","textChars":36,"textLines":1,"bbox":[892,234,306,192]}
+{"kind":"textbox","id":"sh/cvixczed","slide":13,"text":"审批仍走销售一审 + 质量终审；低置信或 BLOCKED 不给确定性让步建议。","textPreview":"审批仍走销售一审 + 质量终审；低置信或 BLOCKED 不给确定性让步建议。","textChars":39,"textLines":1,"bbox":[128,506,1024,40]}
+{"kind":"notes","id":"nt/f4nmzd","slide":13,"text":"让步是高风险场景，所以必须突出规则先行和人工双签。\n模型不能改变风险等级，也不能新增审批结论。"}
+{"kind":"slide","id":"sl/bm8svb","slide":14,"title":"13 / 标准冲突","textShapes":20}
+{"kind":"shape","id":"sh/6psfil0r","slide":14,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/dcbulwva","slide":14,"text":"13 / 标准冲突","textPreview":"13 / 标准冲突","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/kre1w7mp","slide":14,"text":"标准冲突：先人工裁决，再由规则引擎重判","textPreview":"标准冲突：先人工裁决，再由规则引擎重判","textChars":19,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/vixczed8","slide":14,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":14,"text":"14","textPreview":"14","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/donyd0z6","slide":14,"bbox":[88,180,310,128]}
+{"kind":"textbox","id":"sh/k3q5o7qp","slide":14,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[106,198,54,44]}
+{"kind":"textbox","id":"sh/vu9knih4","slide":14,"text":"检测","textPreview":"检测","textChars":2,"textLines":1,"bbox":[164,200,214,30]}
+{"kind":"textbox","id":"sh/29gr2p8n","slide":14,"text":"发现同级标准\n限值或口径冲突","textPreview":"发现同级标准 | 限值或口径冲突","textChars":14,"textLines":2,"bbox":[164,238,214,58]}
+{"kind":"shape","id":"sh/kre1w7mp","slide":14,"bbox":[460,180,310,128]}
+{"kind":"textbox","id":"sh/dcbulwva","slide":14,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[478,198,54,44]}
+{"kind":"textbox","id":"sh/6psfil0r","slide":14,"text":"阻断","textPreview":"阻断","textChars":2,"textLines":1,"bbox":[536,200,214,30]}
+{"kind":"textbox","id":"sh/val87ed8","slide":14,"text":"标记冲突结论\n禁止正式出证","textPreview":"标记冲突结论 | 禁止正式出证","textChars":13,"textLines":2,"bbox":[536,238,214,58]}
+{"kind":"shape","id":"sh/k3q5o7qp","slide":14,"bbox":[832,180,310,128]}
+{"kind":"textbox","id":"sh/donyd0z6","slide":14,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[850,198,54,44]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":14,"text":"裁决","textPreview":"裁决","textChars":2,"textLines":1,"bbox":[908,200,214,30]}
+{"kind":"textbox","id":"sh/vixczed8","slide":14,"text":"人工选择\n控制标准","textPreview":"人工选择 | 控制标准","textChars":9,"textLines":2,"bbox":[908,238,214,58]}
+{"kind":"shape","id":"sh/kf6dcbul","slide":14,"bbox":[274,370,310,128]}
+{"kind":"textbox","id":"sh/d0z61032","slide":14,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[292,388,54,44]}
+{"kind":"textbox","id":"sh/dsji5sne","slide":14,"text":"重判","textPreview":"重判","textChars":2,"textLines":1,"bbox":[350,390,214,30]}
+{"kind":"textbox","id":"sh/o7qpg3ex","slide":14,"text":"按控制标准\n规则重判","textPreview":"按控制标准 | 规则重判","textChars":10,"textLines":2,"bbox":[350,428,214,58]}
+{"kind":"shape","id":"sh/vmtwra5g","slide":14,"bbox":[646,370,310,128]}
+{"kind":"textbox","id":"sh/61032lsz","slide":14,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[664,388,54,44]}
+{"kind":"textbox","id":"sh/d4vmtwra","slide":14,"text":"解释","textPreview":"解释","textChars":2,"textLines":1,"bbox":[722,390,214,30]}
+{"kind":"textbox","id":"sh/oj2t83it","slide":14,"text":"重新解释\n恢复放行链路","textPreview":"重新解释 | 恢复放行链路","textChars":11,"textLines":2,"bbox":[722,428,214,58]}
+{"kind":"textbox","id":"sh/vy90je9c","slide":14,"text":"AI 在冲突场景中只做低置信解释和流程门禁，不提供“AI 裁决”。","textPreview":"AI 在冲突场景中只做低置信解释和流程门禁，不提供“AI 裁决”。","textChars":33,"textLines":1,"bbox":[132,548,1015,40]}
+{"kind":"notes","id":"nt/bm8svb","slide":14,"text":"这一页展示系统对标准冲突的强约束。\n人工裁决后是规则重判，不是人工改判，也不是 AI 改判。"}
+{"kind":"slide","id":"sl/qqoag8","slide":15,"title":"14 / 质保书","textShapes":13}
+{"kind":"shape","id":"sh/lc7u54zi","slide":15,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/eloj2t83","slide":15,"text":"14 / 质保书","textPreview":"14 / 质保书","textChars":8,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/36hcrmhk","slide":15,"text":"质保书：状态门禁 + AI 问答，保证最终数据可信","textPreview":"质保书：状态门禁 + AI 问答，保证最终数据可信","textChars":25,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/wfyxobm5","slide":15,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/l0rqd4vm","slide":15,"text":"15","textPreview":"15","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/ed8bat47","slide":15,"bbox":[60,170,350,244]}
+{"kind":"textbox","id":"sh/7u54zido","slide":15,"text":"数据快照","textPreview":"数据快照","textChars":4,"textLines":1,"bbox":[82,192,306,30]}
+{"kind":"textbox","id":"sh/w7mp0bi9","slide":15,"text":"从最终判定和检验依据汇总关键指标；合格或已批准让步才可正式生成。","textPreview":"从最终判定和检验依据汇总关键指标；合格或已批准让步才可正式生成。","textChars":32,"textLines":1,"bbox":[82,236,306,166]}
+{"kind":"shape","id":"sh/psfil0rq","slide":15,"bbox":[465,170,350,244]}
+{"kind":"textbox","id":"sh/tsvu9kni","slide":15,"text":"PDF 导出","textPreview":"PDF 导出","textChars":6,"textLines":1,"bbox":[487,192,306,30]}
+{"kind":"textbox","id":"sh/47y1kre1","slide":15,"text":"正式质保书带受控解释和引用；冲突未裁决只能生成非最终预览。","textPreview":"正式质保书带受控解释和引用；冲突未裁决只能生成非最终预览。","textChars":29,"textLines":1,"bbox":[487,236,306,166]}
+{"kind":"shape","id":"sh/bm58z25k","slide":15,"bbox":[870,170,350,244]}
+{"kind":"textbox","id":"sh/m1cfa9w3","slide":15,"text":"质保问答","textPreview":"质保问答","textChars":4,"textLines":1,"bbox":[892,192,306,30]}
+{"kind":"textbox","id":"sh/tgfmlkjm","slide":15,"text":"按卷号/批次回答为什么可出证、指标依据是什么；缓存回放也需引用校验。","textPreview":"按卷号/批次回答为什么可出证、指标依据是什么；缓存回放也需引用校验。","textChars":34,"textLines":1,"bbox":[892,236,306,166]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":15,"text":"→ UNQUALIFIED / NEED_REINSPECTION：拒绝正式出证","textPreview":"→ UNQUALIFIED / NEED_REINSPECTION：拒绝正式出证","textChars":40,"textLines":1,"bbox":[118,472,1030,30]}
+{"kind":"textbox","id":"sh/bat47y1k","slide":15,"text":"→ CAN_CONCESSION 未审批：提示审批未完成","textPreview":"→ CAN_CONCESSION 未审批：提示审批未完成","textChars":28,"textLines":1,"bbox":[118,508,1030,30]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":15,"text":"→ STANDARD_CONFLICT：禁止正式生成，预览必须标注非最终","textPreview":"→ STANDARD_CONFLICT：禁止正式生成，预览必须标注非最终","textChars":36,"textLines":1,"bbox":[118,544,1030,30]}
+{"kind":"notes","id":"nt/qqoag8","slide":15,"text":"质保书是业务闭环的输出端，也是 AI 问答的场景。\n讲清楚正式件和预览件的差别。"}
+{"kind":"slide","id":"sl/0rws05","slide":16,"title":"15 / 调用链","textShapes":20}
+{"kind":"shape","id":"sh/7adsji5s","slide":16,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/wval87ed","slide":16,"text":"15 / 调用链","textPreview":"15 / 调用链","textChars":8,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/pg3ex0nu","slide":16,"text":"AI 调用链：业务服务经网关访问模型与向量库","textPreview":"AI 调用链：业务服务经网关访问模型与向量库","textChars":22,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/e1w7mp0b","slide":16,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/7mp0bi9s","slide":16,"text":"16","textPreview":"16","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/w7mp0bi9","slide":16,"bbox":[70,205,250,150]}
+{"kind":"textbox","id":"sh/psfil0rq","slide":16,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[88,223,54,44]}
+{"kind":"textbox","id":"sh/ed8bat47","slide":16,"text":"REST API","textPreview":"REST API","textChars":8,"textLines":1,"bbox":[146,225,154,30]}
+{"kind":"textbox","id":"sh/7u54zido","slide":16,"text":"RAG、判定解释、让步评估、质保问答","textPreview":"RAG、判定解释、让步评估、质保问答","textChars":18,"textLines":1,"bbox":[146,263,154,80]}
+{"kind":"shape","id":"sh/3q5o7qpg","slide":16,"bbox":[370,205,260,150]}
+{"kind":"textbox","id":"sh/e9cvixcz","slide":16,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[388,223,54,44]}
+{"kind":"textbox","id":"sh/lwval87e","slide":16,"text":"业务服务","textPreview":"业务服务","textChars":4,"textLines":1,"bbox":[446,225,164,30]}
+{"kind":"textbox","id":"sh/wb2hwfyx","slide":16,"text":"编排规则、引用、状态门禁与降级","textPreview":"编排规则、引用、状态门禁与降级","textChars":15,"textLines":1,"bbox":[446,263,164,80]}
+{"kind":"shape","id":"sh/3itgfmlk","slide":16,"bbox":[690,145,260,150]}
+{"kind":"textbox","id":"sh/ex0nuxc3","slide":16,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[708,163,54,44]}
+{"kind":"textbox","id":"sh/loj2t83i","slide":16,"text":"模型网关","textPreview":"模型网关","textChars":4,"textLines":1,"bbox":[766,165,164,30]}
+{"kind":"textbox","id":"sh/w3m94fu1","slide":16,"text":"Chat、Embedding、Vision OCR\n统一协议与错误结构","textPreview":"Chat、Embedding、Vision OCR | 统一协议与错误结构","textChars":35,"textLines":2,"bbox":[766,203,164,80]}
+{"kind":"shape","id":"sh/3ex0nuxc","slide":16,"bbox":[690,365,260,150]}
+{"kind":"textbox","id":"sh/at47y1kr","slide":16,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[708,383,54,44]}
+{"kind":"textbox","id":"sh/ixczed8v","slide":16,"text":"向量网关","textPreview":"向量网关","textChars":4,"textLines":1,"bbox":[766,385,164,30]}
+{"kind":"textbox","id":"sh/bi9s36hc","slide":16,"text":"ES 混合检索\n向量 + 关键词","textPreview":"ES 混合检索 | 向量 + 关键词","textChars":16,"textLines":2,"bbox":[766,423,164,80]}
+{"kind":"shape","id":"sh/032lszqt","slide":16,"bbox":[990,250,210,170]}
+{"kind":"textbox","id":"sh/tovahoza","slide":16,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[1008,268,54,44]}
+{"kind":"textbox","id":"sh/i9s36hcr","slide":16,"text":"外部能力","textPreview":"外部能力","textChars":4,"textLines":1,"bbox":[1066,270,114,30]}
+{"kind":"textbox","id":"sh/bulwval8","slide":16,"text":"DeepSeek 对话\nbge-m3 向量\nES 索引","textPreview":"DeepSeek 对话 | bge-m3 向量 | ES 索引","textChars":27,"textLines":3,"bbox":[1066,308,114,100]}
+{"kind":"shape","id":"sh/0fepkzup","slide":16,"bbox":[320,280,50,0]}
+{"kind":"shape","id":"sh/p0bi9s36","slide":16,"bbox":[630,280,60,-60]}
+{"kind":"shape","id":"sh/idonyd0z","slide":16,"bbox":[630,280,60,160]}
+{"kind":"shape","id":"sh/byhgn29g","slide":16,"bbox":[950,220,40,80]}
+{"kind":"shape","id":"sh/hk3q5o7q","slide":16,"bbox":[950,440,40,-80]}
+{"kind":"textbox","id":"sh/oza1gvy9","slide":16,"text":"失败可观测：记录 provider、operation、trace id、业务对象、错误类别和耗时，不记录密钥。","textPreview":"失败可观测：记录 provider、operation、trace id、业务对象、错误类别和耗时，不记录密钥。","textChars":56,"textLines":1,"bbox":[118,584,1040,32]}
+{"kind":"notes","id":"nt/0rws05","slide":16,"text":"只讲抽象和调用路径，不展示任何 API key 或敏感配置。\nRAG 入库会调用 embed 和 vector index；问答会先检索再 chat。"}
+{"kind":"slide","id":"sl/nm67rk","slide":17,"title":"16 / Prompt 管理","textShapes":13}
+{"kind":"shape","id":"sh/5sneloj2","slide":17,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/u54zidon","slide":17,"text":"16 / Prompt 管理","textPreview":"16 / Prompt 管理","textChars":14,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":17,"text":"Prompt 版本化：固定策略入资源，动态事实运行时拼装","textPreview":"Prompt 版本化：固定策略入资源，动态事实运行时拼装","textChars":28,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":17,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/5kb6xkf6","slide":17,"text":"17","textPreview":"17","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/ytsvu9kn","slide":17,"bbox":[60,160,350,240]}
+{"kind":"textbox","id":"sh/neloj2t8","slide":17,"text":"Layer 1 策略红线","textPreview":"Layer 1 策略红线","textChars":12,"textLines":1,"bbox":[82,182,306,30]}
+{"kind":"textbox","id":"sh/gn29gr2p","slide":17,"text":"角色、引用规则、温度、输出长度和激活版本进入 manifest。","textPreview":"角色、引用规则、温度、输出长度和激活版本进入 manifest。","textChars":32,"textLines":1,"bbox":[82,226,306,162]}
+{"kind":"shape","id":"sh/58z25kb6","slide":17,"bbox":[465,160,350,240]}
+{"kind":"textbox","id":"sh/d8bat47y","slide":17,"text":"Layer 2 场景骨架","textPreview":"Layer 2 场景骨架","textChars":12,"textLines":1,"bbox":[487,182,306,30]}
+{"kind":"textbox","id":"sh/knih4byh","slide":17,"text":"判定解释、标准 RAG、质保问答、让步风险各有版本化模板。","textPreview":"判定解释、标准 RAG、质保问答、让步风险各有版本化模板。","textChars":29,"textLines":1,"bbox":[487,226,306,162]}
+{"kind":"shape","id":"sh/v6psfil0","slide":17,"bbox":[870,160,350,240]}
+{"kind":"textbox","id":"sh/2lszqtcj","slide":17,"text":"Layer 3 动态事实","textPreview":"Layer 3 动态事实","textChars":12,"textLines":1,"bbox":[892,182,306,30]}
+{"kind":"textbox","id":"sh/d0z61032","slide":17,"text":"判定、指标、检验值、引用条款和用户问题由 Builder 注入。","textPreview":"判定、指标、检验值、引用条款和用户问题由 Builder 注入。","textChars":32,"textLines":1,"bbox":[892,226,306,162]}
+{"kind":"textbox","id":"sh/kf6dcbul","slide":17,"text":"→ Prompt version 写入 qc_ai_assessment，支撑回放和对比","textPreview":"→ Prompt version 写入 qc_ai_assessment，支撑回放和对比","textChars":44,"textLines":1,"bbox":[104,462,1060,30]}
+{"kind":"textbox","id":"sh/vu9knih4","slide":17,"text":"→ 引用规则与 CitationReferenceSupport 配套，不能靠 Prompt 放松安全边界","textPreview":"→ 引用规则与 CitationReferenceSupport 配套，不能靠 Prompt 放松安全边界","textChars":53,"textLines":1,"bbox":[104,498,1060,30]}
+{"kind":"textbox","id":"sh/29gr2p8n","slide":17,"text":"→ 版本升级流程：复制模板、更新 changelog、改 manifest、跑 golden tests","textPreview":"→ 版本升级流程：复制模板、更新 changelog、改 manifest、跑 golden tests","textChars":52,"textLines":1,"bbox":[104,534,1060,30]}
+{"kind":"notes","id":"nt/nm67rk","slide":17,"text":"这里使用代码核对结果：项目已实现 ai-prompts 资源目录和 PromptRegistry。\n如果评委问 Prompt 怎么改，可以讲 manifest activeVersion 和测试流程。"}
+{"kind":"slide","id":"sl/g8k2ni","slide":18,"title":"17 / 置信度","textShapes":16}
+{"kind":"shape","id":"sh/vu9knih4","slide":18,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/kf6dcbul","slide":18,"text":"17 / 置信度","textPreview":"17 / 置信度","textChars":8,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/d0z61032","slide":18,"text":"置信度：让 AI 输出有门禁、有解释、有运营指标","textPreview":"置信度：让 AI 输出有门禁、有解释、有运营指标","textChars":24,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/2lszqtcj","slide":18,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/v6psfil0","slide":18,"text":"18","textPreview":"18","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/knih4byh","slide":18,"bbox":[54,170,230,125]}
+{"kind":"textbox","id":"sh/d8bat47y","slide":18,"text":"0.60","textPreview":"0.60","textChars":4,"textLines":1,"bbox":[74,194,190,50]}
+{"kind":"textbox","id":"sh/6psfil0r","slide":18,"text":"规则完整性默认权重","textPreview":"规则完整性默认权重","textChars":9,"textLines":1,"bbox":[76,252,186,31]}
+{"kind":"shape","id":"sh/val87ed8","slide":18,"bbox":[306,170,230,125]}
+{"kind":"textbox","id":"sh/judg7ads","slide":18,"text":"0.30","textPreview":"0.30","textChars":4,"textLines":1,"bbox":[326,194,190,50]}
+{"kind":"textbox","id":"sh/u9knih4b","slide":18,"text":"RAG 引用质量默认权重","textPreview":"RAG 引用质量默认权重","textChars":12,"textLines":1,"bbox":[328,252,186,31]}
+{"kind":"shape","id":"sh/1032lszq","slide":18,"bbox":[558,170,230,125]}
+{"kind":"textbox","id":"sh/cfa9w3m9","slide":18,"text":"0.10","textPreview":"0.10","textChars":4,"textLines":1,"bbox":[578,194,190,50]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":18,"text":"LLM 输出校验默认权重","textPreview":"LLM 输出校验默认权重","textChars":12,"textLines":1,"bbox":[580,252,186,31]}
+{"kind":"shape","id":"sh/u18jqh0f","slide":18,"bbox":[810,170,330,125]}
+{"kind":"textbox","id":"sh/1orytsvu","slide":18,"text":"LOW","textPreview":"LOW","textChars":3,"textLines":1,"bbox":[830,194,290,50]}
+{"kind":"textbox","id":"sh/c7u54zid","slide":18,"text":"冲突、缺口、无证据时强制人工复核","textPreview":"冲突、缺口、无证据时强制人工复核","textChars":16,"textLines":1,"bbox":[832,252,286,31]}
+{"kind":"shape","id":"sh/nap4r65w","slide":18,"bbox":[80,360,500,150]}
+{"kind":"textbox","id":"sh/upwb2hwf","slide":18,"text":"产品行为","textPreview":"产品行为","textChars":4,"textLines":1,"bbox":[102,382,456,30]}
+{"kind":"textbox","id":"sh/6psfil0r","slide":18,"text":"低置信：复检/改判建议 withhold；让步风险不提供确定性建议；质保解释提示人工复核。","textPreview":"低置信：复检/改判建议 withhold；让步风险不提供确定性建议；质保解释提示人工复核。","textChars":45,"textLines":1,"bbox":[102,426,456,72]}
+{"kind":"shape","id":"sh/val87ed8","slide":18,"bbox":[700,360,500,150]}
+{"kind":"textbox","id":"sh/kre1w7mp","slide":18,"text":"审计与运营","textPreview":"审计与运营","textChars":5,"textLines":1,"bbox":[722,382,456,30]}
+{"kind":"textbox","id":"sh/dcbulwva","slide":18,"text":"工作台低置信待办、AI 评估审计按 label 筛选、采纳/忽略状态可追踪。","textPreview":"工作台低置信待办、AI 评估审计按 label 筛选、采纳/忽略状态可追踪。","textChars":38,"textLines":1,"bbox":[722,426,456,72]}
+{"kind":"notes","id":"nt/g8k2ni","slide":18,"text":"置信度不改变判定结论，只评价 AI 输出能不能放心采信。\n当前 OpenSpec 设计了权重公式，代码中也有配置页；具体场景仍保持确定性门禁。"}
+{"kind":"slide","id":"sl/iy49el","slide":19,"title":"18 / 审计回放","textShapes":4}
+{"kind":"shape","id":"sh/yhgn29gr","slide":19,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/58z25kb6","slide":19,"text":"18 / 审计回放","textPreview":"18 / 审计回放","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/gn29gr2p","slide":19,"text":"可观测性：每次 AI 输出都能回到输入、Prompt 和采用状态","textPreview":"可观测性：每次 AI 输出都能回到输入、Prompt 和采用状态","textChars":32,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/nuxc3ylc","slide":19,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/y90je9cv","slide":19,"text":"19","textPreview":"19","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"table","id":"tb/8bat47y1","slide":19,"name":"","rows":6,"cols":3,"preview":"观测对象 | 记录内容 | 业务价值","bbox":[54,145,1170,425]}
+{"kind":"notes","id":"nt/iy49el","slide":19,"text":"这一页直接回应评分维度“AI 调用链与可观测性”。\n可以配合 AI 评估审计页面现场展示。"}
+{"kind":"slide","id":"sl/wju2zp","slide":20,"title":"19 / 技术选型","textShapes":13}
+{"kind":"shape","id":"sh/m94fu18j","slide":20,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":20,"text":"19 / 技术选型","textPreview":"19 / 技术选型","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/4fu18jqh","slide":20,"text":"技术选型：企业业务栈 + 可替换 AI 网关","textPreview":"技术选型：企业业务栈 + 可替换 AI 网关","textChars":22,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/fil0rqd4","slide":20,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/qxs72x4n","slide":20,"text":"20","textPreview":"20","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/xobm58z2","slide":20,"bbox":[60,160,350,240]}
+{"kind":"textbox","id":"sh/83itgfml","slide":20,"text":"后端","textPreview":"后端","textChars":2,"textLines":1,"bbox":[82,182,306,30]}
+{"kind":"textbox","id":"sh/fepkzupw","slide":20,"text":"Java 8 / Spring Boot 2.7\nMyBatis-Plus / MySQL 5.7\nRedis / Sa-Token / Knife4j","textPreview":"Java 8 / Spring Boot 2.7 | MyBatis-Plus / MySQL 5.7 | Redis / Sa-Token / Knife4j","textChars":76,"textLines":3,"bbox":[82,226,306,162]}
+{"kind":"shape","id":"sh/mtwra5gb","slide":20,"bbox":[465,160,350,240]}
+{"kind":"textbox","id":"sh/oj2t83it","slide":20,"text":"前端","textPreview":"前端","textChars":2,"textLines":1,"bbox":[487,182,306,30]}
+{"kind":"textbox","id":"sh/d4vmtwra","slide":20,"text":"Vue 3 / TypeScript / Vite\nPinia / Router / Element Plus\nECharts","textPreview":"Vue 3 / TypeScript / Vite | Pinia / Router / Element Plus | ECharts","textChars":63,"textLines":3,"bbox":[487,226,306,162]}
+{"kind":"shape","id":"sh/6dcbulwv","slide":20,"bbox":[870,160,350,240]}
+{"kind":"textbox","id":"sh/vy90je9c","slide":20,"text":"AI / RAG","textPreview":"AI / RAG","textChars":8,"textLines":1,"bbox":[892,182,306,30]}
+{"kind":"textbox","id":"sh/o7qpg3ex","slide":20,"text":"模型网关 / 向量网关\nDeepSeek Chat / bge-m3\nOCR / Elasticsearch 8","textPreview":"模型网关 / 向量网关 | DeepSeek Chat / bge-m3 | OCR / Elasticsearch 8","textChars":56,"textLines":3,"bbox":[892,226,306,162]}
+{"kind":"textbox","id":"sh/dsji5sne","slide":20,"text":"→ 选择 OpenAI-compatible 协议，降低模型厂商切换成本","textPreview":"→ 选择 OpenAI-compatible 协议，降低模型厂商切换成本","textChars":36,"textLines":1,"bbox":[108,462,1060,30]}
+{"kind":"textbox","id":"sh/61032lsz","slide":20,"text":"→ 文档解析用 PDFBox / POI，分块保持确定性","textPreview":"→ 文档解析用 PDFBox / POI，分块保持确定性","textChars":28,"textLines":1,"bbox":[108,498,1060,30]}
+{"kind":"textbox","id":"sh/vmtwra5g","slide":20,"text":"→ MySQL 保存业务事实与引用快照，ES 负责语义检索","textPreview":"→ MySQL 保存业务事实与引用快照，ES 负责语义检索","textChars":29,"textLines":1,"bbox":[108,534,1060,30]}
+{"kind":"notes","id":"nt/wju2zp","slide":20,"text":"技术选型要和业务约束绑定：Java/MySQL 适合现有企业环境，ES 支撑 RAG。\n模型不是写死的，网关层保障未来可替换。"}
+{"kind":"slide","id":"sl/2790yc","slide":21,"title":"20 / 开发方法","textShapes":20}
+{"kind":"shape","id":"sh/4vmtwra5","slide":21,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/bat47y1k","slide":21,"text":"20 / 开发方法","textPreview":"20 / 开发方法","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":21,"text":"开发过程：用 OpenSpec 把 AI 需求变成可验证契约","textPreview":"开发过程：用 OpenSpec 把 AI 需求变成可验证契约","textChars":30,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/tsvu9kni","slide":21,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/47y1kre1","slide":21,"text":"21","textPreview":"21","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/bm58z25k","slide":21,"bbox":[88,180,310,128]}
+{"kind":"textbox","id":"sh/m1cfa9w3","slide":21,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[106,198,54,44]}
+{"kind":"textbox","id":"sh/twra5gbq","slide":21,"text":"探索澄清","textPreview":"探索澄清","textChars":4,"textLines":1,"bbox":[164,200,214,30]}
+{"kind":"textbox","id":"sh/4byhgn29","slide":21,"text":"OpenSpec explore\ngrill-me 压实红线","textPreview":"OpenSpec explore | grill-me 压实红线","textChars":30,"textLines":2,"bbox":[164,238,214,58]}
+{"kind":"shape","id":"sh/m58z25kb","slide":21,"bbox":[460,180,310,128]}
+{"kind":"textbox","id":"sh/bq1oryts","slide":21,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[478,198,54,44]}
+{"kind":"textbox","id":"sh/4byhgn29","slide":21,"text":"提案设计","textPreview":"提案设计","textChars":4,"textLines":1,"bbox":[536,200,214,30]}
+{"kind":"textbox","id":"sh/twra5gbq","slide":21,"text":"proposal、design\nspecs、tasks 拆分","textPreview":"proposal、design | specs、tasks 拆分","textChars":30,"textLines":2,"bbox":[536,238,214,58]}
+{"kind":"shape","id":"sh/mhk3q5o7","slide":21,"bbox":[832,180,310,128]}
+{"kind":"textbox","id":"sh/b2hwfyxo","slide":21,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[850,198,54,44]}
+{"kind":"textbox","id":"sh/4nap4r65","slide":21,"text":"实现","textPreview":"实现","textChars":2,"textLines":1,"bbox":[908,200,214,30]}
+{"kind":"textbox","id":"sh/t83itgfm","slide":21,"text":"后端、前端、SQL\n种子数据同步落地","textPreview":"后端、前端、SQL | 种子数据同步落地","textChars":18,"textLines":2,"bbox":[908,238,214,58]}
+{"kind":"shape","id":"sh/mp0bi9s3","slide":21,"bbox":[274,370,310,128]}
+{"kind":"textbox","id":"sh/bat47y1k","slide":21,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[292,388,54,44]}
+{"kind":"textbox","id":"sh/3ex0nuxc","slide":21,"text":"验证","textPreview":"验证","textChars":2,"textLines":1,"bbox":[350,390,214,30]}
+{"kind":"textbox","id":"sh/at47y1kr","slide":21,"text":"单测、模块 API\n评测集和人工手册","textPreview":"单测、模块 API | 评测集和人工手册","textChars":18,"textLines":2,"bbox":[350,428,214,58]}
+{"kind":"shape","id":"sh/lkjm1cfa","slide":21,"bbox":[646,370,310,128]}
+{"kind":"textbox","id":"sh/szqtcj6t","slide":21,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[664,388,54,44]}
+{"kind":"textbox","id":"sh/32lszqtc","slide":21,"text":"归档","textPreview":"归档","textChars":2,"textLines":1,"bbox":[722,390,214,30]}
+{"kind":"textbox","id":"sh/ahoza1gv","slide":21,"text":"完成后 archive\n主规格同步","textPreview":"完成后 archive | 主规格同步","textChars":17,"textLines":2,"bbox":[722,428,214,58]}
+{"kind":"textbox","id":"sh/l87ed8ba","slide":21,"text":"关键产物：13 个主规格、演示数据集、Prompt 模板、评估脚本、人工测试手册。","textPreview":"关键产物：13 个主规格、演示数据集、Prompt 模板、评估脚本、人工测试手册。","textChars":41,"textLines":1,"bbox":[140,548,1000,38]}
+{"kind":"notes","id":"nt/2790yc","slide":21,"text":"这一页讲 AI 辅助开发过程和使用的 skill。\n可提到 grill-me、web-access、frontend-design、自定义模拟标准生成 skill 等。"}
+{"kind":"slide","id":"sl/bqqgf8","slide":22,"title":"21 / 验证结果","textShapes":13}
+{"kind":"shape","id":"sh/neloj2t8","slide":22,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":22,"text":"21 / 验证结果","textPreview":"21 / 验证结果","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/5kb6xkf6","slide":22,"text":"验证：用演示数据和评测集证明不是“只会回答样例”","textPreview":"验证：用演示数据和评测集证明不是“只会回答样例”","textChars":24,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/u54zidon","slide":22,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":22,"text":"22","textPreview":"22","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/cbulwval","slide":22,"bbox":[50,150,250,135]}
+{"kind":"textbox","id":"sh/5sneloj2","slide":22,"text":"20+","textPreview":"20+","textChars":3,"textLines":1,"bbox":[70,174,210,50]}
+{"kind":"textbox","id":"sh/y90je9cv","slide":22,"text":"标准/协议文档\n国标、企标、客户协议","textPreview":"标准/协议文档 | 国标、企标、客户协议","textChars":18,"textLines":2,"bbox":[72,232,206,41]}
+{"kind":"shape","id":"sh/nuxc3ylc","slide":22,"bbox":[320,150,250,135]}
+{"kind":"textbox","id":"sh/36hcrmhk","slide":22,"text":"100+","textPreview":"100+","textChars":4,"textLines":1,"bbox":[340,174,210,50]}
+{"kind":"textbox","id":"sh/eloj2t83","slide":22,"text":"检验记录\n覆盖合格、异常、冲突","textPreview":"检验记录 | 覆盖合格、异常、冲突","textChars":15,"textLines":2,"bbox":[342,232,206,41]}
+{"kind":"shape","id":"sh/lc7u54zi","slide":22,"bbox":[590,150,250,135]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":22,"text":"30","textPreview":"30","textChars":2,"textLines":1,"bbox":[610,174,210,50]}
+{"kind":"textbox","id":"sh/7u54zido","slide":22,"text":"评测用例\n正常、边界、低置信、安全","textPreview":"评测用例 | 正常、边界、低置信、安全","textChars":17,"textLines":2,"bbox":[612,232,206,41]}
+{"kind":"shape","id":"sh/ed8bat47","slide":22,"bbox":[860,150,250,135]}
+{"kind":"textbox","id":"sh/l0rqd4vm","slide":22,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[880,174,210,50]}
+{"kind":"textbox","id":"sh/wfyxobm5","slide":22,"text":"冲突标准样例\n裁决与证书门禁","textPreview":"冲突标准样例 | 裁决与证书门禁","textChars":14,"textLines":2,"bbox":[882,232,206,41]}
+{"kind":"textbox","id":"sh/e1w7mp0b","slide":22,"text":"路演内容按评分权重分配展示重点，AI 能力与可观测性合计占 50%。","textPreview":"路演内容按评分权重分配展示重点，AI 能力与可观测性合计占 50%。","textChars":34,"textLines":1,"bbox":[160,600,960,30]}
+{"kind":"chart","id":"ch/fmlkjm1c","slide":22,"name":"","chartType":"bar","bbox":[90,360,1080,230]}
+{"kind":"notes","id":"nt/bqqgf8","slide":22,"text":"验证数据来自参考材料和 OpenSpec demo-evaluation-dataset。\n展示方向是数据覆盖、模块 API、自动化测试和人工演示，而不是只看单次模型回答。"}
+{"kind":"slide","id":"sl/e9ji1o","slide":23,"title":"22 / 运营推广","textShapes":13}
+{"kind":"shape","id":"sh/3ylc7u54","slide":23,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/sji5snel","slide":23,"text":"22 / 运营推广","textPreview":"22 / 运营推广","textChars":9,"textLines":1,"bbox":[42,30,680,22]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":23,"text":"运营成本与推广路径：先可控，再扩展","textPreview":"运营成本与推广路径：先可控，再扩展","textChars":17,"textLines":1,"bbox":[42,56,1030,54]}
+{"kind":"textbox","id":"sh/a5gbq1or","slide":23,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/3m94fu18","slide":23,"text":"23","textPreview":"23","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"shape","id":"sh/s72x4nap","slide":23,"bbox":[60,160,350,250]}
+{"kind":"textbox","id":"sh/lszqtcj6","slide":23,"text":"主要成本","textPreview":"主要成本","textChars":4,"textLines":1,"bbox":[82,182,306,30]}
+{"kind":"textbox","id":"sh/a1gvy90j","slide":23,"text":"模型调用费用、Embedding 建库、ES 资源、源文件解析/OCR、人工复核与 Prompt 维护。","textPreview":"模型调用费用、Embedding 建库、ES 资源、源文件解析/OCR、人工复核与 Prompt 维护。","textChars":52,"textLines":1,"bbox":[82,226,306,172]}
+{"kind":"shape","id":"sh/zidonyd0","slide":23,"bbox":[465,160,350,250]}
+{"kind":"textbox","id":"sh/re1w7mp0","slide":23,"text":"已知限制","textPreview":"已知限制","textChars":4,"textLines":1,"bbox":[487,182,306,30]}
+{"kind":"textbox","id":"sh/2t83itgf","slide":23,"text":"OCR 非确定性、ES 依赖外部服务、低证据场景必须拒答、历史投诉/库存数据目前偏演示化。","textPreview":"OCR 非确定性、ES 依赖外部服务、低证据场景必须拒答、历史投诉/库存数据目前偏演示化。","textChars":45,"textLines":1,"bbox":[487,226,306,172]}
+{"kind":"shape","id":"sh/9knih4by","slide":23,"bbox":[870,160,350,250]}
+{"kind":"textbox","id":"sh/kzupwb2h","slide":23,"text":"推广路径","textPreview":"推广路径","textChars":4,"textLines":1,"bbox":[892,182,306,30]}
+{"kind":"textbox","id":"sh/rqd4vmtw","slide":23,"text":"先标准 RAG + 判定解释，再扩到让步风险、质保问答、冲突裁决辅助和跨厂区标准库。","textPreview":"先标准 RAG + 判定解释，再扩到让步风险、质保问答、冲突裁决辅助和跨厂区标准库。","textChars":42,"textLines":1,"bbox":[892,226,306,172]}
+{"kind":"textbox","id":"sh/25kb6xkf","slide":23,"text":"→ 通过缓存、规则模板和原始检索降低演示和生产不可用风险","textPreview":"→ 通过缓存、规则模板和原始检索降低演示和生产不可用风险","textChars":28,"textLines":1,"bbox":[104,466,1060,30]}
+{"kind":"textbox","id":"sh/9w3m94fu","slide":23,"text":"→ 高风险流程保持人工审批，避免 AI 直接承担质量责任","textPreview":"→ 高风险流程保持人工审批，避免 AI 直接承担质量责任","textChars":28,"textLines":1,"bbox":[104,502,1060,30]}
+{"kind":"textbox","id":"sh/kb6xkf6d","slide":23,"text":"→ 用评估集持续监控引用命中率、拒答率、人工采纳率和响应时间","textPreview":"→ 用评估集持续监控引用命中率、拒答率、人工采纳率和响应时间","textChars":30,"textLines":1,"bbox":[104,538,1060,30]}
+{"kind":"notes","id":"nt/e9ji1o","slide":23,"text":"成本部分要坦诚，尤其是模型、ES、OCR 和人工复核成本。\n推广路径强调分阶段，不一次性把所有决策交给 AI。"}
+{"kind":"slide","id":"sl/h0agwk","slide":24,"title":"总结","textShapes":10}
+{"kind":"shape","id":"sh/c7u54zid","slide":24,"bbox":[0,0,10,720]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":24,"text":"总结","textPreview":"总结","textChars":2,"textLines":1,"bbox":[42,62,450,70]}
+{"kind":"textbox","id":"sh/u18jqh0f","slide":24,"text":"这套系统的价值不是让 AI 替人判定，而是把质量判定做成可解释、可追溯、可运营的闭环。","textPreview":"这套系统的价值不是让 AI 替人判定，而是把质量判定做成可解释、可追溯、可运营的闭环。","textChars":43,"textLines":1,"bbox":[42,150,1060,76]}
+{"kind":"shape","id":"sh/1032lszq","slide":24,"bbox":[60,300,340,210]}
+{"kind":"textbox","id":"sh/cfa9w3m9","slide":24,"text":"不足","textPreview":"不足","textChars":2,"textLines":1,"bbox":[82,322,296,30]}
+{"kind":"textbox","id":"sh/judg7ads","slide":24,"text":"外部模型、ES、OCR 仍是运行依赖；低证据场景必须降级；真实投诉/库存集成还需继续完善。","textPreview":"外部模型、ES、OCR 仍是运行依赖；低证据场景必须降级；真实投诉/库存集成还需继续完善。","textChars":45,"textLines":1,"bbox":[82,366,296,132]}
+{"kind":"shape","id":"sh/u9knih4b","slide":24,"bbox":[470,300,340,210]}
+{"kind":"textbox","id":"sh/54zidony","slide":24,"text":"启发","textPreview":"启发","textChars":2,"textLines":1,"bbox":[492,322,296,30]}
+{"kind":"textbox","id":"sh/cj6tovah","slide":24,"text":"AI 落地要先确定业务真相源，再把生成能力放在解释、检索、审计和复核门禁之后。","textPreview":"AI 落地要先确定业务真相源，再把生成能力放在解释、检索、审计和复核门禁之后。","textChars":39,"textLines":1,"bbox":[492,366,296,132]}
+{"kind":"shape","id":"sh/ex0nuxc3","slide":24,"bbox":[880,300,340,210]}
+{"kind":"textbox","id":"sh/3itgfmlk","slide":24,"text":"参考","textPreview":"参考","textChars":2,"textLines":1,"bbox":[902,322,296,30]}
+{"kind":"textbox","id":"sh/w3m94fu1","slide":24,"text":"OpenSpec、项目 specs、质量业务参考材料、RAG/硅基流动/OpenAI-compatible 调用文档。","textPreview":"OpenSpec、项目 specs、质量业务参考材料、RAG/硅基流动/OpenAI-compatible 调用文档。","textChars":59,"textLines":1,"bbox":[902,366,296,132]}
+{"kind":"textbox","id":"sh/loj2t83i","slide":24,"text":"钢铁质量管理 AI 增强路演","textPreview":"钢铁质量管理 AI 增强路演","textChars":14,"textLines":1,"bbox":[42,672,520,24]}
+{"kind":"textbox","id":"sh/e9cvixcz","slide":24,"text":"24","textPreview":"24","textChars":2,"textLines":1,"bbox":[1188,672,50,24]}
+{"kind":"notes","id":"nt/h0agwk","slide":24,"text":"收尾时回到一句话：标准库定规则、判定引擎出结论、AI 做可信辅助。\n不足要主动说明，体现工程真实度。"}

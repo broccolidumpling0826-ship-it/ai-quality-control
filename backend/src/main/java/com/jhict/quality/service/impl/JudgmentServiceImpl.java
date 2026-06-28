@@ -36,9 +36,9 @@ import com.jhict.quality.vo.AiSourceReferenceVO;
 import com.jhict.quality.vo.StandardCandidateSetVO;
 import com.jhict.quality.vo.StandardCandidateVO;
 import com.jhict.quality.vo.StandardConflictVO;
+import com.jhict.quality.service.support.prompt.JudgmentExplanationPromptBuilder;
 import com.jhict.quality.service.support.rag.CitationReferenceLoader;
 import com.jhict.quality.service.support.rag.CitationReferenceSupport;
-import com.jhict.quality.service.support.rag.CitationReferenceSupport.CitationPromptStyle;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -63,7 +63,6 @@ public class JudgmentServiceImpl implements JudgmentService {
     private static final String DASHBOARD_CACHE_KEY_PREFIX = "dashboard:summary:v2:";
     private static final String DEFAULT_COMPANY_ID = "DEFAULT";
     private static final long DASHBOARD_TTL_SECONDS = 60L;
-    private static final String EXPLANATION_PROMPT_VERSION = "judgment-explanation-v3";
 
     private enum AiExplanationSource {
         SKIPPED,
@@ -111,6 +110,9 @@ public class JudgmentServiceImpl implements JudgmentService {
 
     @Resource
     private ModelGateway modelGateway;
+
+    @Resource
+    private JudgmentExplanationPromptBuilder judgmentExplanationPromptBuilder;
 
     @Resource
     private AiAssessmentService aiAssessmentService;
@@ -700,36 +702,7 @@ public class JudgmentServiceImpl implements JudgmentService {
     private ModelChatRequest buildExplanationChatRequest(QcJudgmentResultVO vo,
                                                         QcJudgmentResult result,
                                                         List<AiSourceReferenceVO> citations) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("判定结论：").append(result.getJudgmentType()).append("\n");
-        prompt.append("规则解释：").append(vo.getRuleExplanation()).append("\n\n");
-        prompt.append("指标依据：\n");
-        if (vo.getEvidences() != null) {
-            for (QcJudgmentResultVO.EvidenceVO evidence : vo.getEvidences()) {
-                prompt.append("- ")
-                        .append(nullToEmpty(evidence.getIndicatorName()))
-                        .append(" 实测=").append(evidence.getTestValue())
-                        .append(" 下限=").append(evidence.getLowerLimit())
-                        .append(" 上限=").append(evidence.getUpperLimit())
-                        .append(" 偏差=").append(evidence.getDeviation())
-                        .append(" 规则=").append(nullToEmpty(evidence.getTriggerRule()))
-                        .append("\n");
-            }
-        }
-        CitationReferenceSupport.appendNumberedCitationBlock(prompt, citations);
-        CitationReferenceSupport.appendCitationAnswerRules(prompt, CitationPromptStyle.JUDGMENT_EXPLANATION);
-        return ModelChatRequest.builder()
-                .businessType("JUDGMENT_EXPLANATION")
-                .businessId(result.getId())
-                .promptVersion(EXPLANATION_PROMPT_VERSION)
-                .systemPrompt("你是钢铁质量判定解释助手。不得使用来源条款之外的标准、限值或案例；缺少依据时必须说明引用缺失。")
-                .messages(Collections.singletonList(ModelMessage.builder()
-                        .role("user")
-                        .content(prompt.toString())
-                        .build()))
-                .temperature(0.1D)
-                .maxTokens(600)
-                .build();
+        return judgmentExplanationPromptBuilder.build(vo, result, citations);
     }
 
     private String nullToEmpty(String value) {
@@ -746,7 +719,7 @@ public class JudgmentServiceImpl implements JudgmentService {
             cmd.setInputSnapshot(buildExplanationInputSnapshot(vo));
             cmd.setReferencesJson(objectMapper.writeValueAsString(vo.getCitations()));
             cmd.setModelProvider(StringUtils.hasText(vo.getAiExplanation()) ? modelGateway.provider() : null);
-            cmd.setPromptVersion(EXPLANATION_PROMPT_VERSION);
+            cmd.setPromptVersion(judgmentExplanationPromptBuilder.activePromptVersion());
             cmd.setRawOutput(StringUtils.hasText(vo.getAiExplanation()) ? vo.getAiExplanation() : vo.getRuleExplanation());
             cmd.setStructuredOutput(buildExplanationStructuredOutput(vo));
             cmd.setConfidenceLabel(vo.getConfidenceLabel());

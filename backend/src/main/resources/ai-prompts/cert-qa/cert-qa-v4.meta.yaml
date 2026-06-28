@@ -1,0 +1,6 @@
+version: cert-qa-v4
+scene: CERT_QA
+changelog: Migrated from CertQaServiceImpl hardcoded prompt (registry baseline)
+snippets:
+  append-concession-approved: cert-qa-v4.append-concession-approved.txt
+  append-non-final: cert-qa-v4.append-non-final.txt

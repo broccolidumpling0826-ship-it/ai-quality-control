@@ -1,0 +1,37 @@
+defaults:
+  temperature: 0.1
+
+shared:
+  citationRules:
+    JUDGMENT_EXPLANATION: shared/citation-judgment-explanation.txt
+    CERT_QA: shared/citation-cert-qa.txt
+    STANDARD_RAG: shared/citation-standard-rag.txt
+
+scenes:
+  JUDGMENT_EXPLANATION:
+    activeVersion: judgment-explanation-v3
+    businessType: JUDGMENT_EXPLANATION
+    citationStyle: JUDGMENT_EXPLANATION
+    temperature: 0.1
+    maxTokens: 600
+  STANDARD_RAG:
+    activeVersion: standard-rag-p0-v3
+    businessType: STANDARD_RAG
+    citationStyle: STANDARD_RAG
+    temperature: 0.1
+    maxTokens: 800
+  CERT_QA:
+    activeVersion: cert-qa-v4
+    businessType: CERT_QA
+    citationStyle: CERT_QA
+    temperature: 0.1
+    maxTokens: 700
+  CONCESSION_RISK:
+    activeVersion: concession-risk-v1
+    businessType: CONCESSION_RISK
+    temperature: 0.1
+    maxTokens: 500
+  VISION_OCR:
+    activeVersion: vision-ocr-v1
+    businessType: STANDARD_SOURCE_OCR
+    temperature: 0.1

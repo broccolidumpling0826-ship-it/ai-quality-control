@@ -1,0 +1,154 @@
+{
+  "lang": "zh",
+  "tier": 2,
+  "recommend": {
+    "canvas": "ppt169",
+    "mode": "instructional",
+    "visual_style": "dark-tech",
+    "delivery_purpose": "balanced",
+    "icons": "tabler-outline",
+    "image_usage": "placeholder",
+    "formula_policy": "text-only",
+    "generation_mode": "continuous"
+  },
+  "page_count": { "value": "35-39" },
+  "audience": {
+    "value": "竞赛评委、技术评审专家（熟悉 AI 应用与企业系统落地）；路演现场同时进行投影演示与会后翻阅"
+  },
+  "content_divergence": { "value": "" },
+  "color": {
+    "selected": 0,
+    "candidates": [
+      {
+        "name_zh": "AQC 工业精密控制室（原版）",
+        "name_en": "AQC Industrial Precision — Original",
+        "note_zh": "直接沿用系统 CSS Token，深蓝黑底+青色强调+语义状态色",
+        "note_en": "Directly mirrors the system CSS token set — dark navy/black canvas, cyan accent, semantic state colors",
+        "palette": {
+          "background": "#060E1C",
+          "secondary_bg": "#0B1929",
+          "primary": "#00D4FF",
+          "accent": "#00D4FF",
+          "secondary_accent": "#3D9EFF",
+          "body_text": "#E8F0FA"
+        }
+      },
+      {
+        "name_zh": "AQC 深蓝冷灰偏移版",
+        "name_en": "AQC Cool Shift — Muted Cyan",
+        "note_zh": "背景稍浅、青色降饱和，整体更克制，适合长篇阅读",
+        "note_en": "Slightly lighter background, desaturated cyan — more restrained for extended reading",
+        "palette": {
+          "background": "#091523",
+          "secondary_bg": "#0F2137",
+          "primary": "#00B8D9",
+          "accent": "#00B8D9",
+          "secondary_accent": "#2E7FBB",
+          "body_text": "#D4E8F5"
+        }
+      },
+      {
+        "name_zh": "AQC 纯黑极简版",
+        "name_en": "AQC Minimal Dark — Pure Black",
+        "note_zh": "极深黑底，青色更跳出，对比更强，适合大投影场景",
+        "note_en": "Pure-black canvas with high-contrast cyan — maximum projection punch",
+        "palette": {
+          "background": "#020810",
+          "secondary_bg": "#071221",
+          "primary": "#00E5FF",
+          "accent": "#00E5FF",
+          "secondary_accent": "#1A6FA8",
+          "body_text": "#F0F6FF"
+        }
+      }
+    ]
+  },
+  "typography": {
+    "selected": 0,
+    "candidates": [
+      {
+        "name_zh": "科技无衬线 — 微软雅黑 × Consolas（等宽强调）",
+        "name_en": "Tech Sans — Microsoft YaHei × Consolas mono emphasis",
+        "note_zh": "标题用微软雅黑压缩风，数据/接口名/枚举值用 Consolas 等宽",
+        "note_en": "Headings in Microsoft YaHei condensed-feel; data/API names/enums in Consolas mono",
+        "heading": {
+          "cjk": "Microsoft YaHei",
+          "latin": "Arial",
+          "css": "\"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+          "sample_cjk": "判定引擎核心流程",
+          "sample_latin": "AI Quality Control"
+        },
+        "body": {
+          "cjk": "Microsoft YaHei",
+          "latin": "Arial",
+          "css": "\"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+          "sample_cjk": "结构化标准是唯一判定真相源",
+          "sample_latin": "Rules first, AI explains"
+        },
+        "body_size": 24,
+        "sizes": {
+          "title": 40,
+          "subtitle": 30,
+          "annotation": 18
+        }
+      },
+      {
+        "name_zh": "标题加粗对比 — SimHei 黑体 × Consolas",
+        "name_en": "Bold Contrast — SimHei × Consolas",
+        "note_zh": "标题换 SimHei 加强工业感，体现硬朗感；正文保持微软雅黑可读性",
+        "note_en": "SimHei title for stronger industrial weight; body stays readable Microsoft YaHei",
+        "heading": {
+          "cjk": "SimHei",
+          "latin": "Arial",
+          "css": "SimHei, \"Microsoft YaHei\", Arial, sans-serif",
+          "sample_cjk": "判定引擎核心流程",
+          "sample_latin": "AI Quality Control"
+        },
+        "body": {
+          "cjk": "Microsoft YaHei",
+          "latin": "Arial",
+          "css": "\"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+          "sample_cjk": "结构化标准是唯一判定真相源",
+          "sample_latin": "Rules first, AI explains"
+        },
+        "body_size": 24,
+        "sizes": {
+          "title": 40,
+          "subtitle": 30,
+          "annotation": 18
+        }
+      },
+      {
+        "name_zh": "单族协调 — 全程微软雅黑 + 等宽数据字体",
+        "name_en": "Concord — Full Microsoft YaHei + Consolas code",
+        "note_zh": "一个字族贯穿，靠粗细和大小区分层次，等宽字体专用于代码和数值",
+        "note_en": "One family throughout; hierarchy from weight/size contrast; monospace for code and numbers only",
+        "heading": {
+          "cjk": "Microsoft YaHei",
+          "latin": "Consolas",
+          "css": "\"Microsoft YaHei\", \"PingFang SC\", Consolas, sans-serif",
+          "sample_cjk": "判定引擎核心流程",
+          "sample_latin": "AI Quality Control"
+        },
+        "body": {
+          "cjk": "Microsoft YaHei",
+          "latin": "Arial",
+          "css": "\"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+          "sample_cjk": "结构化标准是唯一判定真相源",
+          "sample_latin": "Rules first, AI explains"
+        },
+        "body_size": 24,
+        "sizes": {
+          "title": 40,
+          "subtitle": 30,
+          "annotation": 18
+        }
+      }
+    ]
+  },
+  "image_strategy": {
+    "selected": 0,
+    "candidates": []
+  },
+  "refine_spec": { "value": false }
+}

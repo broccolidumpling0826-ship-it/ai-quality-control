@@ -1,0 +1,8 @@
+用户问题：{{question}}
+
+结构化事实摘要：
+{{ruleAnswer}}
+
+质保书快照状态：{{certStatus}}
+最终判定：{{judgmentType}}
+是否非最终态：{{nonFinal}}

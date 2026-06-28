@@ -2,6 +2,7 @@ package com.jhict.quality.service.support.rag;
 
 import com.jhict.quality.vo.AiSourceReferenceVO;
 import com.jhict.quality.vo.QcJudgmentResultVO;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -14,7 +15,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.jhict.quality.service.support.prompt.PromptRegistryTestSupport;
+
 class CitationReferenceSupportTest {
+
+    @BeforeAll
+    static void loadCitationRules() {
+        PromptRegistryTestSupport.createLoadedRegistry();
+    }
 
     @Test
     void rankAndLimit_shouldPreferIndicatorClauseOverScopeClause() {

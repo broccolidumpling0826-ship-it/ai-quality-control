@@ -1,0 +1,3 @@
+version: judgment-explanation-v3
+scene: JUDGMENT_EXPLANATION
+changelog: Migrated from JudgmentServiceImpl hardcoded prompt (registry baseline)

@@ -1,0 +1,3 @@
+基线结论：{{narrativeExplanation}}
+风险等级：{{riskLevel}}
+建议条件：{{suggestedConditions}}

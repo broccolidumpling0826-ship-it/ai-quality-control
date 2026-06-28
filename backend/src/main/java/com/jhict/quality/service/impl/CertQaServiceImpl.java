@@ -20,8 +20,8 @@ import com.jhict.quality.service.api.AiCacheService;
 import com.jhict.quality.service.api.CertDataService;
 import com.jhict.quality.service.api.CertQaService;
 import com.jhict.quality.service.api.JudgmentService;
+import com.jhict.quality.service.support.prompt.CertQaPromptBuilder;
 import com.jhict.quality.service.support.rag.CitationReferenceSupport;
-import com.jhict.quality.service.support.rag.CitationReferenceSupport.CitationPromptStyle;
 import com.jhict.quality.vo.AiSourceReferenceVO;
 import com.jhict.quality.vo.CertQaAnswerVO;
 import com.jhict.quality.vo.QcJudgmentListVO;
@@ -44,7 +44,6 @@ import java.util.stream.Collectors;
 @Service
 public class CertQaServiceImpl implements CertQaService {
 
-    private static final String PROMPT_VERSION = "cert-qa-v4";
     private static final String ASSESSMENT_TYPE_CERT_QA = "CERT_QA";
     private static final String MSG_CONCESSION_PENDING_WORKFLOW =
             "当前为可让步判定，尚未完成客户确认或内部让步审批，暂不能生成正式质保书。"
@@ -73,6 +72,9 @@ public class CertQaServiceImpl implements CertQaService {
 
     @Resource
     private QcConcessionAcceptanceMapper concessionMapper;
+
+    @Resource
+    private CertQaPromptBuilder certQaPromptBuilder;
 
     @Override
     public CertQaAnswerVO answer(CertQaQueryCmd cmd) {
@@ -180,53 +182,9 @@ public class CertQaServiceImpl implements CertQaService {
                                                     List<AiSourceReferenceVO> citations,
                                                     String ruleAnswer,
                                                     boolean concessionApproved) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("用户问题：").append(cmd.getQuestion()).append("\n\n");
-        prompt.append("结构化事实摘要：\n").append(ruleAnswer).append("\n\n");
-        if (cert != null) {
-            prompt.append("质保书快照状态：").append(cert.getStatus()).append("\n");
-        } else {
-            prompt.append("质保书快照状态：未生成\n");
-        }
-        prompt.append("最终判定：").append(judgment.getJudgmentType()).append("\n");
-        if (JudgmentType.CAN_CONCESSION.getCode().equals(judgment.getJudgmentType())) {
-            prompt.append("让步接收审批：").append(concessionApproved ? "已通过" : "未完成").append("\n");
-        }
-        prompt.append("是否非最终态：").append(Boolean.TRUE.equals(answerNonFinal(cert, judgment)) ? "是" : "否").append("\n");
-        if (basis != null && !basis.isEmpty()) {
-            prompt.append("\n指标依据：\n");
-            for (QcJudgmentResultVO.EvidenceVO evidence : basis) {
-                prompt.append("- ")
-                        .append(nullToEmpty(evidence.getIndicatorName()))
-                        .append(" 实测=").append(evidence.getTestValue())
-                        .append(" 下限=").append(evidence.getLowerLimit())
-                        .append(" 上限=").append(evidence.getUpperLimit())
-                        .append(" 偏差=").append(evidence.getDeviation())
-                        .append(" 规则=").append(nullToEmpty(evidence.getTriggerRule()))
-                        .append("\n");
-            }
-        }
-        CitationReferenceSupport.appendNumberedCitationBlock(prompt, citations);
-        CitationReferenceSupport.appendCitationAnswerRules(prompt, CitationPromptStyle.CERT_QA);
-        if (concessionApproved && needsCertSnapshot(cert, judgment)) {
-            prompt.append("让步接收已审批通过，仅缺质保书数据快照；"
-                    + "应明确引导用户前往【数据汇总 → 质保书数据】点击生成，"
-                    + "勿误判为客户确认或让步审批未完成。");
-        } else if (Boolean.TRUE.equals(answerNonFinal(cert, judgment))) {
-            prompt.append("当前为不可正式出证或非最终状态，回答中必须明确说明。");
-        }
-        return ModelChatRequest.builder()
-                .businessType(ASSESSMENT_TYPE_CERT_QA)
-                .businessId(judgment.getJudgmentId())
-                .promptVersion(PROMPT_VERSION)
-                .systemPrompt("你是钢铁质保书问答助手。只能依据给定的事实与来源条款回答，不得超出证据推断。")
-                .messages(Collections.singletonList(ModelMessage.builder()
-                        .role("user")
-                        .content(prompt.toString())
-                        .build()))
-                .temperature(0.1D)
-                .maxTokens(700)
-                .build();
+        boolean nonFinal = answerNonFinal(cert, judgment);
+        return certQaPromptBuilder.build(cmd, cert, judgment, basis, citations, ruleAnswer,
+                concessionApproved, nonFinal, needsCertSnapshot(cert, judgment));
     }
 
     private boolean answerNonFinal(QcQualityCertDataVO cert, QcJudgmentResultVO judgment) {
@@ -273,7 +231,7 @@ public class CertQaServiceImpl implements CertQaService {
             createCmd.setInputSnapshot(objectMapper.writeValueAsString(cmd));
             createCmd.setReferencesJson(objectMapper.writeValueAsString(answer.getCitations()));
             createCmd.setModelProvider(aiGenerated ? modelGateway.provider() : null);
-            createCmd.setPromptVersion(PROMPT_VERSION);
+            createCmd.setPromptVersion(certQaPromptBuilder.activePromptVersion());
             createCmd.setRawOutput(answer.getAnswer());
             createCmd.setStructuredOutput(objectMapper.writeValueAsString(answer));
             createCmd.setConfidenceLabel(answer.getConfidenceLabel());

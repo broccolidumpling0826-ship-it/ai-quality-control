@@ -1,0 +1,52 @@
+{
+  "canvas": "ppt169",
+  "audience": "竞赛评委、技术评审专家（熟悉 AI 应用与企业系统落地）；路演现场同时进行投影演示与会后翻阅",
+  "content_divergence": "",
+  "mode": "instructional",
+  "visual_style": "dark-tech",
+  "delivery_purpose": "balanced",
+  "page_count": "35-39",
+  "color": {
+    "name": "",
+    "palette": {
+      "background": "#060E1C",
+      "secondary_bg": "#0B1929",
+      "primary": "#00D4FF",
+      "accent": "#00D4FF",
+      "secondary_accent": "#3D9EFF",
+      "body_text": "#E8F0FA"
+    }
+  },
+  "icons": "tabler-outline",
+  "typography": {
+    "name": "",
+    "heading": {
+      "cjk": "Microsoft YaHei",
+      "css": "\"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+      "latin": "Arial",
+      "sample_cjk": "判定引擎核心流程",
+      "sample_latin": "AI Quality Control"
+    },
+    "body": {
+      "cjk": "Microsoft YaHei",
+      "css": "\"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+      "latin": "Arial",
+      "sample_cjk": "结构化标准是唯一判定真相源",
+      "sample_latin": "Rules first, AI explains"
+    },
+    "body_size": 24,
+    "sizes": {
+      "annotation": 18,
+      "subtitle": 30,
+      "title": 40
+    },
+    "body_size_unit": "px"
+  },
+  "formula_policy": "text-only",
+  "image_usage": "placeholder",
+  "generation_mode": "continuous",
+  "refine_spec": false,
+  "stage": "final",
+  "status": "confirmed",
+  "confirmed_at": "2026-06-28T03:50:10"
+}

@@ -1,0 +1,4 @@
+判定结论：{{judgmentType}}
+规则解释：{{ruleExplanation}}
+
+指标依据：

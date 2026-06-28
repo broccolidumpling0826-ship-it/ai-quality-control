@@ -25,8 +25,8 @@ import com.jhict.quality.mapper.QcStandardClauseMapper;
 import com.jhict.quality.service.api.AiDegradationService;
 import com.jhict.quality.service.api.StandardDocumentService;
 import com.jhict.quality.service.api.StandardRagService;
+import com.jhict.quality.service.support.prompt.StandardRagPromptBuilder;
 import com.jhict.quality.service.support.rag.CitationReferenceSupport;
-import com.jhict.quality.service.support.rag.CitationReferenceSupport.CitationPromptStyle;
 import com.jhict.quality.vo.AiDegradationResultVO;
 import com.jhict.quality.vo.AiSourceReferenceVO;
 import com.jhict.quality.vo.StandardClauseVO;
@@ -54,7 +54,9 @@ public class StandardRagServiceImpl implements StandardRagService {
     private static final double HIGH_CONFIDENCE_SCORE = 0.86D;
     private static final double MEDIUM_CONFIDENCE_SCORE = 0.66D;
     private static final double RAW_RETRIEVAL_SCORE = 0.55D;
-    private static final String PROMPT_VERSION = "standard-rag-p0-v3";
+
+    @Resource
+    private StandardRagPromptBuilder standardRagPromptBuilder;
 
     @Resource
     private VectorStoreGateway vectorStoreGateway;
@@ -143,26 +145,12 @@ public class StandardRagServiceImpl implements StandardRagService {
     }
 
     private ModelChatRequest buildChatRequest(StandardRagQueryCmd cmd, List<StandardRagSourceVO> sources) {
-        StringBuilder userPrompt = new StringBuilder();
-        userPrompt.append("问题：").append(cmd.getQuery()).append("\n\n");
-        userPrompt.append("只能依据以下来源条款回答，并在句末标注条款号或来源编号：\n");
-        CitationReferenceSupport.appendNumberedRagCitationBlock(userPrompt, sources);
-        CitationReferenceSupport.appendCitationAnswerRules(userPrompt, CitationPromptStyle.STANDARD_RAG);
+        StandardRagPromptBuilder.BuiltStandardRagPrompt built = standardRagPromptBuilder.build(cmd, sources);
         log.info("标准RAG调用Chat模型，sourceCount={}, promptChars={}, sourceIds={}",
                 sources.size(),
-                userPrompt.length(),
+                built.getUserPromptLength(),
                 sources.stream().map(StandardRagSourceVO::getClauseId).collect(Collectors.toList()));
-        return ModelChatRequest.builder()
-                .businessType("STANDARD_RAG")
-                .promptVersion(PROMPT_VERSION)
-                .systemPrompt("你是钢铁质量标准检索助手。不得使用来源条款以外的标准、限值或案例。缺少依据时必须说明没有依据。")
-                .messages(java.util.Collections.singletonList(ModelMessage.builder()
-                        .role("user")
-                        .content(userPrompt.toString())
-                        .build()))
-                .temperature(0.1D)
-                .maxTokens(800)
-                .build();
+        return built.getRequest();
     }
 
     private AiDegradationRequest buildDegradationRequest(StandardRagQueryCmd cmd, ModelChatResponse modelResponse,

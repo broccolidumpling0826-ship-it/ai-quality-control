@@ -1,0 +1,3 @@
+version: concession-risk-v1
+scene: CONCESSION_RISK
+changelog: Migrated from ConcessionRiskServiceImpl hardcoded prompt (registry baseline)

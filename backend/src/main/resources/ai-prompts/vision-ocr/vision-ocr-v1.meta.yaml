@@ -1,0 +1,3 @@
+version: vision-ocr-v1
+scene: VISION_OCR
+changelog: Migrated from ImageVisionSourceDocumentTextExtractor hardcoded prompt (registry baseline)

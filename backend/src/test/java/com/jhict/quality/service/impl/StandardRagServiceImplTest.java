@@ -11,6 +11,8 @@ import com.jhict.quality.gateway.vector.VectorStoreGateway;
 import com.jhict.quality.mapper.QcQualityStandardMapper;
 import com.jhict.quality.mapper.QcStandardClauseMapper;
 import com.jhict.quality.service.api.StandardDocumentService;
+import com.jhict.quality.service.support.prompt.PromptRegistryTestSupport;
+import com.jhict.quality.service.support.prompt.StandardRagPromptBuilder;
 import com.jhict.quality.vo.StandardClauseVO;
 import com.jhict.quality.vo.StandardRagAnswerVO;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +58,8 @@ class StandardRagServiceImplTest {
         ReflectionTestUtils.setField(service, "standardClauseMapper", standardClauseMapper);
         ReflectionTestUtils.setField(service, "qualityStandardMapper", qualityStandardMapper);
         ReflectionTestUtils.setField(service, "aiDegradationService", new AiDegradationServiceImpl());
+        ReflectionTestUtils.setField(service, "standardRagPromptBuilder",
+                new StandardRagPromptBuilder(PromptRegistryTestSupport.createLoadedRegistry()));
         lenient().when(standardClauseMapper.selectBatchIds(any())).thenReturn(Collections.emptyList());
     }
 

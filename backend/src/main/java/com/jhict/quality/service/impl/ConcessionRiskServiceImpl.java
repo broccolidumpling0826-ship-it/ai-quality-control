@@ -17,6 +17,7 @@ import com.jhict.quality.service.api.ConcessionRiskService;
 import com.jhict.quality.service.api.CustomerUsageProfileService;
 import com.jhict.quality.service.api.JudgmentService;
 import com.jhict.quality.service.api.StandardDocumentService;
+import com.jhict.quality.service.support.prompt.ConcessionRiskPromptBuilder;
 import com.jhict.quality.service.support.rag.CitationReferenceLoader;
 import com.jhict.quality.service.support.rag.CitationReferenceSupport;
 import com.jhict.quality.vo.AiSourceReferenceVO;
@@ -43,8 +44,6 @@ import java.util.stream.Collectors;
 @Service
 public class ConcessionRiskServiceImpl implements ConcessionRiskService {
 
-    private static final String PROMPT_VERSION = "concession-risk-v1";
-
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Resource
@@ -67,6 +66,9 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
 
     @Resource
     private AiAssessmentService aiAssessmentService;
+
+    @Resource
+    private ConcessionRiskPromptBuilder concessionRiskPromptBuilder;
 
     @Override
     public ConcessionRiskAssessmentVO assess(ConcessionRiskAssessCmd cmd) {
@@ -258,20 +260,8 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
         if (!modelGateway.enabled() || "BLOCKED".equals(result.getRiskLevel())) {
             return;
         }
-        ModelChatResponse response = modelGateway.chat(ModelChatRequest.builder()
-                .businessType("CONCESSION_RISK")
-                .businessId(judgment.getJudgmentId())
-                .promptVersion(PROMPT_VERSION)
-                .systemPrompt("你是钢铁质量让步风险说明助手。只能改写已给出的基线结论，不得改变风险等级或新增审批结论。")
-                .messages(Collections.singletonList(ModelMessage.builder()
-                        .role("user")
-                        .content("基线结论：" + result.getNarrativeExplanation()
-                                + "\n风险等级：" + result.getRiskLevel()
-                                + "\n建议条件：" + result.getSuggestedConditions())
-                        .build()))
-                .temperature(0.1D)
-                .maxTokens(500)
-                .build());
+        ModelChatResponse response = modelGateway.chat(
+                concessionRiskPromptBuilder.build(judgment.getJudgmentId(), result));
         if (response != null && response.isSuccess() && StringUtils.hasText(response.getContent())) {
             result.setNarrativeExplanation(response.getContent());
             result.setDegradationSource("GENERATED");
@@ -288,7 +278,7 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
             createCmd.setRelatedJudgmentId(cmd.getJudgmentId());
             createCmd.setInputSnapshot(objectMapper.writeValueAsString(cmd));
             createCmd.setReferencesJson(objectMapper.writeValueAsString(result.getEvidenceRefs()));
-            createCmd.setPromptVersion(PROMPT_VERSION);
+            createCmd.setPromptVersion(concessionRiskPromptBuilder.activePromptVersion());
             createCmd.setRawOutput(result.getNarrativeExplanation());
             createCmd.setStructuredOutput(objectMapper.writeValueAsString(result));
             createCmd.setRiskLevel(result.getRiskLevel());

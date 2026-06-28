@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,8 @@ public final class CitationReferenceSupport {
         CERT_QA,
         STANDARD_RAG
     }
+
+    private static volatile Map<CitationPromptStyle, String> registeredCitationRules;
 
     private static final Pattern CITATION_MARKER = Pattern.compile("\\[(\\d+)\\]");
     private static final Pattern NUMERIC_LIMIT_IN_TEXT = Pattern.compile("\\d+(?:\\.\\d+)?\\s*(?:MPa|%)");
@@ -507,35 +510,23 @@ public final class CitationReferenceSupport {
         }
     }
 
+    public static void registerCitationRules(Map<CitationPromptStyle, String> rules) {
+        if (rules == null || rules.isEmpty()) {
+            registeredCitationRules = null;
+            return;
+        }
+        registeredCitationRules = Collections.unmodifiableMap(new EnumMap<>(rules));
+    }
+
     public static void appendCitationAnswerRules(StringBuilder prompt, CitationPromptStyle style) {
         if (prompt == null || style == null) {
             return;
         }
-        switch (style) {
-            case JUDGMENT_EXPLANATION:
-                prompt.append("\n请只依据规则解释和来源条款说明判定原因，必须在关键句后标注来源编号如[1]。");
-                prompt.append("仅当来源段落正文中出现该指标的数值、单位或上下限时，才可引用该编号；");
-                prompt.append("对可让步(CAN_CONCESSION)判定，须逐条说明落入让步带的指标及实测/限值，并引用写明让步条件的条款；");
-                prompt.append("「范围」「适用范围」等章节若未写出具体限值，不得用于指标上下限引用；");
-                prompt.append("「术语」「定义」等章节仅解释指标含义，不得用于引用合格限值。");
-                break;
-            case CERT_QA:
-                prompt.append("\n请只依据上述事实回答用户问题，必须在关键句后标注来源编号如[1]。");
-                prompt.append("指标上下限若来源段落未写出具体数值，请写「限值见指标依据」且不要错误引用范围章节；");
-                prompt.append("仅当来源段落正文中出现该指标的数值、单位或上下限时，才可引用该编号；");
-                prompt.append("「术语」「定义」等章节仅解释指标含义，不得用于引用合格限值。");
-                prompt.append("不得编造标准、限值、条款或案例；信息不足时必须明确说明。");
-                break;
-            case STANDARD_RAG:
-                prompt.append("\n请只依据上述来源条款回答问题，必须在关键句后标注来源编号如[1]。");
-                prompt.append("仅当来源段落正文中出现具体数值、单位或上下限时，才可引用该编号说明限值；");
-                prompt.append("「范围」「适用范围」等章节若未写出具体限值，不得用于指标上下限引用；");
-                prompt.append("「术语」「定义」等章节仅解释指标含义，不得用于引用合格限值。");
-                prompt.append("缺少依据时必须说明没有依据，不得编造标准、限值或案例。");
-                break;
-            default:
-                break;
+        String rules = registeredCitationRules == null ? null : registeredCitationRules.get(style);
+        if (!StringUtils.hasText(rules)) {
+            throw new IllegalStateException("Citation rules not loaded for style: " + style);
         }
+        prompt.append(rules);
     }
 
     public static List<String> buildIndicatorKeywords(QcJudgmentResultVO.EvidenceVO evidence) {

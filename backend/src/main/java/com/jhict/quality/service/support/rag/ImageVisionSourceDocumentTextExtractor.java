@@ -1,10 +1,11 @@
 package com.jhict.quality.service.support.rag;
 
-import com.jhict.quality.common.entity.ApiResult;
-import com.jhict.quality.common.exception.ServiceException;
 import com.jhict.quality.gateway.model.ModelGateway;
 import com.jhict.quality.gateway.model.ModelVisionExtractionRequest;
 import com.jhict.quality.gateway.model.ModelVisionExtractionResponse;
+import com.jhict.quality.service.support.prompt.VisionOcrPromptProvider;
+import com.jhict.quality.common.entity.ApiResult;
+import com.jhict.quality.common.exception.ServiceException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -18,14 +19,13 @@ import java.util.UUID;
 @Slf4j
 public class ImageVisionSourceDocumentTextExtractor implements SourceDocumentTextExtractor {
 
-    private static final String DEFAULT_SYSTEM_PROMPT =
-            "You are an OCR engine for quality standard documents. "
-                    + "Extract all visible text faithfully. Do not summarize, invent, or add content not present in the image.";
-
     private final ModelGateway modelGateway;
+    private final VisionOcrPromptProvider visionOcrPromptProvider;
 
-    public ImageVisionSourceDocumentTextExtractor(ModelGateway modelGateway) {
+    public ImageVisionSourceDocumentTextExtractor(ModelGateway modelGateway,
+                                                  VisionOcrPromptProvider visionOcrPromptProvider) {
         this.modelGateway = modelGateway;
+        this.visionOcrPromptProvider = visionOcrPromptProvider;
     }
 
     @Override
@@ -49,7 +49,8 @@ public class ImageVisionSourceDocumentTextExtractor implements SourceDocumentTex
                 .businessId(sourceFilePath)
                 .imageBase64(base64)
                 .imageMimeType(mimeType)
-                .systemPrompt(DEFAULT_SYSTEM_PROMPT)
+                .systemPrompt(visionOcrPromptProvider.resolveSystemPrompt())
+                .ocrPrompt(visionOcrPromptProvider.resolveOcrPrompt())
                 .build());
 
         if (response == null || !response.isSuccess() || !StringUtils.hasText(response.getExtractedText())) {
