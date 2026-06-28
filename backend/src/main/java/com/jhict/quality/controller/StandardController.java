@@ -7,12 +7,14 @@ import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.dto.QcQualityStandardAddCmd;
 import com.jhict.quality.dto.QcQualityStandardPageQuery;
 import com.jhict.quality.dto.StandardCandidateQuery;
+import com.jhict.quality.dto.StandardClausePageQuery;
 import com.jhict.quality.service.api.StandardService;
 import com.jhict.quality.service.api.StandardSourceFileService;
 import com.jhict.quality.vo.QcIndicatorItemVO;
 import com.jhict.quality.vo.QcQualityStandardDetailVO;
 import com.jhict.quality.vo.QcQualityStandardVO;
 import com.jhict.quality.vo.StandardCandidateSetVO;
+import com.jhict.quality.vo.StandardClauseVO;
 import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardSourceDocumentVO;
 import io.swagger.annotations.Api;
@@ -189,6 +191,26 @@ public class StandardController {
             @ApiParam(value = "标准ID", required = true) @PathVariable String id,
             @ApiParam(value = "源文档ID", required = true) @PathVariable String documentId) {
         return ApiResult.success(standardSourceFileService.reindexSourceFile(id, documentId));
+    }
+
+    @PostMapping("/{id}/source-files/{documentId}/clauses/page")
+    @ApiOperation(value = "分页查询标准源文件条款拆分")
+    @SaCheckPermission("menu:standard")
+    public ApiResult<IPage<StandardClauseVO>> pageSourceFileClauses(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id,
+            @ApiParam(value = "源文档ID", required = true) @PathVariable String documentId,
+            @RequestBody StandardClausePageQuery query) {
+        return ApiResult.success(standardSourceFileService.pageSourceFileClauses(id, documentId, query));
+    }
+
+    @GetMapping("/{id}/source-files/{documentId}/clauses/{clauseId}")
+    @ApiOperation(value = "查询标准源文件条款拆分详情")
+    @SaCheckPermission("menu:standard")
+    public ApiResult<StandardClauseVO> getSourceFileClause(
+            @ApiParam(value = "标准ID", required = true) @PathVariable String id,
+            @ApiParam(value = "源文档ID", required = true) @PathVariable String documentId,
+            @ApiParam(value = "条款ID", required = true) @PathVariable String clauseId) {
+        return ApiResult.success(standardSourceFileService.getSourceFileClause(id, documentId, clauseId));
     }
 
     @PostMapping("/{id}/source-files/reindex-all")

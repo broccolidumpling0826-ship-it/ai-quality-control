@@ -1,7 +1,9 @@
 package com.jhict.quality.service.impl;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jhict.quality.common.entity.ApiResult;
 import com.jhict.quality.common.exception.ServiceException;
+import com.jhict.quality.dto.StandardClausePageQuery;
 import com.jhict.quality.entity.QcQualityStandard;
 import com.jhict.quality.entity.QcStandardDocument;
 import com.jhict.quality.mapper.QcQualityStandardMapper;
@@ -11,6 +13,7 @@ import com.jhict.quality.service.api.StandardSourceFileService;
 import com.jhict.quality.service.support.rag.LegacyStandardDocumentFields;
 import com.jhict.quality.service.support.rag.StandardSourceFileStorageService;
 import com.jhict.quality.service.support.rag.StandardSourceFileStorageService.StoredStandardFile;
+import com.jhict.quality.vo.StandardClauseVO;
 import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardSourceDocumentVO;
 import lombok.extern.slf4j.Slf4j;
@@ -127,6 +130,31 @@ public class StandardSourceFileServiceImpl implements StandardSourceFileService 
         return results;
     }
 
+    @Override
+    public IPage<StandardClauseVO> pageSourceFileClauses(String standardId, String documentId,
+            StandardClausePageQuery query) {
+        requireStandard(standardId);
+        requireLinkedDocument(standardId, documentId);
+        StandardClausePageQuery safeQuery = query == null ? new StandardClausePageQuery() : query;
+        safeQuery.setDocumentId(documentId);
+        safeQuery.setStandardId(null);
+        return standardDocumentService.pageClauses(safeQuery);
+    }
+
+    @Override
+    public StandardClauseVO getSourceFileClause(String standardId, String documentId, String clauseId) {
+        requireStandard(standardId);
+        requireLinkedDocument(standardId, documentId);
+        if (!StringUtils.hasText(clauseId)) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "条款ID不能为空");
+        }
+        StandardClauseVO clause = standardDocumentService.getClauseById(clauseId);
+        if (!documentId.equals(clause.getDocumentId())) {
+            throw new ServiceException(ApiResult.CODE_NOT_FOUND, "标准源条款不存在");
+        }
+        return clause;
+    }
+
     private QcQualityStandard requireStandard(String standardId) {
         if (!StringUtils.hasText(standardId)) {
             throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "标准ID不能为空");
@@ -136,6 +164,17 @@ public class StandardSourceFileServiceImpl implements StandardSourceFileService 
             throw new ServiceException(ApiResult.CODE_NOT_FOUND, "质量标准不存在");
         }
         return standard;
+    }
+
+    private QcStandardDocument requireLinkedDocument(String standardId, String documentId) {
+        if (!StringUtils.hasText(documentId)) {
+            throw new ServiceException(ApiResult.CODE_BAD_REQUEST, "源文档ID不能为空");
+        }
+        QcStandardDocument document = standardDocumentService.getLinkedDocument(standardId, documentId);
+        if (document == null) {
+            throw new ServiceException(ApiResult.CODE_NOT_FOUND, "标准源文档不存在");
+        }
+        return document;
     }
 
     private void updateSourceFileMetadata(String documentId, StoredStandardFile stored) {

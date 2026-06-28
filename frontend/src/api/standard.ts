@@ -1,4 +1,5 @@
 import { get, post, put, del } from '@/utils/request'
+import type { PageResult } from '@/types'
 
 function parseLimit(val: unknown): number | undefined {
   if (val === '' || val === null || val === undefined) return undefined
@@ -114,3 +115,37 @@ export const reindexStandardSourceFile = (standardId: string, documentId: string
 
 export const reindexAllStandardSourceFiles = (standardId: string) =>
   post<StandardDocumentIngestSummary[]>(`/standards/${standardId}/source-files/reindex-all`)
+
+export interface StandardClauseSummary {
+  id?: string
+  documentId?: string
+  clauseNo?: string
+  pageNo?: number
+  paragraphText?: string
+  embeddingStatus?: string
+  clauseKey?: string
+  esDocumentKey?: string
+}
+
+export interface StandardClausePageQuery {
+  keyword?: string
+  pageNum?: number
+  pageSize?: number
+}
+
+export const pageStandardSourceClauses = (
+  standardId: string,
+  documentId: string,
+  data: StandardClausePageQuery
+) =>
+  post<PageResult<StandardClauseSummary>>(
+    `/standards/${standardId}/source-files/${documentId}/clauses/page`,
+    data
+  )
+
+export const getStandardSourceClause = (
+  standardId: string,
+  documentId: string,
+  clauseId: string
+) =>
+  get<StandardClauseSummary>(`/standards/${standardId}/source-files/${documentId}/clauses/${clauseId}`)
