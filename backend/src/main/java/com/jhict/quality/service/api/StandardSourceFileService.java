@@ -1,5 +1,8 @@
 package com.jhict.quality.service.api;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.jhict.quality.dto.StandardClausePageQuery;
+import com.jhict.quality.vo.StandardClauseVO;
 import com.jhict.quality.vo.StandardDocumentIngestVO;
 import com.jhict.quality.vo.StandardSourceDocumentVO;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +23,10 @@ public interface StandardSourceFileService {
     StandardDocumentIngestVO reindexSourceFile(String standardId, String documentId);
 
     List<StandardDocumentIngestVO> reindexAllSourceFiles(String standardId);
+
+    IPage<StandardClauseVO> pageSourceFileClauses(String standardId, String documentId, StandardClausePageQuery query);
+
+    StandardClauseVO getSourceFileClause(String standardId, String documentId, String clauseId);
 
     default void downloadSourceFile(String standardId, HttpServletResponse response) {
         List<StandardSourceDocumentVO> files = listSourceFiles(standardId);

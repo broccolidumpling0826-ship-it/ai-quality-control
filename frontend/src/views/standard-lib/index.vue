@@ -233,7 +233,6 @@
         :model="formData"
         :rules="formRules"
         label-width="100px"
-        :disabled="drawerMode === 'view'"
       >
         <el-alert
           v-if="drawerMode === 'edit' && formData.status === 'PUBLISHED'"
@@ -246,12 +245,12 @@
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="标准编号" prop="standardCode">
-              <el-input v-model="formData.standardCode" placeholder="请输入标准编号" />
+              <el-input v-model="formData.standardCode" placeholder="请输入标准编号" :disabled="drawerMode === 'view'" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="标准名称" prop="standardName">
-              <el-input v-model="formData.standardName" placeholder="请输入标准名称" />
+              <el-input v-model="formData.standardName" placeholder="请输入标准名称" :disabled="drawerMode === 'view'" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -260,6 +259,7 @@
                 v-model="formData.standardType"
                 placeholder="请选择"
                 style="width:100%"
+                :disabled="drawerMode === 'view'"
                 @change="onStandardTypeChange"
               >
                 <el-option
@@ -292,7 +292,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="品种" prop="productVariety">
-              <el-select v-model="formData.productVariety" placeholder="请选择" style="width:100%">
+              <el-select v-model="formData.productVariety" placeholder="请选择" style="width:100%" :disabled="drawerMode === 'view'">
                 <el-option
                   v-for="item in dictStore.getItems('PRODUCT_VARIETY')"
                   :key="item.value"
@@ -304,17 +304,17 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="牌号" prop="productGrade">
-              <el-input v-model="formData.productGrade" placeholder="请输入牌号" />
+              <el-input v-model="formData.productGrade" placeholder="请输入牌号" :disabled="drawerMode === 'view'" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="规格范围" prop="specRange">
-              <el-input v-model="formData.specRange" placeholder="如：Φ10~Φ20mm（必填，用于检验规格下拉）" />
+              <el-input v-model="formData.specRange" placeholder="如：Φ10~Φ20mm（必填，用于检验规格下拉）" :disabled="drawerMode === 'view'" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="版本号" prop="version">
-              <el-input v-model="formData.version" placeholder="如：V1.0" />
+              <el-input v-model="formData.version" placeholder="如：V1.0" :disabled="drawerMode === 'view'" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -325,6 +325,7 @@
                 placeholder="选择日期"
                 value-format="YYYY-MM-DD"
                 style="width:100%"
+                :disabled="drawerMode === 'view'"
               />
             </el-form-item>
           </el-col>
@@ -336,12 +337,13 @@
                 placeholder="选择日期（可为空）"
                 value-format="YYYY-MM-DD"
                 style="width:100%"
+                :disabled="drawerMode === 'view'"
               />
             </el-form-item>
           </el-col>
           <el-col :span="24">
             <el-form-item label="描述">
-              <el-input v-model="formData.description" type="textarea" :rows="2" placeholder="标准描述（选填）" />
+              <el-input v-model="formData.description" type="textarea" :rows="2" placeholder="标准描述（选填）" :disabled="drawerMode === 'view'" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -356,7 +358,12 @@
             style="width:100%"
           >
             <el-table-column label="文件名" min-width="180" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.sourceFileName || '-' }}</template>
+              <template #default="{ row }">
+                <span>{{ row.sourceFileName || '-' }}</span>
+                <el-tooltip v-if="row.parseErrorMessage" :content="row.parseErrorMessage" placement="top">
+                  <el-icon class="source-error-icon"><WarningFilled /></el-icon>
+                </el-tooltip>
+              </template>
             </el-table-column>
             <el-table-column label="类型" width="80">
               <template #default="{ row }">{{ sourceFileTypeLabel(row.sourceFileName) }}</template>
@@ -370,25 +377,51 @@
             <el-table-column label="条款数" width="72" align="center">
               <template #default="{ row }">{{ row.chunkCount ?? 0 }}</template>
             </el-table-column>
-            <el-table-column v-if="drawerMode !== 'view'" label="操作" width="220" align="center">
+            <el-table-column label="操作" :width="drawerMode === 'view' ? 220 : 320" align="center" class-name="source-op-col">
               <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="handleSourceDownload(row)">下载</el-button>
-                <el-button
-                  v-if="formData.status === 'PUBLISHED'"
-                  link
-                  type="warning"
-                  size="small"
-                  :loading="sourceReindexDocumentId === row.documentId"
-                  @click="handleSourceReindex(row)"
-                >
-                  重索引
-                </el-button>
-                <el-button link type="danger" size="small" @click="handleSourceDelete(row)">删除</el-button>
-              </template>
-            </el-table-column>
-            <el-table-column v-else label="操作" width="80" align="center">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="handleSourceDownload(row)">下载</el-button>
+                <div class="source-file-op-cell">
+                  <el-button
+                    v-if="canViewSourceClauses(row)"
+                    type="primary"
+                    plain
+                    size="small"
+                    class="source-file-op-btn"
+                    @click="openClauseDrawer(row)"
+                  >
+                    查看拆分结果
+                  </el-button>
+                  <el-button
+                    type="primary"
+                    plain
+                    size="small"
+                    class="source-file-op-btn"
+                    @click="handleSourceDownload(row)"
+                  >
+                    下载
+                  </el-button>
+                  <template v-if="drawerMode !== 'view'">
+                    <el-button
+                      v-if="formData.status === 'PUBLISHED'"
+                      type="warning"
+                      plain
+                      size="small"
+                      class="source-file-op-btn"
+                      :loading="sourceReindexDocumentId === row.documentId"
+                      @click="handleSourceReindex(row)"
+                    >
+                      重索引
+                    </el-button>
+                    <el-button
+                      type="danger"
+                      plain
+                      size="small"
+                      class="source-file-op-btn"
+                      @click="handleSourceDelete(row)"
+                    >
+                      删除
+                    </el-button>
+                  </template>
+                </div>
               </template>
             </el-table-column>
           </el-table>
@@ -519,6 +552,105 @@
       </template>
     </el-drawer>
 
+    <!-- 条款拆分查看抽屉 -->
+    <el-drawer
+      v-model="clauseDrawerVisible"
+      title="条款拆分结果"
+      size="800px"
+      destroy-on-close
+    >
+      <div v-if="clauseDrawerDocument" class="clause-drawer">
+        <div class="clause-drawer-summary">
+          <div class="clause-drawer-file">{{ clauseDrawerDocument.sourceFileName || '-' }}</div>
+          <div class="clause-drawer-meta">
+            <span>解析：{{ clauseDrawerDocument.parseStatus || '-' }}</span>
+            <span>索引：{{ clauseDrawerDocument.indexStatus || '-' }}</span>
+            <span>条款：{{ clauseDrawerDocument.chunkCount ?? 0 }}</span>
+          </div>
+          <el-alert
+            v-if="clauseDrawerDocument.parseErrorMessage"
+            type="warning"
+            :closable="false"
+            show-icon
+            :title="clauseDrawerDocument.parseErrorMessage"
+            style="margin-top:8px"
+          />
+          <div class="clause-drawer-hint">只读验收视图，不可编辑切片内容</div>
+        </div>
+
+        <div class="clause-drawer-toolbar">
+          <el-input
+            v-model="clauseKeyword"
+            clearable
+            placeholder="搜索条款号或原文"
+            style="flex:1"
+            @keyup.enter="searchClauseList"
+          />
+          <el-button type="primary" :loading="clauseLoading" @click="searchClauseList">搜索</el-button>
+        </div>
+
+        <el-table
+          v-loading="clauseLoading"
+          :data="clauseList"
+          border
+          size="small"
+          style="width:100%"
+          class="clause-list-table"
+          @row-click="openClauseDetail"
+        >
+          <el-table-column label="#" width="52" align="center">
+            <template #default="{ $index }">
+              {{ (clausePageNum - 1) * clausePageSize + $index + 1 }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="clauseNo" label="条款" width="100" show-overflow-tooltip />
+          <el-table-column label="页码" width="64" align="center">
+            <template #default="{ row }">{{ row.pageNo ?? '-' }}</template>
+          </el-table-column>
+          <el-table-column label="字符" width="64" align="center">
+            <template #default="{ row }">{{ clauseTextLength(row.paragraphText) }}</template>
+          </el-table-column>
+          <el-table-column label="向量" width="88" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="embeddingStatusTagType(row.embeddingStatus)">
+                {{ row.embeddingStatus || '-' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="原文预览" min-width="220" show-overflow-tooltip>
+            <template #default="{ row }">{{ previewClauseText(row.paragraphText) }}</template>
+          </el-table-column>
+        </el-table>
+
+        <div class="clause-drawer-pagination">
+          <el-pagination
+            v-model:current-page="clausePageNum"
+            v-model:page-size="clausePageSize"
+            :total="clauseTotal"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            @current-change="loadClauseList"
+            @size-change="handleClausePageSizeChange"
+          />
+        </div>
+      </div>
+    </el-drawer>
+
+    <!-- 条款详情 -->
+    <el-dialog v-model="clauseDetailVisible" title="条款详情" width="720px" destroy-on-close>
+      <template v-if="clauseDetail">
+        <el-descriptions :column="2" border size="small" style="margin-bottom:12px">
+          <el-descriptions-item label="条款号">{{ clauseDetail.clauseNo || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="页码">{{ clauseDetail.pageNo ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item label="向量状态">{{ clauseDetail.embeddingStatus || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="字符数">{{ clauseTextLength(clauseDetail.paragraphText) }}</el-descriptions-item>
+          <el-descriptions-item label="clauseKey" :span="2">{{ clauseDetail.clauseKey || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="esDocumentKey" :span="2">{{ clauseDetail.esDocumentKey || '-' }}</el-descriptions-item>
+        </el-descriptions>
+        <div class="clause-detail-text">{{ clauseDetail.paragraphText || '-' }}</div>
+      </template>
+    </el-dialog>
+
     <!-- 发布确认对话框 -->
     <el-dialog v-model="publishDialogVisible" title="发布确认" width="440px">
       <p>确认发布标准 <strong>{{ publishTarget?.standardName }}</strong>？</p>
@@ -544,6 +676,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { WarningFilled } from '@element-plus/icons-vue'
 import type { FormInstance, UploadRequestOptions } from 'element-plus'
 import { useDictStore } from '@/store/dict'
 import { useTableFilter } from '@/composables/use-table-filter'
@@ -559,7 +692,10 @@ import {
   deleteStandardSourceFile,
   reindexStandardSourceFile,
   reindexAllStandardSourceFiles,
-  type StandardSourceDocumentSummary
+  pageStandardSourceClauses,
+  getStandardSourceClause,
+  type StandardSourceDocumentSummary,
+  type StandardClauseSummary
 } from '@/api/standard'
 import { listActiveIndicators } from '@/api/indicator'
 import type { PageResult } from '@/types'
@@ -642,6 +778,17 @@ const sourceUploadLoading = ref(false)
 const sourceReindexDocumentId = ref('')
 const sourceReindexAllLoading = ref(false)
 
+const clauseDrawerVisible = ref(false)
+const clauseDrawerDocument = ref<StandardSourceDocumentSummary | null>(null)
+const clauseKeyword = ref('')
+const clauseList = ref<StandardClauseSummary[]>([])
+const clauseLoading = ref(false)
+const clausePageNum = ref(1)
+const clausePageSize = ref(20)
+const clauseTotal = ref(0)
+const clauseDetailVisible = ref(false)
+const clauseDetail = ref<StandardClauseSummary | null>(null)
+
 function applySourceDocuments(list?: StandardSourceDocumentSummary[]) {
   sourceDocuments.value = (list || []).filter((item) => item.hasSourceFile !== false)
 }
@@ -662,6 +809,76 @@ function sourceFileTypeLabel(fileName?: string) {
   if (ext === 'xlsx' || ext === 'xls') return 'Excel'
   if (ext === 'png' || ext === 'jpg' || ext === 'jpeg') return '图片'
   return ext ? ext.toUpperCase() : '-'
+}
+
+function canViewSourceClauses(row: StandardSourceDocumentSummary) {
+  return (row.chunkCount ?? 0) > 0 && !!row.documentId
+}
+
+function previewClauseText(text?: string) {
+  if (!text) return '-'
+  return text.length > 80 ? `${text.slice(0, 80)}…` : text
+}
+
+function clauseTextLength(text?: string) {
+  return text ? text.length : 0
+}
+
+function embeddingStatusTagType(status?: string) {
+  if (status === 'INDEXED') return 'success'
+  if (status === 'FAILED') return 'danger'
+  if (status === 'PENDING') return 'warning'
+  return 'info'
+}
+
+async function openClauseDrawer(row: StandardSourceDocumentSummary) {
+  if (!formData.id || !row.documentId) return
+  clauseDrawerDocument.value = row
+  clauseKeyword.value = ''
+  clausePageNum.value = 1
+  clausePageSize.value = 20
+  clauseDrawerVisible.value = true
+  await loadClauseList()
+}
+
+async function loadClauseList() {
+  if (!formData.id || !clauseDrawerDocument.value?.documentId) return
+  clauseLoading.value = true
+  try {
+    const res = await pageStandardSourceClauses(formData.id, clauseDrawerDocument.value.documentId, {
+      keyword: clauseKeyword.value || undefined,
+      pageNum: clausePageNum.value,
+      pageSize: clausePageSize.value
+    }) as PageResult<StandardClauseSummary>
+    clauseList.value = res.records || []
+    clauseTotal.value = res.total ?? 0
+  } finally {
+    clauseLoading.value = false
+  }
+}
+
+function searchClauseList() {
+  clausePageNum.value = 1
+  loadClauseList()
+}
+
+function handleClausePageSizeChange() {
+  clausePageNum.value = 1
+  loadClauseList()
+}
+
+async function openClauseDetail(row: StandardClauseSummary) {
+  if (!formData.id || !clauseDrawerDocument.value?.documentId || !row.id) return
+  try {
+    clauseDetail.value = await getStandardSourceClause(
+      formData.id,
+      clauseDrawerDocument.value.documentId,
+      row.id
+    ) as StandardClauseSummary
+    clauseDetailVisible.value = true
+  } catch {
+    // handled by request interceptor
+  }
 }
 
 const isCustomerStandard = computed(() => formData.standardType === 'CUSTOMER')
@@ -1185,5 +1402,110 @@ onMounted(() => {
 }
 .op-more-item--primary {
   color: var(--el-color-primary);
+}
+
+.source-error-icon {
+  margin-left: 4px;
+  color: var(--el-color-warning);
+  vertical-align: middle;
+}
+
+.standard-lib-page :deep(.source-op-col .cell) {
+  overflow: visible;
+}
+
+.source-file-op-cell {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.source-file-panel :deep(.source-file-op-btn.el-button--primary.is-plain) {
+  background: rgba(0, 212, 255, 0.12) !important;
+  border-color: rgba(0, 212, 255, 0.55) !important;
+  color: #00d4ff !important;
+}
+
+.source-file-panel :deep(.source-file-op-btn.el-button--primary.is-plain:hover) {
+  background: rgba(0, 212, 255, 0.22) !important;
+  border-color: #00d4ff !important;
+  color: #ffffff !important;
+}
+
+.source-file-panel :deep(.source-file-op-btn.el-button--warning.is-plain) {
+  background: rgba(255, 140, 0, 0.12) !important;
+  border-color: rgba(255, 140, 0, 0.55) !important;
+  color: #ff8c00 !important;
+}
+
+.source-file-panel :deep(.source-file-op-btn.el-button--warning.is-plain:hover) {
+  background: rgba(255, 140, 0, 0.22) !important;
+  border-color: #ff8c00 !important;
+  color: #ffffff !important;
+}
+
+.source-file-panel :deep(.source-file-op-btn.el-button--danger.is-plain) {
+  background: rgba(255, 59, 92, 0.12) !important;
+  border-color: rgba(255, 59, 92, 0.55) !important;
+  color: #ff3b5c !important;
+}
+
+.source-file-panel :deep(.source-file-op-btn.el-button--danger.is-plain:hover) {
+  background: rgba(255, 59, 92, 0.22) !important;
+  border-color: #ff3b5c !important;
+  color: #ffffff !important;
+}
+
+.clause-drawer-summary {
+  margin-bottom: 12px;
+}
+
+.clause-drawer-file {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.clause-drawer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.clause-drawer-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.clause-drawer-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.clause-list-table :deep(.el-table__row) {
+  cursor: pointer;
+}
+
+.clause-drawer-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.clause-detail-text {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  max-height: 420px;
+  overflow: auto;
+  padding: 12px;
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+  font-size: 13px;
 }
 </style>

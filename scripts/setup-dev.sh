@@ -31,12 +31,8 @@ else
         read -s DB_PASSWORD
     fi
 
-    mysql -u "${DB_USER:-root}" -p"$DB_PASSWORD" -h 127.0.0.1 -P 3307 \
-        < backend/scripts/init-schema.sql && echo "  ✓ 表结构初始化完成"
-    mysql -u "${DB_USER:-root}" -p"$DB_PASSWORD" -h 127.0.0.1 -P 3307 \
-        < backend/scripts/init-dict-data.sql && echo "  ✓ 字典数据初始化完成"
-    mysql -u "${DB_USER:-root}" -p"$DB_PASSWORD" -h 127.0.0.1 -P 3307 \
-        < backend/scripts/init-test-data.sql && echo "  ✓ 测试数据初始化完成"
+    DB_HOST=127.0.0.1 DB_PORT=3307 DB_USER="${DB_USER:-root}" DB_PASSWORD="$DB_PASSWORD" \
+        bash backend/scripts/init-db-from-empty.sh
 fi
 
 # 4. 安装前端依赖
