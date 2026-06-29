@@ -56,7 +56,7 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="牌号" prop="productGrade">
-              <el-select v-model="baseForm.productGrade" placeholder="请选择" style="width:100%">
+              <el-select v-model="baseForm.productGrade" placeholder="请选择" filterable style="width:100%">
                 <el-option
                   v-for="item in dictStore.getItems('PRODUCT_GRADE')"
                   :key="item.value"

@@ -24,7 +24,14 @@
           </el-select>
         </el-form-item>
         <el-form-item label="牌号">
-          <el-input v-model="searchForm.productGrade" placeholder="输入牌号" clearable style="width:140px" />
+          <el-select v-model="searchForm.productGrade" placeholder="请选择" clearable filterable style="width:140px">
+            <el-option
+              v-for="item in dictStore.getItems('PRODUCT_GRADE')"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width:120px">
@@ -304,7 +311,20 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="牌号" prop="productGrade">
-              <el-input v-model="formData.productGrade" placeholder="请输入牌号" :disabled="drawerMode === 'view'" />
+              <el-select
+                v-model="formData.productGrade"
+                placeholder="请选择牌号"
+                filterable
+                style="width:100%"
+                :disabled="drawerMode === 'view'"
+              >
+                <el-option
+                  v-for="item in dictStore.getItems('PRODUCT_GRADE')"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -891,7 +911,7 @@ const formRules = {
   standardType: [{ required: true, message: '请选择标准类型', trigger: 'change' }],
   specRange: [{ required: true, message: '请输入规格范围', trigger: 'blur' }],
   productVariety: [{ required: true, message: '请选择品种', trigger: 'change' }],
-  productGrade: [{ required: true, message: '请输入牌号', trigger: 'blur' }],
+  productGrade: [{ required: true, message: '请选择牌号', trigger: 'change' }],
   version: [{ required: true, message: '请输入版本号', trigger: 'blur' }],
   effectiveDate: [{ required: true, message: '请选择生效日期', trigger: 'change' }],
   customerId: [{
@@ -1072,7 +1092,7 @@ async function loadCustomerOptions() {
   }
 }
 
-const FORM_DICT_CODES = ['STANDARD_TYPE', 'PRODUCT_VARIETY', 'STANDARD_STATUS'] as const
+const FORM_DICT_CODES = ['STANDARD_TYPE', 'PRODUCT_VARIETY', 'PRODUCT_GRADE', 'STANDARD_STATUS'] as const
 
 /** 标准维护表单依赖的字典：登录前 loadAll 可能失败，此处按需补拉 */
 async function ensureFormDictOptions() {
