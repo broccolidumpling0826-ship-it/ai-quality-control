@@ -396,7 +396,7 @@ async function handleDownloadPdf(row: CertDisplayRow) {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `quality-cert-${row.id}.pdf`
+    link.download = `质保书-${row.coilNo || row.id}.pdf`
     link.click()
     URL.revokeObjectURL(url)
   } catch (error) {
