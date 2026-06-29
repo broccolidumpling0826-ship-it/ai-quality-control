@@ -36,6 +36,13 @@ public class JudgmentController {
         return ApiResult.success(judgmentService.getExplanation(id));
     }
 
+    @GetMapping("/{id}/snapshot")
+    @ApiOperation(value = "查询判定结论快照（不含AI解释，供改判/让步等流程页使用）")
+    public ApiResult<QcJudgmentResultVO> getExplanationSnapshot(
+            @ApiParam(value = "判定结论ID", required = true) @PathVariable String id) {
+        return ApiResult.success(judgmentService.getExplanationSnapshot(id));
+    }
+
     @PostMapping("/page")
     @ApiOperation(value = "分页查询判定结论")
     public ApiResult<IPage<QcJudgmentListVO>> page(@RequestBody QcJudgmentPageQuery query) {

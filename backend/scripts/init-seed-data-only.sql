@@ -134,11 +134,28 @@ INSERT IGNORE INTO sys_dict_item (id, dict_code, item_value, item_label, color_t
 ('di132', 'PRODUCT_VARIETY', '热轧板', '热轧板', '', 2, 1, 0, NOW(), NOW()),
 ('di133', 'PRODUCT_VARIETY', '镀锌板', '镀锌板', '', 3, 1, 0, NOW(), NOW());
 
--- 牌号（示例数据）
+-- 牌号（常用牌号，可在数据字典 PRODUCT_GRADE 中维护）
 INSERT IGNORE INTO sys_dict_item (id, dict_code, item_value, item_label, color_tag, sort_no, status, is_system, create_date_time, update_date_time) VALUES
-('di141', 'PRODUCT_GRADE', 'Q235B', 'Q235B', '', 1, 1, 0, NOW(), NOW()),
-('di142', 'PRODUCT_GRADE', 'SPHC',  'SPHC',  '', 2, 1, 0, NOW(), NOW()),
-('di143', 'PRODUCT_GRADE', 'DC01',  'DC01',  '', 3, 1, 0, NOW(), NOW());
+('di141', 'PRODUCT_GRADE', 'Q235B',      'Q235B',      '', 1,  1, 0, NOW(), NOW()),
+('di142', 'PRODUCT_GRADE', 'SPHC',       'SPHC',       '', 2,  1, 0, NOW(), NOW()),
+('di143', 'PRODUCT_GRADE', 'DC01',       'DC01',       '', 3,  1, 0, NOW(), NOW()),
+('di144', 'PRODUCT_GRADE', 'Q355B',      'Q355B',      '', 4,  1, 0, NOW(), NOW()),
+('di145', 'PRODUCT_GRADE', 'Q345B',      'Q345B',      '', 5,  1, 0, NOW(), NOW()),
+('di146', 'PRODUCT_GRADE', 'Q345R',      'Q345R',      '', 6,  1, 0, NOW(), NOW()),
+('di147', 'PRODUCT_GRADE', 'HC340LA',    'HC340LA',    '', 7,  1, 0, NOW(), NOW()),
+('di148', 'PRODUCT_GRADE', 'DX51D+Z',    'DX51D+Z',    '', 8,  1, 0, NOW(), NOW()),
+('di149', 'PRODUCT_GRADE', 'DX56D+Z',    'DX56D+Z',    '', 9,  1, 0, NOW(), NOW()),
+('di150', 'PRODUCT_GRADE', 'DC04',       'DC04',       '', 10, 1, 0, NOW(), NOW()),
+('di156', 'PRODUCT_GRADE', 'HRB400E',    'HRB400E',    '', 11, 1, 0, NOW(), NOW()),
+('di157', 'PRODUCT_GRADE', '06Cr19Ni10', '06Cr19Ni10', '', 12, 1, 0, NOW(), NOW()),
+('di158', 'PRODUCT_GRADE', 'SPFH590',    'SPFH590',    '', 13, 1, 0, NOW(), NOW()),
+('di159', 'PRODUCT_GRADE', 'NM400',      'NM400',      '', 14, 1, 0, NOW(), NOW()),
+('di160', 'PRODUCT_GRADE', 'S355J2',     'S355J2',     '', 15, 1, 0, NOW(), NOW()),
+('di164', 'PRODUCT_GRADE', 'AH36',       'AH36',       '', 16, 1, 0, NOW(), NOW()),
+('di165', 'PRODUCT_GRADE', 'L245M',      'L245M',      '', 17, 1, 0, NOW(), NOW()),
+('di166', 'PRODUCT_GRADE', 'L360M',      'L360M',      '', 18, 1, 0, NOW(), NOW()),
+('di167', 'PRODUCT_GRADE', '50W800',     '50W800',     '', 19, 1, 0, NOW(), NOW()),
+('di168', 'PRODUCT_GRADE', '60Si2Mn',    '60Si2Mn',    '', 20, 1, 0, NOW(), NOW());
 
 -- 审计操作类型
 INSERT IGNORE INTO sys_dict_item (id, dict_code, item_value, item_label, color_tag, sort_no, status, is_system, create_date_time, update_date_time) VALUES

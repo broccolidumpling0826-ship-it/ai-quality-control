@@ -1,5 +1,5 @@
 <template>
-  <div class="cert-data-page">
+  <div class="cert-data-page page-list-full">
     <div class="page-toolbar">
       <div>
         <div class="page-toolbar-title">质保书数据</div>
@@ -102,7 +102,7 @@
         <el-table-column
           prop="generateTime"
           label="生成时间"
-          width="160"
+          min-width="170"
           :filters="getFilters('generateTime')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
@@ -110,7 +110,7 @@
         <el-table-column
           prop="operatorName"
           label="操作人"
-          width="100"
+          min-width="120"
           :filters="getFilters('operatorName')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
@@ -396,7 +396,7 @@ async function handleDownloadPdf(row: CertDisplayRow) {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `quality-cert-${row.id}.pdf`
+    link.download = `质保书-${row.coilNo || row.id}.pdf`
     link.click()
     URL.revokeObjectURL(url)
   } catch (error) {
@@ -442,7 +442,8 @@ onMounted(() => {
 
 <style scoped>
 .cert-data-page {
-  padding: 16px;
+  width: 100%;
+  max-width: none;
 }
 
 .page-toolbar {

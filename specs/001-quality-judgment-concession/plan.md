@@ -22,7 +22,7 @@ QUALIFIED > CAN_CONCESSION > NEED_REINSPECTION > UNQUALIFIED），支持复检/�
 - 前端：TypeScript 4.x + Vue 3 + Element Plus
 
 **Primary Dependencies**:
-- 后端：MyBatis-Plus 3.x、Knife4j、Lombok、Sa-Token、Spring Boot Actuator（`/actuator/health`）、Spring Scheduler
+- 后端：MyBatis-Plus 3.x、Knife4j、Lombok、Sa-Token、Spring Boot Actuator（`/actuator/health`）、Spring Scheduler、Apache PDFBox 2.x（质保书 PDF）
 - 前端：Vue Router 4、Pinia、Axios、Element Plus、dayjs、ECharts
 - 日志：SLF4J + Logback（FR-019：结构化 JSON + MDC traceId + File Appender）
 
@@ -85,6 +85,15 @@ QUALIFIED > CAN_CONCESSION > NEED_REINSPECTION > UNQUALIFIED），支持复检/�
 - **默认纳入**：COMPOSITION（成分）、PERFORMANCE（性能）、DIMENSION（尺寸）
 - **默认排除**：SURFACE（表面）、SHAPE（外形）
 - ADMIN 可通过系统配置动态调整
+
+### D-020：质保书 PDF 导出规范（FR-010a 权威定义）
+
+- **技术栈**：Apache PDFBox 2.x；生成器 `QualityCertPdfBuilder`；中文字体资源 `backend/src/main/resources/fonts/`（优先 `msyh.ttc`，回退系统 Noto CJK）
+- **版式**：A4 纵向；蓝色边框；标题「质量证明书」；基本信息双列表格；检测指标表（斑马纹 + 表头底色）；页脚自动生成说明
+- **中文映射**：判定类型与指标结论使用字典语义中文（合格/不合格/需复检/可让步/让步/缺失）
+- **门禁**：与正式质保书数据生成一致；快照不完整、指标 FAIL/WARNING、判定不可放行时禁止导出
+- **审计**：`@AuditLog(operationType = "EXPORT_CERT_PDF")`
+- **接口**：`GET /api/v1/cert-data/{id}/pdf`；前端下载名 `质保书-{卷号}.pdf`
 
 ### D-018：可用性目标（SC-008）
 
@@ -188,6 +197,7 @@ frontend/src/
 | 让步双签 | SALES_APPROVED 中间态 | ServiceAssert 按角色拦截越权 |
 | product_spec 匹配 | 下拉选择，无需区间解析 | 数据源动态过滤自标准库（D-016） |
 | 质保书指标范围 | 按 indicator_category 过滤 | ADMIN 可配置，默认 3 类纳入（D-017） |
+| 质保书 PDF 导出 | 中文字体依赖、版式一致性 | PDFBox + 内置字体资源 + 放行门禁（D-020） |
 | 可观测性 | 结构化 JSON + MDC | logback-spring.xml 配置（D-019） |
 | MySQL 5.7 约束 | 无 CTE/窗口函数 | 子查询替代，严格 GROUP BY |
 

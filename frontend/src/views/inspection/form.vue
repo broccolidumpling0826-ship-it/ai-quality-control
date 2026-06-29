@@ -56,7 +56,7 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="牌号" prop="productGrade">
-              <el-select v-model="baseForm.productGrade" placeholder="请选择" style="width:100%">
+              <el-select v-model="baseForm.productGrade" placeholder="请选择" filterable style="width:100%">
                 <el-option
                   v-for="item in dictStore.getItems('PRODUCT_GRADE')"
                   :key="item.value"
@@ -171,13 +171,20 @@
             {{ row.concessionUpper ?? '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="实测值" width="130">
+        <el-table-column width="130">
+          <template #header>
+            <span class="required-column-label">实测值</span>
+          </template>
           <template #default="{ row }">
             <el-input
               v-model="row.measuredValue"
               size="small"
-              placeholder="输入实测值"
-              :class="{ 'input-warning': row.noStandard }"
+              placeholder="请输入实测值"
+              :class="{
+                'input-warning': row.noStandard && !row.measuredValueError,
+                'input-error': row.measuredValueError
+              }"
+              @input="row.measuredValueError = false"
             />
           </template>
         </el-table-column>
@@ -344,6 +351,7 @@ interface IndicatorRow {
   concessionLower: number | null
   concessionUpper: number | null
   measuredValue: string
+  measuredValueError?: boolean
   unit: string
   noStandard: boolean
 }
@@ -542,6 +550,23 @@ function removeRow(index: number) {
   indicatorRows.value.splice(index, 1)
 }
 
+function isMeasuredValueEmpty(value: unknown): boolean {
+  return value === '' || value == null || String(value).trim() === ''
+}
+
+function validateMeasuredValues(): boolean {
+  let valid = true
+  for (const row of indicatorRows.value) {
+    const empty = isMeasuredValueEmpty(row.measuredValue)
+    row.measuredValueError = empty
+    if (empty) valid = false
+  }
+  if (!valid) {
+    ElMessage.warning('请填写所有指标的实测值')
+  }
+  return valid
+}
+
 function judgmentTypeColor(type: string): any {
   const map: Record<string, string> = {
     QUALIFIED: 'success',
@@ -580,6 +605,9 @@ async function handleSubmit() {
   await baseFormRef.value?.validate()
   if (indicatorRows.value.length === 0) {
     ElMessage.warning('请至少添加一条指标记录')
+    return
+  }
+  if (!validateMeasuredValues()) {
     return
   }
   submitLoading.value = true
@@ -621,9 +649,17 @@ async function handleSubmit() {
   gap: 8px;
   padding: 12px 0;
 }
-:deep(.input-warning .el-input__inner) {
+.required-column-label::before {
+  content: '*';
+  color: var(--el-color-danger);
+  margin-right: 4px;
+}
+:deep(.input-warning .el-input__wrapper) {
   background-color: #fdf6ec;
-  border-color: #e6a23c;
+  box-shadow: 0 0 0 1px #e6a23c inset;
+}
+:deep(.input-error .el-input__wrapper) {
+  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
 }
 :deep(.el-table tr.no-standard-row) {
   background-color: #fdf6ec !important;

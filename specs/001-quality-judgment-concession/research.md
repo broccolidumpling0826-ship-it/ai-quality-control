@@ -364,6 +364,16 @@ CREATE TABLE `table_name` (
 
 ---
 
+### D-020：质保书 PDF 导出（Session 2026-06-29 实现收敛）
+
+**Decision**: 本系统内置正式质保书 PDF 导出；Apache PDFBox 2.x + `QualityCertPdfBuilder`；中文字体资源置于 `backend/src/main/resources/fonts/`
+
+**Rationale**: 原假设「PDF 由下游系统生成」已不满足演示与出证需求。PDFBox 已在 `pom.xml` 引入；集中 Builder 可避免手写 ASCII PDF 导致中文乱码；导出门禁与数据生成门禁保持一致，降低误出证风险。
+
+**版式要点**: A4 中文表格化；标题「质量证明书」；基本信息双列表 + 检测指标表；`EXPORT_CERT_PDF` 审计。
+
+---
+
 ### D-018：系统可用性目标（Session 2026-05-16 澄清）
 
 **Decision**: 软可用目标：单点部署，RTO ≤ 30 分钟，RPO = 0

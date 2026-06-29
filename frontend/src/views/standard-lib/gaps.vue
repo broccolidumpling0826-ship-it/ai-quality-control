@@ -22,14 +22,22 @@
         @clear="handleSearch"
         @keyup.enter="handleSearch"
       />
-      <el-input
+      <el-select
         v-model="query.grade"
-        placeholder="牌号模糊查询"
+        placeholder="牌号"
         clearable
-        class="search-input"
+        filterable
+        class="search-select"
+        @change="handleSearch"
         @clear="handleSearch"
-        @keyup.enter="handleSearch"
-      />
+      >
+        <el-option
+          v-for="item in dictStore.getItems('PRODUCT_GRADE')"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
       <el-select
         v-model="query.isResolved"
         placeholder="处理状态"
@@ -159,8 +167,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useDictStore } from '@/store/dict'
 import { useTableFilter } from '@/composables/use-table-filter'
 import { standardGapApi, type StandardGapVO } from '@/api/standard-gap'
+
+const dictStore = useDictStore()
 
 const loading = ref(false)
 const tableData = ref<StandardGapVO[]>([])
@@ -217,7 +228,15 @@ async function handleResolve(row: StandardGapVO) {
   loadData()
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  if (!dictStore.loaded) {
+    await dictStore.loadAll().catch(() => {})
+  }
+  if (dictStore.getItems('PRODUCT_GRADE').length === 0) {
+    await dictStore.refreshItems('PRODUCT_GRADE').catch(() => {})
+  }
+  loadData()
+})
 </script>
 
 <style scoped>

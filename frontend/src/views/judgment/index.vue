@@ -1,5 +1,5 @@
 <template>
-  <div class="judgment-page">
+  <div class="judgment-page page-list-full">
     <!-- 搜索 -->
     <el-card class="search-card" shadow="never">
       <el-form :model="searchForm" inline>
@@ -106,7 +106,7 @@
         <el-table-column
           prop="customerId"
           label="客户"
-          width="140"
+          min-width="160"
           show-overflow-tooltip
           :filters="getFilters('customerId')"
           :filter-method="filterMethod"
@@ -133,7 +133,7 @@
         <el-table-column
           prop="judgmentTime"
           label="判定时间"
-          width="160"
+          min-width="170"
           :filters="getFilters('judgmentTime')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
@@ -141,7 +141,7 @@
         <el-table-column
           prop="inspector"
           label="检验人"
-          width="100"
+          min-width="110"
           :filters="getFilters('inspector')"
           :filter-method="filterMethod"
           filter-placement="bottom-start"
@@ -246,7 +246,8 @@ onMounted(async () => {
 
 <style scoped>
 .judgment-page {
-  padding: 16px;
+  width: 100%;
+  max-width: none;
 }
 .search-card :deep(.el-card__body) {
   padding: 16px 16px 0;

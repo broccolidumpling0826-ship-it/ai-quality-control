@@ -42,7 +42,7 @@
       type="info"
       :closable="false"
       show-icon
-      style="margin-bottom:16px"
+      class="stat-summary-alert"
       :title="String(overviewData.evaluationSummary)"
     />
 
@@ -51,7 +51,7 @@
       type="success"
       :closable="false"
       show-icon
-      style="margin-bottom:16px"
+      class="stat-summary-alert"
       :title="String(overviewData.analyticsTrendSummary)"
     />
 
@@ -266,6 +266,9 @@ onUnmounted(() => {
 <style scoped>
 .statistics-page {
   padding: 16px;
+}
+.stat-summary-alert {
+  margin-bottom: 16px;
 }
 .stat-card {
   text-align: center;

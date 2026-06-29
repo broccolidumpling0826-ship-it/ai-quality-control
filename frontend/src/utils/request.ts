@@ -62,6 +62,9 @@ service.interceptors.response.use(
     return Promise.reject(new Error(msg))
   },
   (error) => {
+    if ((error.config as { skipGlobalErrorHandler?: boolean } | undefined)?.skipGlobalErrorHandler) {
+      return Promise.reject(error)
+    }
     const status = error.response?.status
     let msg = '网络请求失败，请稍后重试'
 
