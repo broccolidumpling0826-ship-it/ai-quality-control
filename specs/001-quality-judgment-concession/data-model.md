@@ -322,6 +322,10 @@ public enum ConcessionStatus { PENDING_APPROVAL, SALES_APPROVED, APPROVED, INVAL
 
 **索引**: `idx_coil(coil_no)`, `idx_batch(batch_no)`
 
+**关联能力**:
+- 正式 PDF 导出为无状态能力，不额外落库；导出时读取快照 JSON 与检验记录补全字段，经放行门禁后由 `QualityCertPdfBuilder` 生成 PDF。
+- PDF 下载审计写入 `qc_audit_log`，`operation_type = EXPORT_CERT_PDF`。
+
 ---
 
 ### 3.13 QcAuditLog — 审计日志
