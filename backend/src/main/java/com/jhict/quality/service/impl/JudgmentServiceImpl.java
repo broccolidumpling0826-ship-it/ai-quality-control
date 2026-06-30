@@ -36,6 +36,8 @@ import com.jhict.quality.vo.AiSourceReferenceVO;
 import com.jhict.quality.vo.StandardCandidateSetVO;
 import com.jhict.quality.vo.StandardCandidateVO;
 import com.jhict.quality.vo.StandardConflictVO;
+import com.jhict.quality.service.support.ai.AiFallbackCacheContext;
+import com.jhict.quality.service.support.ai.AiFallbackCacheService;
 import com.jhict.quality.service.support.prompt.JudgmentExplanationPromptBuilder;
 import com.jhict.quality.service.support.rag.CitationReferenceLoader;
 import com.jhict.quality.service.support.rag.CitationReferenceSupport;
@@ -67,6 +69,7 @@ public class JudgmentServiceImpl implements JudgmentService {
     private enum AiExplanationSource {
         SKIPPED,
         GENERATED,
+        CACHE,
         STRUCTURED
     }
 
@@ -113,6 +116,9 @@ public class JudgmentServiceImpl implements JudgmentService {
 
     @Resource
     private JudgmentExplanationPromptBuilder judgmentExplanationPromptBuilder;
+
+    @Resource
+    private AiFallbackCacheService aiFallbackCacheService;
 
     @Resource
     private AiAssessmentService aiAssessmentService;
@@ -428,7 +434,12 @@ public class JudgmentServiceImpl implements JudgmentService {
                     ? "STRUCTURED_ONLY" : "SKIPPED");
         }
         applyConfidenceAndDegradation(vo, result, conflicts, aiSource, conflictRejudge);
-        if (aiSource == AiExplanationSource.GENERATED || aiSource == AiExplanationSource.STRUCTURED) {
+        if (aiSource == AiExplanationSource.GENERATED) {
+            aiFallbackCacheService.saveValidatedGenerated(buildJudgmentCacheContext(vo, result, vo.getAiExplanation()));
+        }
+        if (aiSource == AiExplanationSource.GENERATED
+                || aiSource == AiExplanationSource.CACHE
+                || aiSource == AiExplanationSource.STRUCTURED) {
             persistJudgmentExplanationAssessment(vo, result);
         }
     }
@@ -596,6 +607,12 @@ public class JudgmentServiceImpl implements JudgmentService {
             if (JudgmentType.STANDARD_CONFLICT.getCode().equals(result.getJudgmentType()) || hasBlockingConflict) {
                 factors.add("存在未裁决标准冲突");
             }
+        } else if (aiSource == AiExplanationSource.CACHE && StringUtils.hasText(vo.getAiExplanation())) {
+            if (!StringUtils.hasText(vo.getConfidenceLabel())) {
+                vo.setConfidenceLabel("MEDIUM");
+                vo.setConfidenceScore(0.7D);
+            }
+            factors.add("模型解释不可用，命中同输入快照缓存");
         } else if (!Boolean.TRUE.equals(vo.getCitationMissing()) && StringUtils.hasText(vo.getAiExplanation())) {
             vo.setConfidenceLabel("HIGH");
             vo.setConfidenceScore(0.85D);
@@ -622,6 +639,9 @@ public class JudgmentServiceImpl implements JudgmentService {
             } else if (aiSource == AiExplanationSource.STRUCTURED) {
                 vo.setDegradationSource("RULE_TEMPLATE");
                 vo.setDegradationReason("模型解释未通过校验，已展示含指标依据与来源编号的结构化解释");
+            } else if (aiSource == AiExplanationSource.CACHE) {
+                vo.setDegradationSource("CACHE");
+                vo.setDegradationReason("模型解释不可用，已展示同输入快照缓存解释");
             } else {
                 vo.setDegradationSource("GENERATED");
                 vo.setDegradationReason("AI解释已基于来源条款生成并通过引用校验");
@@ -678,6 +698,17 @@ public class JudgmentServiceImpl implements JudgmentService {
             log.warn("AI判定解释模型无响应，judgmentId={}，trace=MODEL_REJECTED", judgmentId);
             vo.setAiExplanationTrace("MODEL_REJECTED");
         }
+        QcAiCache fallbackCache = aiFallbackCacheService.findFallbackCache(
+                buildJudgmentCacheContext(vo, result, null));
+        if (fallbackCache != null && StringUtils.hasText(fallbackCache.getCachedOutput())) {
+            vo.setAiExplanation(fallbackCache.getCachedOutput());
+            vo.setAiExplanationTrace("CACHE_HIT");
+            vo.setConfidenceLabel(fallbackCache.getConfidenceLabel());
+            vo.setConfidenceScore(fallbackCache.getConfidenceScore() == null
+                    ? null : fallbackCache.getConfidenceScore().doubleValue());
+            log.info("AI判定解释命中降级缓存，judgmentId={}", judgmentId);
+            return AiExplanationSource.CACHE;
+        }
         AiExplanationSource structured = tryStructuredExplanation(vo, citations);
         if (structured == AiExplanationSource.STRUCTURED && !StringUtils.hasText(vo.getAiExplanationTrace())) {
             vo.setAiExplanationTrace("MODEL_REJECTED");
@@ -709,6 +740,38 @@ public class JudgmentServiceImpl implements JudgmentService {
         return value == null ? "" : value;
     }
 
+    private AiFallbackCacheContext buildJudgmentCacheContext(QcJudgmentResultVO vo,
+                                                            QcJudgmentResult result,
+                                                            String outputText) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("judgmentType", result.getJudgmentType());
+        snapshot.put("matchedStandardIds", result.getMatchedStandardIds());
+        snapshot.put("evidences", vo.getEvidences());
+        snapshot.put("citations", vo.getCitations());
+        snapshot.put("citationMissing", vo.getCitationMissing());
+        return AiFallbackCacheContext.builder()
+                .assessmentType("JUDGMENT_EXPLANATION")
+                .businessType("QC_JUDGMENT_RESULT")
+                .businessId(result.getId())
+                .promptVersion(judgmentExplanationPromptBuilder.activePromptVersion())
+                .modelName(modelGateway.provider())
+                .inputSnapshot(snapshot)
+                .outputText(outputText)
+                .structuredOutput(toJsonQuietly(vo.getCitations()))
+                .references(vo.getCitations())
+                .confidenceLabel(vo.getConfidenceLabel())
+                .confidenceScore(vo.getConfidenceScore() == null ? null : BigDecimal.valueOf(vo.getConfidenceScore()))
+                .build();
+    }
+
+    private String toJsonQuietly(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private void persistJudgmentExplanationAssessment(QcJudgmentResultVO vo, QcJudgmentResult result) {
         try {
             AiAssessmentCreateCmd cmd = new AiAssessmentCreateCmd();
@@ -726,7 +789,7 @@ public class JudgmentServiceImpl implements JudgmentService {
             cmd.setConfidenceScore(vo.getConfidenceScore() == null ? null : BigDecimal.valueOf(vo.getConfidenceScore()));
             cmd.setConfidenceFactors(objectMapper.writeValueAsString(vo.getConfidenceFactors()));
             cmd.setDegradationSource(vo.getDegradationSource());
-            cmd.setCacheHit(0);
+            cmd.setCacheHit("CACHE".equals(vo.getDegradationSource()) ? 1 : 0);
             aiAssessmentService.create(cmd);
         } catch (Exception e) {
             log.warn("保存AI判定解释审计失败，judgmentId={}, error={}", result.getId(), e.getMessage());
