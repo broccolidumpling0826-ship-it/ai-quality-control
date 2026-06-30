@@ -13,8 +13,8 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.springframework.util.StringUtils;
 
-import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -38,21 +38,23 @@ public final class QualityCertPdfBuilder {
     private static final float CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm");
 
-    private static final Color COLOR_BORDER = new Color(38, 89, 142);
-    private static final Color COLOR_TITLE = new Color(26, 64, 115);
-    private static final Color COLOR_HEADER_BG = new Color(230, 238, 248);
-    private static final Color COLOR_ROW_ALT = new Color(248, 250, 252);
-    private static final Color COLOR_TEXT = new Color(38, 38, 38);
-    private static final Color COLOR_MUTED = new Color(102, 102, 102);
-    private static final Color COLOR_PASS = new Color(34, 139, 58);
-    private static final Color COLOR_FAIL = new Color(196, 52, 52);
+    private static final RgbColor COLOR_BORDER = RgbColor.of(38, 89, 142);
+    private static final RgbColor COLOR_TITLE = RgbColor.of(26, 64, 115);
+    private static final RgbColor COLOR_HEADER_BG = RgbColor.of(230, 238, 248);
+    private static final RgbColor COLOR_ROW_ALT = RgbColor.of(248, 250, 252);
+    private static final RgbColor COLOR_TEXT = RgbColor.of(38, 38, 38);
+    private static final RgbColor COLOR_MUTED = RgbColor.of(102, 102, 102);
+    private static final RgbColor COLOR_PASS = RgbColor.of(34, 139, 58);
+    private static final RgbColor COLOR_FAIL = RgbColor.of(196, 52, 52);
+    private static final RgbColor COLOR_WHITE = RgbColor.of(255, 255, 255);
 
     private QualityCertPdfBuilder() {
     }
 
     public static byte[] build(QcQualityCertDataVO vo) {
-        try (PDDocument document = new PDDocument()) {
-            PDFont font = loadChineseFont(document);
+        try (PDDocument document = createDocument();
+             LoadedPdfFont loadedFont = loadChineseFont(document)) {
+            PDFont font = loadedFont.getFont();
             List<QcQualityCertDataVO.IndicatorSnapshot> indicators = vo.getIndicators() == null
                     ? Collections.emptyList()
                     : vo.getIndicators();
@@ -78,6 +80,13 @@ public final class QualityCertPdfBuilder {
         } catch (IOException e) {
             throw new ServiceException("生成质保书PDF失败：" + e.getMessage());
         }
+    }
+
+    private static PDDocument createDocument() {
+        if (!StringUtils.hasText(System.getProperty("java.awt.headless"))) {
+            System.setProperty("java.awt.headless", "true");
+        }
+        return new PDDocument();
     }
 
     private static float drawOuterFrame(PDPageContentStream cs) throws IOException {
@@ -182,7 +191,7 @@ public final class QualityCertPdfBuilder {
         float currentTop = headerBottom;
         if (indicators.isEmpty()) {
             float emptyHeight = rowHeight;
-            fillRect(cs, tableX, currentTop - emptyHeight, tableWidth, emptyHeight, Color.WHITE);
+            fillRect(cs, tableX, currentTop - emptyHeight, tableWidth, emptyHeight, COLOR_WHITE);
             drawTableGrid(cs, tableX, currentTop, tableWidth, emptyHeight, colWidths, false);
             drawText(cs, font, 10f, tableX + 8f, currentTop - 15f, "暂无指标数据", COLOR_MUTED);
             return currentTop - emptyHeight;
@@ -190,7 +199,7 @@ public final class QualityCertPdfBuilder {
 
         int index = 1;
         for (QcQualityCertDataVO.IndicatorSnapshot item : indicators) {
-            Color rowBg = index % 2 == 0 ? COLOR_ROW_ALT : Color.WHITE;
+            RgbColor rowBg = index % 2 == 0 ? COLOR_ROW_ALT : COLOR_WHITE;
             fillRect(cs, tableX, currentTop - rowHeight, tableWidth, rowHeight, rowBg);
             drawTableGrid(cs, tableX, currentTop, tableWidth, rowHeight, colWidths, false);
 
@@ -208,7 +217,7 @@ public final class QualityCertPdfBuilder {
             float cellX = tableX + 6f;
             float cellY = currentTop - 15f;
             for (int i = 0; i < cells.length; i++) {
-                Color textColor = i == cells.length - 1
+                RgbColor textColor = i == cells.length - 1
                         ? resultColor(item.getIndicatorResult())
                         : COLOR_TEXT;
                 drawText(cs, font, 9f, cellX, cellY, cells[i], textColor);
@@ -255,35 +264,35 @@ public final class QualityCertPdfBuilder {
     }
 
     private static void drawCenteredText(PDPageContentStream cs, PDFont font, float fontSize,
-                                         float y, String text, Color color) throws IOException {
+                                         float y, String text, RgbColor color) throws IOException {
         float textWidth = font.getStringWidth(text) / 1000f * fontSize;
         float x = (PAGE_WIDTH - textWidth) / 2f;
         drawText(cs, font, fontSize, x, y, text, color);
     }
 
     private static void drawText(PDPageContentStream cs, PDFont font, float fontSize,
-                                 float x, float y, String text, Color color) throws IOException {
+                                 float x, float y, String text, RgbColor color) throws IOException {
         cs.beginText();
         cs.setFont(font, fontSize);
-        cs.setNonStrokingColor(color);
+        cs.setNonStrokingColor(color.red, color.green, color.blue);
         cs.newLineAtOffset(x, y);
         cs.showText(safeText(text));
         cs.endText();
     }
 
     private static void fillRect(PDPageContentStream cs, float x, float y, float width, float height,
-                                 Color color) throws IOException {
-        cs.setNonStrokingColor(color);
+                                 RgbColor color) throws IOException {
+        cs.setNonStrokingColor(color.red, color.green, color.blue);
         cs.addRect(x, y, width, height);
         cs.fill();
     }
 
-    private static void setStroke(PDPageContentStream cs, Color color, float width) throws IOException {
-        cs.setStrokingColor(color);
+    private static void setStroke(PDPageContentStream cs, RgbColor color, float width) throws IOException {
+        cs.setStrokingColor(color.red, color.green, color.blue);
         cs.setLineWidth(width);
     }
 
-    private static PDFont loadChineseFont(PDDocument document) throws IOException {
+    private static LoadedPdfFont loadChineseFont(PDDocument document) throws IOException {
         List<String> classpathFonts = new ArrayList<>();
         classpathFonts.add("/fonts/msyh.ttc");
         classpathFonts.add("/fonts/NotoSansSC-Regular.otf");
@@ -294,16 +303,16 @@ public final class QualityCertPdfBuilder {
             if (stream == null) {
                 continue;
             }
-            try (InputStream fontStream = stream) {
-                if (classpathFont.endsWith(".ttc")) {
-                    PDType0Font font = loadFromTrueTypeCollection(document, fontStream,
-                            "MicrosoftYaHei", "Microsoft YaHei", "SimSun");
-                    if (font != null) {
-                        return font;
-                    }
-                    continue;
+            if (classpathFont.endsWith(".ttc")) {
+                LoadedPdfFont font = loadFromTrueTypeCollection(document, stream,
+                        "MicrosoftYaHei", "Microsoft YaHei", "SimSun");
+                if (font != null) {
+                    return font;
                 }
-                return PDType0Font.load(document, fontStream, true);
+                continue;
+            }
+            try (InputStream fontStream = stream) {
+                return LoadedPdfFont.of(PDType0Font.load(document, fontStream, true));
             }
         }
 
@@ -318,28 +327,28 @@ public final class QualityCertPdfBuilder {
                 continue;
             }
             if (path.toString().endsWith(".ttc")) {
-                try (InputStream fontStream = Files.newInputStream(path)) {
-                    PDType0Font font = loadFromTrueTypeCollection(document, fontStream,
-                            "MicrosoftYaHei", "Microsoft YaHei", "SimSun", "Noto Sans CJK SC");
-                    if (font != null) {
-                        return font;
-                    }
+                LoadedPdfFont font = loadFromTrueTypeCollection(document, Files.newInputStream(path),
+                        "MicrosoftYaHei", "Microsoft YaHei", "SimSun", "Noto Sans CJK SC");
+                if (font != null) {
+                    return font;
                 }
                 continue;
             }
-            return PDType0Font.load(document, path.toFile());
+            return LoadedPdfFont.of(PDType0Font.load(document, path.toFile()));
         }
 
         throw new ServiceException("未找到可用的中文字体，请将字体文件放到 backend/src/main/resources/fonts/ 目录");
     }
 
-    private static PDType0Font loadFromTrueTypeCollection(PDDocument document, InputStream fontStream,
-                                                          String... preferredNames) throws IOException {
-        try (TrueTypeCollection collection = new TrueTypeCollection(fontStream)) {
+    private static LoadedPdfFont loadFromTrueTypeCollection(PDDocument document, InputStream fontStream,
+                                                            String... preferredNames) throws IOException {
+        TrueTypeCollection collection = null;
+        try {
+            collection = new TrueTypeCollection(fontStream);
             for (String preferredName : preferredNames) {
                 TrueTypeFont ttf = collection.getFontByName(preferredName);
                 if (ttf != null) {
-                    return PDType0Font.load(document, ttf, true);
+                    return LoadedPdfFont.of(PDType0Font.load(document, ttf, true), collection, fontStream);
                 }
             }
             final TrueTypeFont[] firstFont = new TrueTypeFont[1];
@@ -349,10 +358,72 @@ public final class QualityCertPdfBuilder {
                 }
             });
             if (firstFont[0] != null) {
-                return PDType0Font.load(document, firstFont[0], true);
+                return LoadedPdfFont.of(PDType0Font.load(document, firstFont[0], true), collection, fontStream);
+            }
+            closeQuietly(collection);
+            closeQuietly(fontStream);
+            return null;
+        } catch (IOException | RuntimeException e) {
+            closeQuietly(collection);
+            closeQuietly(fontStream);
+            throw e;
+        }
+    }
+
+    private static void closeQuietly(Closeable closeable) {
+        if (closeable == null) {
+            return;
+        }
+        try {
+            closeable.close();
+        } catch (IOException ignored) {
+            // PDF generation is already complete or another exception is being propagated.
+        }
+    }
+
+    private static final class LoadedPdfFont implements Closeable {
+        private final PDFont font;
+        private final List<Closeable> closeables;
+
+        private LoadedPdfFont(PDFont font, List<Closeable> closeables) {
+            this.font = font;
+            this.closeables = closeables;
+        }
+
+        private static LoadedPdfFont of(PDFont font, Closeable... closeables) {
+            List<Closeable> resources = new ArrayList<>();
+            if (closeables != null) {
+                Collections.addAll(resources, closeables);
+            }
+            return new LoadedPdfFont(font, resources);
+        }
+
+        private PDFont getFont() {
+            return font;
+        }
+
+        @Override
+        public void close() {
+            for (Closeable closeable : closeables) {
+                closeQuietly(closeable);
             }
         }
-        return null;
+    }
+
+    private static final class RgbColor {
+        private final int red;
+        private final int green;
+        private final int blue;
+
+        private RgbColor(int red, int green, int blue) {
+            this.red = red;
+            this.green = green;
+            this.blue = blue;
+        }
+
+        private static RgbColor of(int red, int green, int blue) {
+            return new RgbColor(red, green, blue);
+        }
     }
 
     private static String preferName(QcQualityCertDataVO.IndicatorSnapshot item) {
@@ -401,7 +472,7 @@ public final class QualityCertPdfBuilder {
         return code;
     }
 
-    private static Color resultColor(String code) {
+    private static RgbColor resultColor(String code) {
         if (JudgmentExplainConstants.INDICATOR_RESULT_PASS.equals(code)) {
             return COLOR_PASS;
         }
