@@ -86,7 +86,6 @@ public class AiCacheServiceImpl implements AiCacheService {
     }
 
     private String buildCacheKey(AiFallbackCacheContext context, String inputHash) {
-        return context.getAssessmentType() + ":" + context.getBusinessType() + ":"
-                + context.getBusinessId() + ":" + context.getPromptVersion() + ":" + inputHash;
+        return context.getAssessmentType() + ":" + context.getBusinessType() + ":" + inputHash;
     }
 }

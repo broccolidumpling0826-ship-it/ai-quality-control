@@ -674,6 +674,10 @@ public class JudgmentServiceImpl implements JudgmentService {
         if (!modelGateway.enabled()) {
             vo.setAiExplanationTrace("MODEL_DISABLED");
             log.info("判定解释未调模型，judgmentId={}，trace=MODEL_DISABLED", judgmentId);
+            AiExplanationSource cached = tryFallbackCache(vo, result, judgmentId);
+            if (cached == AiExplanationSource.CACHE) {
+                return cached;
+            }
             return tryStructuredExplanation(vo, citations);
         }
         log.info("判定解释开始调用模型，judgmentId={}，businessType=JUDGMENT_EXPLANATION", judgmentId);
@@ -698,8 +702,21 @@ public class JudgmentServiceImpl implements JudgmentService {
             log.warn("AI判定解释模型无响应，judgmentId={}，trace=MODEL_REJECTED", judgmentId);
             vo.setAiExplanationTrace("MODEL_REJECTED");
         }
-        QcAiCache fallbackCache = aiFallbackCacheService.findFallbackCache(
-                buildJudgmentCacheContext(vo, result, null));
+        AiExplanationSource cached = tryFallbackCache(vo, result, judgmentId);
+        if (cached == AiExplanationSource.CACHE) {
+            return cached;
+        }
+        AiExplanationSource structured = tryStructuredExplanation(vo, citations);
+        if (structured == AiExplanationSource.STRUCTURED && !StringUtils.hasText(vo.getAiExplanationTrace())) {
+            vo.setAiExplanationTrace("MODEL_REJECTED");
+        }
+        return structured;
+    }
+
+    private AiExplanationSource tryFallbackCache(QcJudgmentResultVO vo,
+                                                 QcJudgmentResult result,
+                                                 String judgmentId) {
+        QcAiCache fallbackCache = aiFallbackCacheService.findFallbackCache(buildJudgmentCacheContext(vo, result, null));
         if (fallbackCache != null && StringUtils.hasText(fallbackCache.getCachedOutput())) {
             vo.setAiExplanation(fallbackCache.getCachedOutput());
             vo.setAiExplanationTrace("CACHE_HIT");
@@ -709,11 +726,7 @@ public class JudgmentServiceImpl implements JudgmentService {
             log.info("AI判定解释命中降级缓存，judgmentId={}", judgmentId);
             return AiExplanationSource.CACHE;
         }
-        AiExplanationSource structured = tryStructuredExplanation(vo, citations);
-        if (structured == AiExplanationSource.STRUCTURED && !StringUtils.hasText(vo.getAiExplanationTrace())) {
-            vo.setAiExplanationTrace("MODEL_REJECTED");
-        }
-        return structured;
+        return AiExplanationSource.SKIPPED;
     }
 
     private AiExplanationSource tryStructuredExplanation(QcJudgmentResultVO vo,
