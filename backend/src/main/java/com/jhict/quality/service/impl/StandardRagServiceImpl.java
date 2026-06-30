@@ -6,6 +6,7 @@ import com.jhict.quality.common.exception.ServiceException;
 import com.jhict.quality.dto.AiDegradationRequest;
 import com.jhict.quality.dto.StandardClausePageQuery;
 import com.jhict.quality.dto.StandardRagQueryCmd;
+import com.jhict.quality.entity.QcAiCache;
 import com.jhict.quality.entity.QcQualityStandard;
 import com.jhict.quality.entity.QcStandardClause;
 import com.jhict.quality.enums.AiDegradationSource;
@@ -25,6 +26,8 @@ import com.jhict.quality.mapper.QcStandardClauseMapper;
 import com.jhict.quality.service.api.AiDegradationService;
 import com.jhict.quality.service.api.StandardDocumentService;
 import com.jhict.quality.service.api.StandardRagService;
+import com.jhict.quality.service.support.ai.AiFallbackCacheContext;
+import com.jhict.quality.service.support.ai.AiFallbackCacheService;
 import com.jhict.quality.service.support.prompt.StandardRagPromptBuilder;
 import com.jhict.quality.service.support.rag.CitationReferenceSupport;
 import com.jhict.quality.vo.AiDegradationResultVO;
@@ -38,9 +41,11 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,6 +71,9 @@ public class StandardRagServiceImpl implements StandardRagService {
 
     @Resource
     private AiDegradationService aiDegradationService;
+
+    @Resource
+    private AiFallbackCacheService aiFallbackCacheService;
 
     @Resource
     private StandardDocumentService standardDocumentService;
@@ -97,6 +105,19 @@ public class StandardRagServiceImpl implements StandardRagService {
         }
 
         ModelChatResponse modelResponse = modelGateway.chat(buildChatRequest(cmd, sources));
+        boolean groundedGenerated = isGroundedGeneratedOutput(modelResponse, sources);
+        if (groundedGenerated) {
+            aiFallbackCacheService.saveValidatedGenerated(buildStandardRagCacheContext(
+                    cmd, sources, modelResponse.getContent(), "HIGH", HIGH_CONFIDENCE_SCORE));
+        } else {
+            QcAiCache fallbackCache = aiFallbackCacheService.findFallbackCache(buildStandardRagCacheContext(
+                    cmd, sources, null,
+                    modelResponse != null && modelResponse.isSuccess() ? "HIGH" : "MEDIUM",
+                    modelResponse != null && modelResponse.isSuccess() ? HIGH_CONFIDENCE_SCORE : MEDIUM_CONFIDENCE_SCORE));
+            if (fallbackCache != null && StringUtils.hasText(fallbackCache.getCachedOutput())) {
+                return buildAnswer(cmd, sources, buildCacheDegradationResult(cmd, fallbackCache, sources), queryVector);
+            }
+        }
         AiDegradationResultVO degradation = aiDegradationService.resolveAiOutput(buildDegradationRequest(
                 cmd, modelResponse, sources));
         return buildAnswer(cmd, sources, degradation, queryVector);
@@ -186,6 +207,52 @@ public class StandardRagServiceImpl implements StandardRagService {
         answer.setChatPromptSourceCount(sources.size());
         answer.setSources(sources);
         return answer;
+    }
+
+    private AiFallbackCacheContext buildStandardRagCacheContext(StandardRagQueryCmd cmd,
+                                                               List<StandardRagSourceVO> sources,
+                                                               String outputText,
+                                                               String confidenceLabel,
+                                                               Double confidenceScore) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("query", cmd.getQuery());
+        snapshot.put("sourceTypes", cmd.getSourceTypes());
+        snapshot.put("customerId", cmd.getCustomerId());
+        snapshot.put("variety", cmd.getVariety());
+        snapshot.put("grade", cmd.getGrade());
+        snapshot.put("indicatorCode", cmd.getIndicatorCode());
+        snapshot.put("effectiveDate", cmd.getEffectiveDate());
+        snapshot.put("sources", sources);
+        return AiFallbackCacheContext.builder()
+                .assessmentType("STANDARD_RAG")
+                .businessType("STANDARD_RAG_QUERY")
+                .businessId(cmd.getQuery())
+                .promptVersion(standardRagPromptBuilder.activePromptVersion())
+                .modelName(modelGateway.provider())
+                .inputSnapshot(snapshot)
+                .outputText(outputText)
+                .structuredOutput(null)
+                .references(CitationReferenceSupport.toAiReferences(sources))
+                .confidenceLabel(confidenceLabel)
+                .confidenceScore(confidenceScore == null ? null : BigDecimal.valueOf(confidenceScore))
+                .build();
+    }
+
+    private AiDegradationResultVO buildCacheDegradationResult(StandardRagQueryCmd cmd,
+                                                              QcAiCache cache,
+                                                              List<StandardRagSourceVO> sources) {
+        AiDegradationResultVO result = new AiDegradationResultVO();
+        result.setAssessmentType("STANDARD_RAG");
+        result.setBusinessType("STANDARD_RAG_QUERY");
+        result.setBusinessId(cmd.getQuery());
+        result.setOutputText(cache.getCachedOutput());
+        result.setDegradationSource(AiDegradationSource.CACHE.getCode());
+        result.setDegradationReason("模型输出不可用，命中同输入快照缓存");
+        result.setConfidenceLabel(cache.getConfidenceLabel());
+        result.setConfidenceScore(cache.getConfidenceScore() == null ? null : cache.getConfidenceScore().doubleValue());
+        result.setAuthoritative(true);
+        result.setReferences(CitationReferenceSupport.toAiReferences(sources));
+        return result;
     }
 
     private StandardRagAnswerVO noEvidence(StandardRagQueryCmd cmd, VectorSearchResponse vectorResponse,

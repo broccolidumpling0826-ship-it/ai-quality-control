@@ -2,6 +2,7 @@ package com.jhict.quality.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jhict.quality.dto.StandardRagQueryCmd;
+import com.jhict.quality.entity.QcAiCache;
 import com.jhict.quality.enums.AiDegradationSource;
 import com.jhict.quality.gateway.model.ModelChatResponse;
 import com.jhict.quality.gateway.model.ModelGateway;
@@ -11,6 +12,7 @@ import com.jhict.quality.gateway.vector.VectorStoreGateway;
 import com.jhict.quality.mapper.QcQualityStandardMapper;
 import com.jhict.quality.mapper.QcStandardClauseMapper;
 import com.jhict.quality.service.api.StandardDocumentService;
+import com.jhict.quality.service.support.ai.AiFallbackCacheService;
 import com.jhict.quality.service.support.prompt.PromptRegistryTestSupport;
 import com.jhict.quality.service.support.prompt.StandardRagPromptBuilder;
 import com.jhict.quality.vo.StandardClauseVO;
@@ -22,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -47,6 +50,9 @@ class StandardRagServiceImplTest {
     @Mock
     private QcQualityStandardMapper qualityStandardMapper;
 
+    @Mock
+    private AiFallbackCacheService aiFallbackCacheService;
+
     private StandardRagServiceImpl service;
 
     @BeforeEach
@@ -58,9 +64,11 @@ class StandardRagServiceImplTest {
         ReflectionTestUtils.setField(service, "standardClauseMapper", standardClauseMapper);
         ReflectionTestUtils.setField(service, "qualityStandardMapper", qualityStandardMapper);
         ReflectionTestUtils.setField(service, "aiDegradationService", new AiDegradationServiceImpl());
+        ReflectionTestUtils.setField(service, "aiFallbackCacheService", aiFallbackCacheService);
         ReflectionTestUtils.setField(service, "standardRagPromptBuilder",
                 new StandardRagPromptBuilder(PromptRegistryTestSupport.createLoadedRegistry()));
         lenient().when(standardClauseMapper.selectBatchIds(any())).thenReturn(Collections.emptyList());
+        lenient().when(modelGateway.provider()).thenReturn("TEST_MODEL");
     }
 
     @Test
@@ -90,6 +98,28 @@ class StandardRagServiceImplTest {
         assertEquals(AiDegradationSource.RAW_RETRIEVAL.getCode(), answer.getDegradationSource());
         assertTrue(answer.getSources().get(0).getReferenceOnly());
         verify(modelGateway, never()).chat(any());
+    }
+
+    @Test
+    void query_shouldUseFallbackCacheWhenModelOutputFailsCitationValidation() {
+        when(vectorStoreGateway.searchClauses(any())).thenReturn(vectorResponse(1.2D));
+        when(modelGateway.chat(any())).thenReturn(ModelChatResponse.builder()
+                .success(true)
+                .content("Rm 应为 370 MPa 至 510 MPa。")
+                .build());
+        QcAiCache cache = new QcAiCache();
+        cache.setCachedOutput("缓存回答：Rm 应为 370 MPa 至 510 MPa，依据 [1]。");
+        cache.setConfidenceLabel("HIGH");
+        cache.setConfidenceScore(BigDecimal.valueOf(0.86D));
+        when(aiFallbackCacheService.findFallbackCache(any())).thenReturn(cache);
+
+        StandardRagAnswerVO answer = service.query(cmd("Q235B Rm 要求是什么"));
+
+        assertFalse(answer.getRefused());
+        assertEquals(AiDegradationSource.CACHE.getCode(), answer.getDegradationSource());
+        assertTrue(answer.getCacheHit());
+        assertEquals("缓存回答：Rm 应为 370 MPa 至 510 MPa，依据 [1]。", answer.getAnswer());
+        verify(aiFallbackCacheService).findFallbackCache(any());
     }
 
     @Test
