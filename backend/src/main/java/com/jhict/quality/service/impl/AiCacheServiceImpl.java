@@ -6,9 +6,11 @@ import com.jhict.quality.mapper.QcAiCacheMapper;
 import com.jhict.quality.service.api.AiCacheService;
 import com.jhict.quality.service.support.ai.AiFallbackCacheContext;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class AiCacheServiceImpl implements AiCacheService {
@@ -52,7 +54,39 @@ public class AiCacheServiceImpl implements AiCacheService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void saveValidatedGenerated(AiFallbackCacheContext context, String inputHash, int ttlDays) {
-        // Full versioned cache persistence is intentionally deferred to Task 3.
+        List<QcAiCache> activeCaches = aiCacheMapper.selectList(new LambdaQueryWrapper<QcAiCache>()
+                .eq(QcAiCache::getAssessmentType, context.getAssessmentType())
+                .eq(QcAiCache::getBusinessType, context.getBusinessType())
+                .eq(QcAiCache::getBusinessId, context.getBusinessId())
+                .eq(QcAiCache::getPromptVersion, context.getPromptVersion())
+                .eq(QcAiCache::getInputHash, inputHash)
+                .eq(QcAiCache::getEnabled, 1));
+        for (QcAiCache cache : activeCaches) {
+            cache.setEnabled(0);
+            aiCacheMapper.updateById(cache);
+        }
+
+        QcAiCache cache = new QcAiCache();
+        cache.setCacheKey(buildCacheKey(context, inputHash));
+        cache.setAssessmentType(context.getAssessmentType());
+        cache.setBusinessType(context.getBusinessType());
+        cache.setBusinessId(context.getBusinessId());
+        cache.setPromptVersion(context.getPromptVersion());
+        cache.setInputHash(inputHash);
+        cache.setCachedOutput(context.getOutputText());
+        cache.setReferencesJson(context.getStructuredOutput());
+        cache.setConfidenceLabel(context.getConfidenceLabel());
+        cache.setConfidenceScore(context.getConfidenceScore());
+        cache.setDegradationSource("CACHE");
+        cache.setEnabled(1);
+        cache.setExpiryTime(LocalDateTime.now().plusDays(ttlDays));
+        aiCacheMapper.insert(cache);
+    }
+
+    private String buildCacheKey(AiFallbackCacheContext context, String inputHash) {
+        return context.getAssessmentType() + ":" + context.getBusinessType() + ":"
+                + context.getBusinessId() + ":" + context.getPromptVersion() + ":" + inputHash;
     }
 }

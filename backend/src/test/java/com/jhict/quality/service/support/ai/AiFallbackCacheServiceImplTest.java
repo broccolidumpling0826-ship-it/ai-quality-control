@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jhict.quality.config.AiDegradationCacheProperties;
 import com.jhict.quality.service.api.AiCacheService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Arrays;
@@ -118,6 +119,23 @@ class AiFallbackCacheServiceImplTest {
         service.saveValidatedGenerated(context);
 
         verify(aiCacheService).saveValidatedGenerated(eq(context), anyString(), eq(30));
+    }
+
+    @Test
+    void saveValidatedGeneratedDelegatesWithBuiltInputHash() {
+        AiCacheService aiCacheService = mock(AiCacheService.class);
+        AiFallbackCacheServiceImpl service = newService(aiCacheService);
+        AiFallbackCacheContext context = baseContext()
+                .inputSnapshot(simpleSnapshot())
+                .outputText("validated answer")
+                .confidenceLabel("HIGH")
+                .build();
+
+        service.saveValidatedGenerated(context);
+
+        ArgumentCaptor<String> hashCaptor = ArgumentCaptor.forClass(String.class);
+        verify(aiCacheService).saveValidatedGenerated(eq(context), hashCaptor.capture(), eq(30));
+        assertThat(hashCaptor.getValue()).isEqualTo(service.buildInputHash(context));
     }
 
     private AiFallbackCacheServiceImpl newService(AiCacheService aiCacheService) {
