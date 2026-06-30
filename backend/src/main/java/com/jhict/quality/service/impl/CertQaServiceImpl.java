@@ -16,10 +16,11 @@ import com.jhict.quality.gateway.model.ModelChatResponse;
 import com.jhict.quality.gateway.model.ModelGateway;
 import com.jhict.quality.gateway.model.ModelMessage;
 import com.jhict.quality.service.api.AiAssessmentService;
-import com.jhict.quality.service.api.AiCacheService;
 import com.jhict.quality.service.api.CertDataService;
 import com.jhict.quality.service.api.CertQaService;
 import com.jhict.quality.service.api.JudgmentService;
+import com.jhict.quality.service.support.ai.AiFallbackCacheContext;
+import com.jhict.quality.service.support.ai.AiFallbackCacheService;
 import com.jhict.quality.service.support.prompt.CertQaPromptBuilder;
 import com.jhict.quality.service.support.rag.CitationReferenceSupport;
 import com.jhict.quality.vo.AiSourceReferenceVO;
@@ -36,6 +37,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,9 +58,6 @@ public class CertQaServiceImpl implements CertQaService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Resource
-    private AiCacheService aiCacheService;
-
-    @Resource
     private CertDataService certDataService;
 
     @Resource
@@ -75,6 +74,9 @@ public class CertQaServiceImpl implements CertQaService {
 
     @Resource
     private CertQaPromptBuilder certQaPromptBuilder;
+
+    @Resource
+    private AiFallbackCacheService aiFallbackCacheService;
 
     @Override
     public CertQaAnswerVO answer(CertQaQueryCmd cmd) {
@@ -95,11 +97,6 @@ public class CertQaServiceImpl implements CertQaService {
                 judgment.getCitations() == null ? Collections.emptyList() : judgment.getCitations(),
                 basis,
                 8);
-
-        CertQaAnswerVO cached = tryCache(cmd, citations, basis);
-        if (cached != null) {
-            return cached;
-        }
 
         answer.setCitations(citations);
         answer.setIndicatorBasis(basis);
@@ -137,6 +134,10 @@ public class CertQaServiceImpl implements CertQaService {
         List<AiSourceReferenceVO> citations = answer.getCitations() == null
                 ? Collections.emptyList() : answer.getCitations();
         if (!modelGateway.enabled()) {
+            if (applyFallbackCache(cmd, judgment, answer)) {
+                persistCertQaAssessment(cmd, judgment, answer, false);
+                return;
+            }
             applyRuleDegradation(answer, citations, ruleAnswer);
             return;
         }
@@ -148,6 +149,7 @@ public class CertQaServiceImpl implements CertQaService {
             answer.setAnswer(trusted);
             answer.setConfidenceLabel(citations.isEmpty() ? "MEDIUM" : "HIGH");
             answer.setDegradationSource("GENERATED");
+            aiFallbackCacheService.saveValidatedGenerated(buildCertQaCacheContext(cmd, judgment, answer, trusted));
             persistCertQaAssessment(cmd, judgment, answer, true);
             return;
         }
@@ -157,8 +159,29 @@ public class CertQaServiceImpl implements CertQaService {
             log.warn("质保书问答生成失败，coilNo={}, batchNo={}, error={}",
                     cmd.getCoilNo(), cmd.getBatchNo(), response.getErrorMessage());
         }
+        if (applyFallbackCache(cmd, judgment, answer)) {
+            persistCertQaAssessment(cmd, judgment, answer, false);
+            return;
+        }
         applyRuleDegradation(answer, citations, ruleAnswer);
         persistCertQaAssessment(cmd, judgment, answer, false);
+    }
+
+    private boolean applyFallbackCache(CertQaQueryCmd cmd,
+                                       QcJudgmentResultVO judgment,
+                                       CertQaAnswerVO answer) {
+        QcAiCache fallbackCache = aiFallbackCacheService.findFallbackCache(
+                buildCertQaCacheContext(cmd, judgment, answer, null));
+        if (fallbackCache == null || !StringUtils.hasText(fallbackCache.getCachedOutput())) {
+            return false;
+        }
+        answer.setAnswer(parseCacheAnswer(fallbackCache.getCachedOutput()));
+        answer.setConfidenceLabel(fallbackCache.getConfidenceLabel());
+        answer.setDegradationSource("CACHE");
+        answer.setCacheHit(true);
+        answer.setNonFinal(answer.getAnswer() != null
+                && (answer.getAnswer().contains("不能生成正式质保书") || answer.getAnswer().contains("预览")));
+        return true;
     }
 
     private void applyRuleDegradation(CertQaAnswerVO answer,
@@ -239,7 +262,7 @@ public class CertQaServiceImpl implements CertQaService {
                     ? BigDecimal.valueOf(0.85D)
                     : BigDecimal.valueOf(0.65D));
             createCmd.setDegradationSource(answer.getDegradationSource());
-            createCmd.setCacheHit(0);
+            createCmd.setCacheHit(Boolean.TRUE.equals(answer.getCacheHit()) ? 1 : 0);
             aiAssessmentService.create(createCmd);
         } catch (Exception e) {
             log.warn("保存质保书问答AI评估失败，coilNo={}, batchNo={}, error={}",
@@ -247,35 +270,40 @@ public class CertQaServiceImpl implements CertQaService {
         }
     }
 
-    private CertQaAnswerVO tryCache(CertQaQueryCmd cmd,
-                                    List<AiSourceReferenceVO> citations,
-                                    List<QcJudgmentResultVO.EvidenceVO> basis) {
-        QcAiCache cache = null;
-        if (StringUtils.hasText(cmd.getCoilNo())) {
-            cache = aiCacheService.findActive("CERT_QA", "COIL", cmd.getCoilNo());
-        }
-        if (cache == null && StringUtils.hasText(cmd.getBatchNo())) {
-            cache = aiCacheService.findActive("CERT_QA", "BATCH", cmd.getBatchNo());
-        }
-        if (cache == null) {
+    private AiFallbackCacheContext buildCertQaCacheContext(CertQaQueryCmd cmd,
+                                                           QcJudgmentResultVO judgment,
+                                                           CertQaAnswerVO answer,
+                                                           String outputText) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("question", cmd.getQuestion());
+        snapshot.put("coilNo", cmd.getCoilNo());
+        snapshot.put("batchNo", cmd.getBatchNo());
+        snapshot.put("judgmentId", judgment.getJudgmentId());
+        snapshot.put("judgmentType", judgment.getJudgmentType());
+        snapshot.put("indicatorBasis", answer.getIndicatorBasis());
+        snapshot.put("citations", answer.getCitations());
+        return AiFallbackCacheContext.builder()
+                .assessmentType(ASSESSMENT_TYPE_CERT_QA)
+                .businessType(StringUtils.hasText(cmd.getCoilNo()) ? "COIL" : "BATCH")
+                .businessId(StringUtils.hasText(cmd.getCoilNo()) ? cmd.getCoilNo() : cmd.getBatchNo())
+                .promptVersion(certQaPromptBuilder.activePromptVersion())
+                .modelName(modelGateway.provider())
+                .inputSnapshot(snapshot)
+                .outputText(outputText)
+                .structuredOutput(toJsonQuietly(answer.getCitations()))
+                .references(answer.getCitations())
+                .confidenceLabel(answer.getConfidenceLabel())
+                .confidenceScore("HIGH".equals(answer.getConfidenceLabel())
+                        ? BigDecimal.valueOf(0.85D) : BigDecimal.valueOf(0.65D))
+                .build();
+    }
+
+    private String toJsonQuietly(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
             return null;
         }
-        String answerText = parseCacheAnswer(cache.getCachedOutput());
-        String trusted = CitationReferenceSupport.acceptTrustedCitedOutput(answerText, citations, basis);
-        if (!StringUtils.hasText(trusted)) {
-            log.warn("质保书问答缓存引用校验未通过，coilNo={}, batchNo={}",
-                    cmd.getCoilNo(), cmd.getBatchNo());
-            return null;
-        }
-        CertQaAnswerVO answer = initAnswer();
-        answer.setCacheHit(true);
-        answer.setConfidenceLabel(cache.getConfidenceLabel());
-        answer.setDegradationSource("CACHE");
-        answer.setCitations(citations);
-        answer.setIndicatorBasis(basis);
-        answer.setAnswer(trusted);
-        answer.setNonFinal(trusted.contains("不能生成正式质保书") || trusted.contains("预览"));
-        return answer;
     }
 
     private String parseCacheAnswer(String cachedOutput) {
