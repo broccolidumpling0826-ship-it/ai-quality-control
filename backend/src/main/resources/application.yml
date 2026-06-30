@@ -74,6 +74,12 @@ app:
   ai:
     prompts:
       base-path: classpath:ai-prompts/
+    degradation:
+      cache:
+        enabled: ${AI_DEGRADATION_CACHE_ENABLED:true}
+        mode: ${AI_DEGRADATION_CACHE_MODE:FALLBACK_ONLY}
+        ttl-days: ${AI_DEGRADATION_CACHE_TTL_DAYS:30}
+        write-on-validated-generated: ${AI_DEGRADATION_CACHE_WRITE_ON_VALIDATED_GENERATED:true}
     # 模型/向量配置统一在此维护；dev 环境通过 profile 覆盖开关与本地密钥默认值，勿在 application-dev.yml 重复
     model:
       provider: ${AI_MODEL_PROVIDER:SILICONFLOW}
