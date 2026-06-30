@@ -6,6 +6,7 @@ import com.jhict.quality.dto.AiAssessmentCreateCmd;
 import com.jhict.quality.dto.ConcessionRiskAssessCmd;
 import com.jhict.quality.dto.StandardClausePageQuery;
 import com.jhict.quality.entity.QcAiAssessment;
+import com.jhict.quality.entity.QcAiCache;
 import com.jhict.quality.enums.JudgmentType;
 import com.jhict.quality.gateway.model.ModelChatRequest;
 import com.jhict.quality.gateway.model.ModelChatResponse;
@@ -17,6 +18,8 @@ import com.jhict.quality.service.api.ConcessionRiskService;
 import com.jhict.quality.service.api.CustomerUsageProfileService;
 import com.jhict.quality.service.api.JudgmentService;
 import com.jhict.quality.service.api.StandardDocumentService;
+import com.jhict.quality.service.support.ai.AiFallbackCacheContext;
+import com.jhict.quality.service.support.ai.AiFallbackCacheService;
 import com.jhict.quality.service.support.prompt.ConcessionRiskPromptBuilder;
 import com.jhict.quality.service.support.rag.CitationReferenceLoader;
 import com.jhict.quality.service.support.rag.CitationReferenceSupport;
@@ -69,6 +72,9 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
 
     @Resource
     private ConcessionRiskPromptBuilder concessionRiskPromptBuilder;
+
+    @Resource
+    private AiFallbackCacheService aiFallbackCacheService;
 
     @Override
     public ConcessionRiskAssessmentVO assess(ConcessionRiskAssessCmd cmd) {
@@ -257,14 +263,90 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
     }
 
     private void fillAiWordingIfAvailable(QcJudgmentResultVO judgment, ConcessionRiskAssessmentVO result) {
-        if (!modelGateway.enabled() || "BLOCKED".equals(result.getRiskLevel())) {
+        if ("BLOCKED".equals(result.getRiskLevel())) {
+            return;
+        }
+        if (!modelGateway.enabled()) {
+            applyFallbackCache(judgment, result);
             return;
         }
         ModelChatResponse response = modelGateway.chat(
                 concessionRiskPromptBuilder.build(judgment.getJudgmentId(), result));
-        if (response != null && response.isSuccess() && StringUtils.hasText(response.getContent())) {
+        if (response != null && response.isSuccess()
+                && trustedConcessionNarrative(response.getContent(), result)) {
             result.setNarrativeExplanation(response.getContent());
             result.setDegradationSource("GENERATED");
+            aiFallbackCacheService.saveValidatedGenerated(
+                    buildConcessionCacheContext(judgment, result, response.getContent()));
+            return;
+        }
+        applyFallbackCache(judgment, result);
+    }
+
+    private boolean trustedConcessionNarrative(String content, ConcessionRiskAssessmentVO result) {
+        if (!StringUtils.hasText(content)) {
+            return false;
+        }
+        if (!StringUtils.hasText(result.getRiskLevel()) || !content.contains(result.getRiskLevel())) {
+            return false;
+        }
+        if (result.getBlockingReasons() != null && !result.getBlockingReasons().isEmpty()
+                && result.getBlockingReasons().stream().noneMatch(content::contains)) {
+            return false;
+        }
+        if (result.getSuggestedConditions() != null && !result.getSuggestedConditions().isEmpty()
+                && result.getSuggestedConditions().stream().noneMatch(content::contains)) {
+            return false;
+        }
+        return true;
+    }
+
+    private void applyFallbackCache(QcJudgmentResultVO judgment, ConcessionRiskAssessmentVO result) {
+        QcAiCache fallbackCache = aiFallbackCacheService.findFallbackCache(
+                buildConcessionCacheContext(judgment, result, null));
+        if (fallbackCache == null || !StringUtils.hasText(fallbackCache.getCachedOutput())) {
+            return;
+        }
+        result.setNarrativeExplanation(fallbackCache.getCachedOutput());
+        result.setConfidenceLabel(fallbackCache.getConfidenceLabel());
+        if (fallbackCache.getConfidenceScore() != null) {
+            result.setConfidenceScore(fallbackCache.getConfidenceScore().doubleValue());
+        }
+        result.setDegradationSource("CACHE");
+    }
+
+    private AiFallbackCacheContext buildConcessionCacheContext(QcJudgmentResultVO judgment,
+                                                               ConcessionRiskAssessmentVO result,
+                                                               String outputText) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("judgmentId", judgment.getJudgmentId());
+        snapshot.put("judgmentType", judgment.getJudgmentType());
+        snapshot.put("riskLevel", result.getRiskLevel());
+        snapshot.put("mustReview", result.getMustReview());
+        snapshot.put("missingInfo", result.getMissingInfo());
+        snapshot.put("suggestedConditions", result.getSuggestedConditions());
+        snapshot.put("blockingReasons", result.getBlockingReasons());
+        snapshot.put("evidenceRefs", result.getEvidenceRefs());
+        snapshot.put("alternativeStocks", result.getAlternativeStocks());
+        return AiFallbackCacheContext.builder()
+                .assessmentType("CONCESSION_RISK")
+                .businessType("QC_JUDGMENT_RESULT")
+                .businessId(judgment.getJudgmentId())
+                .promptVersion(concessionRiskPromptBuilder.activePromptVersion())
+                .modelName(modelGateway.provider())
+                .inputSnapshot(snapshot)
+                .outputText(outputText)
+                .structuredOutput(toJsonQuietly(result))
+                .confidenceLabel(result.getConfidenceLabel())
+                .confidenceScore(result.getConfidenceScore() == null ? null : BigDecimal.valueOf(result.getConfidenceScore()))
+                .build();
+    }
+
+    private String toJsonQuietly(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -286,7 +368,7 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
             createCmd.setConfidenceScore(BigDecimal.valueOf(result.getConfidenceScore()));
             createCmd.setConfidenceFactors(objectMapper.writeValueAsString(result.getMissingInfo()));
             createCmd.setDegradationSource(result.getDegradationSource());
-            createCmd.setCacheHit(0);
+            createCmd.setCacheHit("CACHE".equals(result.getDegradationSource()) ? 1 : 0);
             QcAiAssessment assessment = aiAssessmentService.create(createCmd);
             result.setAssessmentId(assessment.getId());
         } catch (Exception e) {
