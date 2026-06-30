@@ -12,8 +12,12 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -39,7 +43,7 @@ public class AiFallbackCacheServiceImpl implements AiFallbackCacheService {
         stable.put("businessId", context.getBusinessId());
         stable.put("promptVersion", context.getPromptVersion());
         stable.put("modelName", context.getModelName());
-        stable.put("inputSnapshot", context.getInputSnapshot());
+        stable.put("inputSnapshot", normalizeForHash(context.getInputSnapshot()));
         try {
             String json = objectMapper.writeValueAsString(stable);
             return DigestUtils.md5DigestAsHex(json.getBytes(StandardCharsets.UTF_8));
@@ -82,12 +86,32 @@ public class AiFallbackCacheServiceImpl implements AiFallbackCacheService {
                 && StringUtils.hasText(context.getAssessmentType())
                 && StringUtils.hasText(context.getBusinessType())
                 && StringUtils.hasText(context.getBusinessId())
-                && StringUtils.hasText(context.getPromptVersion());
+                && StringUtils.hasText(context.getPromptVersion())
+                && StringUtils.hasText(context.getModelName());
     }
 
     private boolean cacheWritable(AiFallbackCacheContext context) {
         return cacheReadable(context)
                 && properties.isWriteOnValidatedGenerated()
-                && StringUtils.hasText(context.getOutputText());
+                && StringUtils.hasText(context.getOutputText())
+                && StringUtils.hasText(context.getConfidenceLabel());
+    }
+
+    private Object normalizeForHash(Object value) {
+        if (value instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) value;
+            Map<String, Object> normalized = new LinkedHashMap<>();
+            map.entrySet().stream()
+                    .sorted(Comparator.comparing(entry -> String.valueOf(entry.getKey())))
+                    .forEach(entry -> normalized.put(String.valueOf(entry.getKey()), normalizeForHash(entry.getValue())));
+            return normalized;
+        }
+        if (value instanceof List) {
+            List<?> list = (List<?>) value;
+            return list.stream()
+                    .map(this::normalizeForHash)
+                    .collect(Collectors.toCollection(ArrayList::new));
+        }
+        return value;
     }
 }
