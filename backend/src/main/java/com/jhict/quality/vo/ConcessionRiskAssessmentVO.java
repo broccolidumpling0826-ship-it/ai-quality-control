@@ -49,6 +49,9 @@ public class ConcessionRiskAssessmentVO {
     @ApiModelProperty(value = "降级来源")
     private String degradationSource;
 
+    @ApiModelProperty(value = "降级说明")
+    private String degradationReason;
+
     @ApiModelProperty(value = "说明文本")
     private String narrativeExplanation;
 

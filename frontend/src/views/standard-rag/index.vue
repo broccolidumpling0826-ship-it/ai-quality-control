@@ -42,7 +42,7 @@
                     class="refusal-alert"
                     type="warning"
                     :closable="false"
-                    :title="answer.refusalReason || '在已上传的标准/协议中未找到相关依据'"
+                    :title="answer.refusalReason || '本地标准库中未找到与问题相关的可引用条款'"
                     show-icon
                   />
 

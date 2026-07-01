@@ -84,8 +84,11 @@
               {{ riskResult.mustReview ? '需人工复核' : '可按流程评审' }}
             </el-tag>
             <el-tag size="small" type="info">{{ riskResult.confidenceLabel }}</el-tag>
-            <el-tag size="small" type="info">{{ riskResult.degradationSource }}</el-tag>
+            <el-tag :type="degradationTagType(riskResult.degradationSource)" size="small">
+              {{ degradationLabel(riskResult.degradationSource) }}
+            </el-tag>
           </div>
+          <div v-if="riskResult.degradationReason" class="degrade-text">{{ riskResult.degradationReason }}</div>
           <p class="risk-text">{{ riskResult.narrativeExplanation }}</p>
           <el-alert
             v-if="riskResult.blockingReasons?.length"
@@ -217,6 +220,7 @@ import {
   type ConcessionRiskAssessment
 } from '@/api/concession'
 import { AI_LOADING_TEXT, AI_LOADING_CLASS } from '@/constants/ai-loading-text'
+import { degradationLabel, degradationTagType } from '@/utils/ai-degradation-display'
 
 const route = useRoute()
 const router = useRouter()
@@ -439,6 +443,12 @@ onMounted(loadDetail)
 .risk-list {
   flex-wrap: wrap;
   margin-top: 8px;
+}
+.degrade-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 .risk-text {
   margin: 8px 0;

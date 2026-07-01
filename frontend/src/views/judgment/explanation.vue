@@ -80,7 +80,9 @@
             <el-tag :type="confidenceType(detail.confidenceLabel)" size="small">
               {{ detail.confidenceLabel || 'N/A' }}
             </el-tag>
-            <el-tag type="info" size="small">{{ detail.degradationSource || 'N/A' }}</el-tag>
+            <el-tag :type="degradationTagType(detail.degradationSource)" size="small">
+              {{ degradationLabel(detail.degradationSource) }}
+            </el-tag>
             <el-tag v-if="detail.aiExplanationTrace" type="warning" size="small">
               {{ explanationTraceLabel(detail.aiExplanationTrace) }}
             </el-tag>
@@ -101,6 +103,7 @@
           <span v-else class="citation-mark">[{{ part.index }}]</span>
         </template>
       </p>
+      <div v-if="detail.degradationReason" class="degrade-text">{{ detail.degradationReason }}</div>
       <div v-if="detail.confidenceFactors?.length" class="factor-row">
         <el-tag v-for="item in detail.confidenceFactors" :key="item" size="small" type="info">{{ item }}</el-tag>
       </div>
@@ -342,6 +345,11 @@ import { getReinspectionAdvice, initiateReinspection, type WorkflowAdvice } from
 import { getRejudgmentAdvice } from '@/api/rejudgment'
 import { handleAiAssessment } from '@/api/ai-assessment'
 import { AI_LOADING_TEXT, AI_LOADING_CLASS } from '@/constants/ai-loading-text'
+import {
+  degradationLabel,
+  degradationTagType,
+  explanationTraceLabel
+} from '@/utils/ai-degradation-display'
 
 const route = useRoute()
 const router = useRouter()
@@ -408,20 +416,6 @@ function confidenceType(label?: string): any {
   if (label === 'HIGH') return 'success'
   if (label === 'LOW') return 'danger'
   return 'warning'
-}
-
-function explanationTraceLabel(trace?: string) {
-  const map: Record<string, string> = {
-    MODEL_GENERATED: '已调模型·校验通过',
-    MODEL_REJECTED: '已调模型·校验未通过',
-    ASSESSMENT_REUSE: '未调模型·复用历史评估',
-    CACHE_HIT: '未调模型·缓存命中',
-    MODEL_DISABLED: '未调模型·开关关闭',
-    STRUCTURED_ONLY: '未调模型·仅结构化',
-    CONFLICT_REJUDGE: '冲突裁决后重判·结构化解释',
-    SKIPPED: '未生成解释'
-  }
-  return map[trace || ''] || trace || '路径未知'
 }
 
 function stdTypeLabel(type: string) {
@@ -664,6 +658,12 @@ onMounted(loadDetail)
   line-height: 1.7;
   white-space: pre-wrap;
   color: var(--text-primary);
+}
+.degrade-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 .citation-mark,
 .citation-index {

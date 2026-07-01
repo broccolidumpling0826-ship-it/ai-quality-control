@@ -106,6 +106,7 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
         result.setConfidenceLabel("MEDIUM");
         result.setConfidenceScore(0.65D);
         result.setDegradationSource("RULE_TEMPLATE");
+        result.setDegradationReason("基于规则引擎生成风险等级与建议条件");
         return result;
     }
 
@@ -276,6 +277,7 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
                 && trustedConcessionNarrative(response.getContent(), result)) {
             result.setNarrativeExplanation(response.getContent());
             result.setDegradationSource("GENERATED");
+            result.setDegradationReason("AI说明已基于风险评估结果生成并通过内容校验");
             aiFallbackCacheService.saveValidatedGenerated(
                     buildConcessionCacheContext(judgment, result, response.getContent()));
             return;
@@ -313,6 +315,7 @@ public class ConcessionRiskServiceImpl implements ConcessionRiskService {
             result.setConfidenceScore(fallbackCache.getConfidenceScore().doubleValue());
         }
         result.setDegradationSource("CACHE");
+        result.setDegradationReason("引用校验未通过或模型未启用，已使用同输入快照缓存说明");
     }
 
     private AiFallbackCacheContext buildConcessionCacheContext(QcJudgmentResultVO judgment,

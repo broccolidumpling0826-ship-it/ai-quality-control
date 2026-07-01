@@ -64,7 +64,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="degradationSource" label="降级来源" width="140" />
+        <el-table-column label="降级来源" width="140">
+          <template #default="{ row }">
+            {{ degradationLabel(row.degradationSource, row.cacheHit === 1) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="adoptionStatus" label="处理状态" width="120">
           <template #default="{ row }">
             <el-tag :type="adoptionTagType(row.adoptionStatus)" size="small">
@@ -116,7 +120,9 @@
           <el-descriptions-item label="置信分">{{ detail.confidenceScore ?? '-' }}</el-descriptions-item>
           <el-descriptions-item label="模型">{{ detail.modelProvider || '-' }} / {{ detail.modelName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="提示词版本">{{ detail.promptVersion || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="降级来源">{{ detail.degradationSource || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="降级来源">
+            {{ degradationLabel(detail.degradationSource, detail.cacheHit === 1) }}
+          </el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ detail.createDateTime || '-' }}</el-descriptions-item>
         </el-descriptions>
 
@@ -176,6 +182,7 @@ import {
   type AiAssessment,
   type AiAssessmentPageQuery
 } from '@/api/ai-assessment'
+import { degradationLabel } from '@/utils/ai-degradation-display'
 
 const loading = ref(false)
 const detailLoading = ref(false)

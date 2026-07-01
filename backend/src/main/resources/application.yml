@@ -76,7 +76,7 @@ app:
       base-path: classpath:ai-prompts/
     degradation:
       cache:
-        enabled: ${AI_DEGRADATION_CACHE_ENABLED:true}
+        enabled: ${AI_DEGRADATION_CACHE_ENABLED:false}
         mode: ${AI_DEGRADATION_CACHE_MODE:FALLBACK_ONLY}
         ttl-days: ${AI_DEGRADATION_CACHE_TTL_DAYS:30}
         write-on-validated-generated: ${AI_DEGRADATION_CACHE_WRITE_ON_VALIDATED_GENERATED:true}
@@ -109,7 +109,7 @@ app:
       host: ${ES_HOST:http://localhost:9200}
       username: ${ES_USERNAME:elastic}
       password: ${ES_PASSWORD:sisHuNo.1}
-      standard-index: ${ES_STANDARD_INDEX:quality-standard-clauses}
+      standard-index: ${ES_STANDARD_INDEX:quality-standard-clauses2}
       timeout-millis: ${ES_TIMEOUT_MILLIS:5000}
 
 logging:

@@ -1,8 +1,8 @@
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3307/ai_quality_control?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&tinyInt1isBit=false
-    username: ${DB_USER:ai_quality_control}
+    url: jdbc:mysql://127.0.0.1:3307/ai_quality_control2?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&tinyInt1isBit=false
+    username: ${DB_USER:ai_quality_control2}
     password: ${DB_PASSWORD:sisHuNo.1}
     hikari:
       minimum-idle: 2

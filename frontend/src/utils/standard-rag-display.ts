@@ -1,5 +1,7 @@
 import type { RagSource } from '@/api/standard-rag'
 
+export { degradationLabel, degradationTagType } from './ai-degradation-display'
+
 export function ragSourceTypeLabel(type?: string): string {
   const map: Record<string, string> = {
     NATIONAL: '国标',
@@ -28,26 +30,6 @@ export function buildRagSourceShortTitle(source: RagSource, index: number): stri
   const code = source.standardCode || source.standardName || '未知标准'
   const version = source.versionNo ? ` (${source.versionNo})` : ''
   return `[${index + 1}] ${code} ${ragSourceTypeLabel(source.sourceType)}${version}`
-}
-
-export function degradationLabel(source?: string, cacheHit?: boolean): string {
-  if (cacheHit) return '缓存模式'
-  const map: Record<string, string> = {
-    GENERATED: '联网模式',
-    CACHE: '缓存模式',
-    RULE_TEMPLATE: '规则模式',
-    RAW_RETRIEVAL: '检索模式',
-    UNAVAILABLE: '不可用'
-  }
-  return source ? (map[source] || source) : '检索模式'
-}
-
-export function degradationTagType(source?: string, cacheHit?: boolean): 'warning' | 'info' | 'danger' | 'success' {
-  if (cacheHit || source === 'CACHE') return 'warning'
-  if (source === 'GENERATED') return 'warning'
-  if (source === 'UNAVAILABLE') return 'danger'
-  if (source === 'RAW_RETRIEVAL') return 'info'
-  return 'info'
 }
 
 export function extractHighlightKeywords(query: string): string[] {

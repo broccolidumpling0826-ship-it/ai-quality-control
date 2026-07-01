@@ -59,6 +59,12 @@ public class StandardRagServiceImpl implements StandardRagService {
     private static final double HIGH_CONFIDENCE_SCORE = 0.86D;
     private static final double MEDIUM_CONFIDENCE_SCORE = 0.66D;
     private static final double RAW_RETRIEVAL_SCORE = 0.55D;
+    private static final String RAW_RETRIEVAL_ANSWER_PREFIX =
+            "未生成可信回答，以下仅为检索到的来源条款，不能作为最终自动结论。";
+    private static final String RAW_RETRIEVAL_DEGRADATION_REASON = "模型调用失败或引用校验未通过，仅展示检索条款";
+    private static final String PROMPT_INJECTION_REFUSAL_REASON =
+            "检测到试图绕过标准引用、忽略检索依据或编造结论的指令（提示注入）。"
+                    + "系统已拒绝回答，不会生成无来源依据的放行或判定结论。";
 
     @Resource
     private StandardRagPromptBuilder standardRagPromptBuilder;
@@ -87,6 +93,10 @@ public class StandardRagServiceImpl implements StandardRagService {
     @Override
     public StandardRagAnswerVO query(StandardRagQueryCmd cmd) {
         validateQuery(cmd);
+        if (looksLikePromptInjection(cmd.getQuery())) {
+            log.warn("标准RAG检测到提示注入，query={}", cmd.getQuery());
+            return promptInjectionBlockedAnswer(cmd);
+        }
         List<Double> queryVector = buildQueryVector(cmd);
         VectorSearchResponse vectorResponse = vectorStoreGateway.searchClauses(buildVectorSearchRequest(cmd, queryVector));
         List<StandardRagSourceVO> sources = filterUnpublishedStandardSources(toSources(vectorResponse));
@@ -100,9 +110,6 @@ public class StandardRagServiceImpl implements StandardRagService {
             return lowQualityReferences(cmd, sources, queryVector);
         }
         sources = CitationReferenceSupport.filterActionableRagSources(sources);
-        if (looksLikePromptInjection(cmd.getQuery())) {
-            return promptInjectionRawAnswer(cmd, sources, queryVector);
-        }
 
         ModelChatResponse modelResponse = modelGateway.chat(buildChatRequest(cmd, sources));
         boolean groundedGenerated = isGroundedGeneratedOutput(modelResponse, sources);
@@ -200,13 +207,35 @@ public class StandardRagServiceImpl implements StandardRagService {
         answer.setConfidenceLabel(degradation.getConfidenceLabel());
         answer.setConfidenceScore(degradation.getConfidenceScore());
         answer.setDegradationSource(degradation.getDegradationSource());
-        answer.setDegradationReason(degradation.getDegradationReason());
+        answer.setDegradationReason(normalizeRagDegradationReason(degradation));
+        answer.setAnswer(normalizeRagAnswerText(degradation.getDegradationSource(), answer.getAnswer()));
         answer.setCacheHit(AiDegradationSource.CACHE.getCode().equals(degradation.getDegradationSource()));
         answer.setEmbeddingUsed(!CollectionUtils.isEmpty(queryVector));
         answer.setRetrievalMode(!CollectionUtils.isEmpty(queryVector) ? "ES_VECTOR_SCRIPT_SCORE" : "ES_TEXT_OR_DB_FALLBACK");
         answer.setChatPromptSourceCount(sources.size());
         answer.setSources(sources);
         return answer;
+    }
+
+    private String normalizeRagDegradationReason(AiDegradationResultVO degradation) {
+        if (degradation == null) {
+            return null;
+        }
+        if (AiDegradationSource.RAW_RETRIEVAL.getCode().equals(degradation.getDegradationSource())) {
+            return RAW_RETRIEVAL_DEGRADATION_REASON;
+        }
+        return degradation.getDegradationReason();
+    }
+
+    private String normalizeRagAnswerText(String degradationSource, String answerText) {
+        if (!AiDegradationSource.RAW_RETRIEVAL.getCode().equals(degradationSource) || !StringUtils.hasText(answerText)) {
+            return answerText;
+        }
+        if (answerText.startsWith("未生成可信回答，以下仅为检索到的来源条款")
+                || answerText.startsWith("模型生成不可用，以下仅为原始检索到的来源条款")) {
+            return RAW_RETRIEVAL_ANSWER_PREFIX;
+        }
+        return answerText;
     }
 
     private AiFallbackCacheContext buildStandardRagCacheContext(StandardRagQueryCmd cmd,
@@ -247,7 +276,7 @@ public class StandardRagServiceImpl implements StandardRagService {
         result.setBusinessId(cmd.getQuery());
         result.setOutputText(cache.getCachedOutput());
         result.setDegradationSource(AiDegradationSource.CACHE.getCode());
-        result.setDegradationReason("模型输出不可用，命中同输入快照缓存");
+        result.setDegradationReason("引用校验未通过，已使用同输入快照缓存回答");
         result.setConfidenceLabel(cache.getConfidenceLabel());
         result.setConfidenceScore(cache.getConfidenceScore() == null ? null : cache.getConfidenceScore().doubleValue());
         result.setAuthoritative(true);
@@ -262,8 +291,8 @@ public class StandardRagServiceImpl implements StandardRagService {
         answer.setAnswer("");
         answer.setRefused(true);
         answer.setRefusalReason(vectorResponse != null && !vectorResponse.isSuccess()
-                ? "标准知识检索不可用，且未找到本地可引用条款"
-                : "在已登记标准/协议/案例条款中未找到可引用依据");
+                ? "向量检索服务异常，且本地标准库无匹配条款"
+                : "本地标准库中未找到与问题相关的可引用条款");
         answer.setConfidenceLabel("LOW");
         answer.setConfidenceScore(0.20D);
         answer.setDegradationSource(AiDegradationSource.UNAVAILABLE.getCode());
@@ -295,21 +324,21 @@ public class StandardRagServiceImpl implements StandardRagService {
         return answer;
     }
 
-    private StandardRagAnswerVO promptInjectionRawAnswer(StandardRagQueryCmd cmd, List<StandardRagSourceVO> sources,
-                                                         List<Double> queryVector) {
+    private StandardRagAnswerVO promptInjectionBlockedAnswer(StandardRagQueryCmd cmd) {
         StandardRagAnswerVO answer = new StandardRagAnswerVO();
         answer.setQuery(cmd.getQuery());
-        answer.setAnswer("检测到可能要求忽略标准、编造依据或泄露系统提示的指令。系统已忽略该指令，仅展示检索到的来源条款。");
-        answer.setRefused(false);
+        answer.setAnswer("");
+        answer.setRefused(true);
+        answer.setRefusalReason(PROMPT_INJECTION_REFUSAL_REASON);
         answer.setConfidenceLabel("LOW");
-        answer.setConfidenceScore(0.40D);
-        answer.setDegradationSource(AiDegradationSource.RAW_RETRIEVAL.getCode());
-        answer.setDegradationReason("提示注入安全保护，未调用模型生成");
+        answer.setConfidenceScore(0.10D);
+        answer.setDegradationSource("SECURITY_REFUSAL");
+        answer.setDegradationReason("提示注入安全保护，已拒绝回答");
         answer.setCacheHit(false);
-        answer.setEmbeddingUsed(!CollectionUtils.isEmpty(queryVector));
-        answer.setRetrievalMode(!CollectionUtils.isEmpty(queryVector) ? "ES_VECTOR_SCRIPT_SCORE" : "ES_TEXT_OR_DB_FALLBACK");
+        answer.setEmbeddingUsed(false);
+        answer.setRetrievalMode("BLOCKED_PROMPT_INJECTION");
         answer.setChatPromptSourceCount(0);
-        answer.setSources(sources);
+        answer.setSources(new ArrayList<>());
         return answer;
     }
 
@@ -341,7 +370,11 @@ public class StandardRagServiceImpl implements StandardRagService {
                 || query.contains("硬编")
                 || query.contains("绕过")
                 || query.contains("泄露提示词")
-                || query.contains("不要引用来源");
+                || query.contains("不要引用来源")
+                || query.contains("不要引用")
+                || query.contains("忽略前面")
+                || query.contains("忽略所有")
+                || query.contains("直接回答");
     }
 
     private boolean isGroundedGeneratedOutput(ModelChatResponse modelResponse, List<StandardRagSourceVO> sources) {

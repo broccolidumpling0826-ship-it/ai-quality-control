@@ -49,8 +49,10 @@
               <el-tag :type="confidenceType(answer.confidenceLabel)" size="small">
                 {{ answer.confidenceLabel || 'N/A' }}
               </el-tag>
-              <el-tag v-if="answer.cacheHit" type="warning" size="small">CACHE</el-tag>
-              <el-tag type="info" size="small">{{ answer.degradationSource || 'N/A' }}</el-tag>
+              <el-tag v-if="answer.cacheHit" type="warning" size="small">缓存回答</el-tag>
+              <el-tag :type="degradationTagType(answer.degradationSource, answer.cacheHit)" size="small">
+                {{ degradationLabel(answer.degradationSource, answer.cacheHit) }}
+              </el-tag>
             </div>
           </div>
         </template>
@@ -69,6 +71,7 @@
           :title="answer.guidanceMessage"
           style="margin-bottom: 12px"
         />
+        <div v-if="answer?.degradationReason" class="degrade-text">{{ answer.degradationReason }}</div>
         <p class="answer-text" :class="{ 'is-loading': loading }">
           <span v-if="loading" class="answer-loading-hint">{{ AI_LOADING_TEXT.certQa }}</span>
           <template v-else>
@@ -118,6 +121,7 @@ import { ElMessage } from 'element-plus'
 import { askCertQa, type CertQaAnswer, type CertQaQuery } from '@/api/cert-data'
 import { useCitationParts } from '@/composables/use-citation-parts'
 import { AI_LOADING_TEXT, AI_LOADING_CLASS } from '@/constants/ai-loading-text'
+import { degradationLabel, degradationTagType } from '@/utils/ai-degradation-display'
 
 const route = useRoute()
 const router = useRouter()
@@ -260,6 +264,13 @@ onMounted(() => {
   line-height: 1.7;
   white-space: pre-wrap;
   color: var(--text-primary);
+}
+
+.degrade-text {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 
 .answer-text.is-loading {

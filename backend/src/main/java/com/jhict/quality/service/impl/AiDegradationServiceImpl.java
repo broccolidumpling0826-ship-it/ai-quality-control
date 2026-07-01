@@ -15,8 +15,9 @@ import java.util.List;
 @Service
 public class AiDegradationServiceImpl implements AiDegradationService {
 
-    private static final String DEFAULT_UNAVAILABLE_REASON = "AI知识服务当前不可用，系统保留结构化业务数据";
-    private static final String RAW_RETRIEVAL_PREFIX = "模型生成不可用，以下仅为原始检索到的来源条款，不能作为最终自动结论。";
+    private static final String DEFAULT_UNAVAILABLE_REASON = "未生成可信回答且无可用引用依据";
+    private static final String RAW_RETRIEVAL_PREFIX =
+            "未生成可信回答，以下仅为检索到的来源条款，不能作为最终自动结论。";
 
     @Override
     public AiDegradationResultVO resolveAiOutput(AiDegradationRequest request) {
@@ -31,11 +32,11 @@ public class AiDegradationServiceImpl implements AiDegradationService {
         }
         if (StringUtils.hasText(safeRequest.getRuleTemplateOutput())) {
             return buildResult(safeRequest, safeRequest.getRuleTemplateOutput(), AiDegradationSource.RULE_TEMPLATE,
-                    "模型不可用，使用结构化规则模板", true, safeReferences(safeRequest));
+                    "模型调用失败或未生成可信回答，已使用结构化规则模板", true, safeReferences(safeRequest));
         }
         if (!CollectionUtils.isEmpty(safeRequest.getRawReferences())) {
             return buildResult(safeRequest, RAW_RETRIEVAL_PREFIX, AiDegradationSource.RAW_RETRIEVAL,
-                    "模型不可用，返回原始检索条款", false, safeReferences(safeRequest));
+                    "模型调用失败或引用校验未通过，仅展示检索条款", false, safeReferences(safeRequest));
         }
         return buildResult(safeRequest, "", AiDegradationSource.UNAVAILABLE,
                 unavailableReason(safeRequest), false, Collections.emptyList());

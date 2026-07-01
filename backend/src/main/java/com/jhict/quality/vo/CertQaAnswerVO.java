@@ -40,6 +40,9 @@ public class CertQaAnswerVO {
     @ApiModelProperty(value = "降级来源")
     private String degradationSource;
 
+    @ApiModelProperty(value = "降级说明")
+    private String degradationReason;
+
     @ApiModelProperty(value = "来源引用")
     private List<AiSourceReferenceVO> citations;
 

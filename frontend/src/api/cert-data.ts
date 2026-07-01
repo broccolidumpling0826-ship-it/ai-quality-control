@@ -97,6 +97,7 @@ export interface CertQaAnswer {
   cacheHit?: boolean
   confidenceLabel?: string
   degradationSource?: string
+  degradationReason?: string
   citations?: Array<{
     clauseId?: string
     standardCode?: string

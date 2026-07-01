@@ -78,6 +78,7 @@ export interface ConcessionRiskAssessment {
   confidenceLabel?: string
   confidenceScore?: number
   degradationSource?: string
+  degradationReason?: string
   narrativeExplanation?: string
   assessmentId?: string
 }

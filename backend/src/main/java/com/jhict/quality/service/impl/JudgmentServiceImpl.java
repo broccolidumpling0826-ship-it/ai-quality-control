@@ -612,7 +612,7 @@ public class JudgmentServiceImpl implements JudgmentService {
                 vo.setConfidenceLabel("MEDIUM");
                 vo.setConfidenceScore(0.7D);
             }
-            factors.add("模型解释不可用，命中同输入快照缓存");
+            factors.add("引用校验未通过，已使用同输入快照缓存解释");
         } else if (!Boolean.TRUE.equals(vo.getCitationMissing()) && StringUtils.hasText(vo.getAiExplanation())) {
             vo.setConfidenceLabel("HIGH");
             vo.setConfidenceScore(0.85D);
@@ -641,14 +641,14 @@ public class JudgmentServiceImpl implements JudgmentService {
                 vo.setDegradationReason("模型解释未通过校验，已展示含指标依据与来源编号的结构化解释");
             } else if (aiSource == AiExplanationSource.CACHE) {
                 vo.setDegradationSource("CACHE");
-                vo.setDegradationReason("模型解释不可用，已展示同输入快照缓存解释");
+                vo.setDegradationReason("引用校验未通过，已展示同输入快照缓存解释");
             } else {
                 vo.setDegradationSource("GENERATED");
                 vo.setDegradationReason("AI解释已基于来源条款生成并通过引用校验");
             }
         } else if (!Boolean.TRUE.equals(vo.getCitationMissing())) {
             vo.setDegradationSource("RAW_RETRIEVAL");
-            vo.setDegradationReason("已返回来源条款和规则模板，AI解释不可用或引用校验未通过");
+            vo.setDegradationReason("引用校验未通过或未生成可信回答，已展示规则模板与来源条款");
         } else {
             vo.setDegradationSource("RULE_TEMPLATE");
             vo.setDegradationReason("当前返回规则模板解释，来源段落尚未命中");

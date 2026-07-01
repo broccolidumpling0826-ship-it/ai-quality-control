@@ -149,6 +149,7 @@ public class CertQaServiceImpl implements CertQaService {
             answer.setAnswer(trusted);
             answer.setConfidenceLabel(citations.isEmpty() ? "MEDIUM" : "HIGH");
             answer.setDegradationSource("GENERATED");
+            answer.setDegradationReason("AI回答已基于判定快照与来源条款生成并通过引用校验");
             aiFallbackCacheService.saveValidatedGenerated(buildCertQaCacheContext(cmd, judgment, answer, trusted));
             persistCertQaAssessment(cmd, judgment, answer, true);
             return;
@@ -178,6 +179,7 @@ public class CertQaServiceImpl implements CertQaService {
         answer.setAnswer(parseCacheAnswer(fallbackCache.getCachedOutput()));
         answer.setConfidenceLabel(fallbackCache.getConfidenceLabel());
         answer.setDegradationSource("CACHE");
+        answer.setDegradationReason("引用校验未通过或模型未启用，已使用同输入快照缓存回答");
         answer.setCacheHit(true);
         answer.setNonFinal(answer.getAnswer() != null
                 && (answer.getAnswer().contains("不能生成正式质保书") || answer.getAnswer().contains("预览")));
@@ -191,10 +193,12 @@ public class CertQaServiceImpl implements CertQaService {
         if (citations.isEmpty()) {
             answer.setConfidenceLabel("MEDIUM");
             answer.setDegradationSource("RULE_TEMPLATE");
+            answer.setDegradationReason("未命中可引用来源段落，以上基于结构化判定快照");
             answer.setAnswer(ruleAnswer + " 未找到可引用的来源段落，以上仅基于结构化判定快照。");
         } else {
             answer.setConfidenceLabel("MEDIUM");
             answer.setDegradationSource("RAW_RETRIEVAL");
+            answer.setDegradationReason("引用校验未通过或模型调用失败，已展示结构化判定快照");
         }
     }
 
@@ -422,7 +426,8 @@ public class CertQaServiceImpl implements CertQaService {
         answer.setRefusalReason(reason);
         answer.setAnswer(reason);
         answer.setConfidenceLabel("LOW");
-        answer.setDegradationSource("RULE_TEMPLATE");
+        answer.setDegradationSource("UNAVAILABLE");
+        answer.setDegradationReason(reason);
         return answer;
     }
 
